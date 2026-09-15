@@ -140,6 +140,55 @@ void main() {
       );
     });
 
+    test('profile update sends protected details and maps the user', () async {
+      final client = MockClient((request) async {
+        expect(request.method, 'PUT');
+        expect(request.url.path, '/api/v1/auth/profile');
+        expect(request.headers['authorization'], 'Bearer sanctum-token');
+        expect(jsonDecode(request.body), {
+          'name': 'Updated Customer',
+          'email': 'updated@example.com',
+          'phone': '09171234567',
+        });
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'message': 'Profile updated successfully.',
+            'data': {
+              'id': 7,
+              'name': 'Updated Customer',
+              'email': 'updated@example.com',
+              'phone': '09171234567',
+              'role': 'customer',
+            },
+          }),
+          200,
+        );
+      });
+      final tokenStore = MemoryCustomerTokenStore()..save('sanctum-token');
+      final repository = ApiCustomerAuthRepository(
+        CustomerApiClient(
+          client,
+          CustomerApiConfig(
+            baseUrl: 'https://api.example.test/api/v1/',
+            apiKey: 'test-app-key',
+          ),
+          tokenStore,
+        ),
+        tokenStore,
+      );
+
+      final user = await repository.updateProfile(
+        name: 'Updated Customer',
+        email: 'updated@example.com',
+        phone: '09171234567',
+      );
+
+      expect(user.name, 'Updated Customer');
+      expect(user.email, 'updated@example.com');
+      expect(user.phone, '09171234567');
+    });
+
     test(
       'catalog repository maps Laravel stores and decimal products',
       () async {

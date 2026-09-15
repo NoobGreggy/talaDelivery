@@ -9,6 +9,10 @@ void main() {
       );
 
       expect(routes.guardLocation(CustomerRoutes.home), CustomerRoutes.login);
+      expect(
+        routes.guardLocation(CustomerRoutes.editProfile),
+        CustomerRoutes.login,
+      );
 
       routes.signInAsCustomer();
       expect(
@@ -18,6 +22,10 @@ void main() {
 
       routes.completeAddressSetup();
       expect(routes.guardLocation(CustomerRoutes.home), CustomerRoutes.home);
+      expect(
+        routes.guardLocation(CustomerRoutes.editProfile),
+        CustomerRoutes.editProfile,
+      );
     });
 
     test('restores the requested route after login and setup', () {

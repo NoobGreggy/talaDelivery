@@ -39,7 +39,7 @@ class PrimaryAction extends StatelessWidget {
     this.icon,
   });
   final String label;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final IconData? icon;
   @override
   Widget build(BuildContext context) => FilledButton(

@@ -4,6 +4,7 @@ class FakeCustomerAuthRepository implements CustomerAuthRepository {
   int loginCalls = 0;
   int registerCalls = 0;
   int logoutCalls = 0;
+  int updateProfileCalls = 0;
   CustomerUser? restoredUser;
 
   @override
@@ -39,6 +40,22 @@ class FakeCustomerAuthRepository implements CustomerAuthRepository {
 
   @override
   Future<CustomerUser?> restoreSession() async => restoredUser;
+
+  @override
+  Future<CustomerUser> updateProfile({
+    required String name,
+    required String email,
+    String? phone,
+  }) async {
+    updateProfileCalls++;
+    return CustomerUser(
+      id: 1,
+      name: name,
+      email: email,
+      phone: phone,
+      role: 'customer',
+    );
+  }
 
   @override
   Future<void> logout() async => logoutCalls++;

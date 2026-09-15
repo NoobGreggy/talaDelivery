@@ -11,6 +11,11 @@ abstract class CustomerAuthRepository {
   });
 
   Future<CustomerUser?> restoreSession();
+  Future<CustomerUser> updateProfile({
+    required String name,
+    required String email,
+    String? phone,
+  });
   Future<void> logout();
 }
 
@@ -70,6 +75,23 @@ class ApiCustomerAuthRepository implements CustomerAuthRepository {
       }
       rethrow;
     }
+  }
+
+  @override
+  Future<CustomerUser> updateProfile({
+    required String name,
+    required String email,
+    String? phone,
+  }) async {
+    final payload = await _apiClient.put(
+      'auth/profile',
+      body: {
+        'name': name.trim(),
+        'email': email.trim(),
+        'phone': phone?.trim().isEmpty == true ? null : phone?.trim(),
+      },
+    );
+    return CustomerUser.fromJson(_data(payload));
   }
 
   @override

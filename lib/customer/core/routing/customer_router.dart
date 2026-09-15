@@ -38,6 +38,7 @@ class CustomerRoutes {
   static const addresses = '/addresses';
   static const notifications = '/notifications';
   static const profile = '/profile';
+  static const editProfile = '/profile/edit';
   static const accessDenied = '/access-denied';
   static const notFound = '/not-found';
 
@@ -59,6 +60,7 @@ class CustomerRoutes {
     addresses,
     notifications,
     profile,
+    editProfile,
     accessDenied,
     notFound,
   };
@@ -127,6 +129,7 @@ class CustomerRouteController {
     CustomerRoutes.addresses,
     CustomerRoutes.notifications,
     CustomerRoutes.profile,
+    CustomerRoutes.editProfile,
   };
 
   void finishRestoring() => session.isRestoring = false;
@@ -255,6 +258,8 @@ class CustomerRouteController {
         return const CustomerShell(initialTab: 1);
       case CustomerRoutes.profile:
         return const CustomerShell(initialTab: 2);
+      case CustomerRoutes.editProfile:
+        return const EditProfilePage();
       case CustomerRoutes.stores:
         final args = switch (settings.arguments) {
           CustomerStoreListingRouteArgs args => args,

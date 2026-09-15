@@ -32,6 +32,8 @@ part 'features/addresses/data/address_repository.dart';
 part 'features/addresses/view_models/address_view_model.dart';
 part 'features/addresses/address_screens.dart';
 part 'features/profile/profile_screen.dart';
+part 'features/profile/edit_profile_screen.dart';
+part 'features/profile/view_models/customer_profile_view_model.dart';
 part 'core/notifications/data/notification_models.dart';
 part 'core/notifications/data/notification_repository.dart';
 part 'core/notifications/notifications_screen.dart';

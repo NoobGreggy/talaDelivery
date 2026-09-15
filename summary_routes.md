@@ -44,6 +44,7 @@ Router implementation:
 | `/addresses` | Authenticated customer with address | Lists saved addresses. |
 | `/notifications` | Authenticated customer with address | Lists customer notifications. |
 | `/profile` | Authenticated customer with address | Opens the Profile shell tab. |
+| `/profile/edit` | Authenticated customer with address | Opens the validated account-details form and saves through Laravel. |
 | `/access-denied` | Public fallback | Shown when the restored account is not a customer. |
 | `/not-found` | Public fallback | Shown for unknown route names. |
 
@@ -108,7 +109,9 @@ The customer application now:
 11. Loads notifications and marks individual notifications as read through
     `/api/v1/notifications`.
 12. Displays the authenticated Laravel user in the customer home and profile.
-13. Calls `POST /api/v1/auth/logout` and clears the local token and cart.
+13. Updates the customer's name, email, and phone through
+    `PUT /api/v1/auth/profile` and refreshes the active session immediately.
+14. Calls `POST /api/v1/auth/logout` and clears the local token and cart.
 
 Delivery fees, product prices, availability, and stock are treated as
 server-authoritative during order creation. The cart itself remains local UI
@@ -144,5 +147,6 @@ route result.
 - Customer guards: `tala_delivery_customer/test/customer_route_guard_test.dart`
 - Customer input validation: `tala_delivery_customer/test/customer_input_validation_test.dart`
 - Customer API mapping: `tala_delivery_customer/test/customer_api_test.dart`
+- Customer profile editing: `tala_delivery_customer/test/customer_profile_test.dart`
 - Rider flow: `tala_delivery_rider/test/rider_app_test.dart`
 - Rider guards: `tala_delivery_rider/test/rider_route_guard_test.dart`

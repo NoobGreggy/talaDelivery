@@ -1,7 +1,20 @@
 part of '../../app.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  Future<void> _editProfile() async {
+    final updated = await Navigator.pushNamed(
+      context,
+      CustomerRoutes.editProfile,
+    );
+    if (mounted && updated is CustomerUser) setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +81,12 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
+          ProfileTile(
+            icon: Icons.edit_outlined,
+            title: 'Edit profile',
+            onTap: _editProfile,
+          ),
+          const SizedBox(height: 10),
           ProfileTile(
             icon: Icons.location_on_outlined,
             title: 'My addresses',
