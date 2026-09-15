@@ -7,6 +7,7 @@ class ProfilePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final user = CustomerRouteScope.of(context).session.user;
     final name = user?.name ?? 'Customer';
+    final palette = appPaletteOf(context);
     final initials = name
         .trim()
         .split(RegExp(r'\s+'))
@@ -26,7 +27,7 @@ class ProfilePage extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 36,
-                  backgroundColor: const Color(0xFFE2F1FD),
+                  backgroundColor: palette.avatarFill,
                   child: Text(
                     initials.isEmpty ? 'CU' : initials,
                     style: const TextStyle(
@@ -43,8 +44,8 @@ class ProfilePage extends StatelessWidget {
                     children: [
                       Text(
                         name,
-                        style: const TextStyle(
-                          color: text,
+                        style: TextStyle(
+                          color: palette.text,
                           fontWeight: FontWeight.w900,
                           fontSize: 20,
                         ),
@@ -52,12 +53,12 @@ class ProfilePage extends StatelessWidget {
                       if (user?.phone != null)
                         Text(
                           user!.phone!,
-                          style: const TextStyle(color: quiet),
+                          style: TextStyle(color: palette.quiet),
                         ),
                       if (user != null)
                         Text(
                           user.email,
-                          style: const TextStyle(color: quiet, fontSize: 12),
+                          style: TextStyle(color: palette.quiet, fontSize: 12),
                         ),
                     ],
                   ),
@@ -84,6 +85,57 @@ class ProfilePage extends StatelessWidget {
             title: 'Notifications',
             onTap: () =>
                 Navigator.pushNamed(context, CustomerRoutes.notifications),
+          ),
+          const SizedBox(height: 24),
+          SectionHeading(title: 'Appearance'),
+          const SizedBox(height: 12),
+          InfoCard(
+            child: ListenableBuilder(
+              listenable: ThemeScope.of(context),
+              builder: (context, _) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Theme',
+                    style: TextStyle(
+                      color: sky,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'Follow the system or choose a fixed appearance.',
+                    style: TextStyle(color: palette.quiet, fontSize: 12),
+                  ),
+                  const SizedBox(height: 12),
+                  SegmentedButton<ThemeMode>(
+                    segments: const [
+                      ButtonSegment(
+                        value: ThemeMode.system,
+                        icon: Icon(Icons.brightness_auto_rounded),
+                        label: Text('System'),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.light,
+                        icon: Icon(Icons.light_mode_rounded),
+                        label: Text('Light'),
+                      ),
+                      ButtonSegment(
+                        value: ThemeMode.dark,
+                        icon: Icon(Icons.dark_mode_rounded),
+                        label: Text('Dark'),
+                      ),
+                    ],
+                    selected: {ThemeScope.of(context).mode},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (selection) =>
+                        ThemeScope.of(context).mode = selection.first,
+                  ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 10),
           ProfileTile(
@@ -115,10 +167,10 @@ class ProfilePage extends StatelessWidget {
             },
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'TalaDelivery • Version 1.0.0',
             textAlign: TextAlign.center,
-            style: TextStyle(color: quiet, fontSize: 12),
+            style: TextStyle(color: palette.quiet, fontSize: 12),
           ),
         ],
       ),

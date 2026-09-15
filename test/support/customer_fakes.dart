@@ -140,6 +140,8 @@ const fakeStore = StoreData(
 );
 
 class FakeCustomerCatalogRepository implements CustomerCatalogRepository {
+  final List<String?> storeSearches = [];
+
   @override
   Future<StoreData> getStore(int id) async => fakeStore;
 
@@ -151,9 +153,16 @@ class FakeCustomerCatalogRepository implements CustomerCatalogRepository {
   }) async => const [fakeProduct];
 
   @override
-  Future<List<StoreData>> listStores({String? search}) async => const [
-    fakeStore,
-  ];
+  Future<List<StoreData>> listStores({String? search}) async {
+    storeSearches.add(search);
+    final query = search?.trim().toLowerCase() ?? '';
+    if (query.isNotEmpty &&
+        !fakeStore.name.toLowerCase().contains(query) &&
+        !(fakeStore.description?.toLowerCase().contains(query) ?? false)) {
+      return const [];
+    }
+    return const [fakeStore];
+  }
 }
 
 class FakeCustomerOrderRepository implements CustomerOrderRepository {
@@ -223,10 +232,11 @@ class FakeCustomerNotificationRepository
 CustomerAppDependencies fakeCustomerDependencies({
   FakeCustomerAuthRepository? auth,
   FakeCustomerAddressRepository? addresses,
+  FakeCustomerCatalogRepository? catalog,
 }) => CustomerAppDependencies(
   auth ?? FakeCustomerAuthRepository(),
   addresses ?? FakeCustomerAddressRepository(),
-  FakeCustomerCatalogRepository(),
+  catalog ?? FakeCustomerCatalogRepository(),
   FakeCustomerOrderRepository(),
   FakeCustomerNotificationRepository(),
   CustomerCartController(),

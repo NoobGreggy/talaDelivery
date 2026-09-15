@@ -20,6 +20,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
+  final storeSearchController = TextEditingController();
   Future<_CustomerHomeData>? future;
 
   @override
@@ -46,6 +47,21 @@ class _HomePageState extends State<HomePage> {
     final next = load();
     setState(() => future = next);
     await next;
+  }
+
+  void openStoreSearch() {
+    final query = storeSearchController.text.trim();
+    Navigator.pushNamed(
+      context,
+      CustomerRoutes.stores,
+      arguments: CustomerStoreListingRouteArgs(initialSearch: query),
+    );
+  }
+
+  @override
+  void dispose() {
+    storeSearchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -95,7 +111,7 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     CircleAvatar(
                       radius: 22,
-                      backgroundColor: const Color(0xFFE1F0FD),
+                      backgroundColor: appPaletteOf(context).avatarFill,
                       child: Text(
                         initials,
                         style: const TextStyle(
@@ -109,9 +125,12 @@ class _HomePageState extends State<HomePage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             'Welcome back,',
-                            style: TextStyle(color: quiet, fontSize: 12),
+                            style: TextStyle(
+                              color: appPaletteOf(context).quiet,
+                              fontSize: 12,
+                            ),
                           ),
                           Text(
                             firstName,
@@ -151,7 +170,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 20),
                 Material(
-                  color: const Color(0xFFE7F4FF),
+                  color: appPaletteOf(context).softBlue,
                   borderRadius: BorderRadius.circular(17),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(17),
@@ -185,8 +204,8 @@ class _HomePageState extends State<HomePage> {
                                   address == null
                                       ? 'Add a delivery address'
                                       : '${address.label ?? 'Address'} • ${address.city}',
-                                  style: const TextStyle(
-                                    color: text,
+                                  style: TextStyle(
+                                    color: appPaletteOf(context).text,
                                     fontWeight: FontWeight.w800,
                                   ),
                                 ),
@@ -204,12 +223,19 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 16),
                 TextField(
-                  readOnly: true,
-                  onTap: () =>
-                      Navigator.pushNamed(context, CustomerRoutes.stores),
-                  decoration: const InputDecoration(
+                  key: const Key('home-store-search'),
+                  controller: storeSearchController,
+                  textInputAction: TextInputAction.search,
+                  autocorrect: false,
+                  onSubmitted: (_) => openStoreSearch(),
+                  decoration: InputDecoration(
                     hintText: 'Search stores',
-                    prefixIcon: Icon(Icons.search_rounded),
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: IconButton(
+                      tooltip: 'Search',
+                      onPressed: openStoreSearch,
+                      icon: const Icon(Icons.arrow_forward_rounded),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 26),

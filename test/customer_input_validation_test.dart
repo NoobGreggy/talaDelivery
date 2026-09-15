@@ -5,6 +5,34 @@ import 'package:tala_delivery_customer/main.dart';
 import 'support/customer_fakes.dart';
 
 void main() {
+  testWidgets('login validation waits for the first submit attempt', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      TalaCustomerApp(dependencies: fakeCustomerDependencies()),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('login-email')),
+      'customer@example.com',
+    );
+    await tester.pump();
+    expect(find.text('Password is required.'), findsNothing);
+
+    await tester.tap(find.text('Log in'));
+    await tester.pump();
+    expect(find.text('Password is required.'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const Key('login-password')),
+      'password123',
+    );
+    await tester.pump();
+    expect(find.text('Password is required.'), findsNothing);
+  });
+
   testWidgets('login rejects invalid input before calling the API', (
     WidgetTester tester,
   ) async {
@@ -29,6 +57,75 @@ void main() {
       findsOneWidget,
     );
     expect(auth.loginCalls, 0);
+  });
+
+  testWidgets('registration validation waits for the first submit attempt', (
+    WidgetTester tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      TalaCustomerApp(dependencies: fakeCustomerDependencies()),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Create account'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('register-name')),
+      'Maria Santos',
+    );
+    await tester.pump();
+    expect(find.text('Phone number is required.'), findsNothing);
+    expect(find.text('Email is required.'), findsNothing);
+
+    await tester.ensureVisible(find.text('Create account').last);
+    await tester.tap(find.text('Create account').last);
+    await tester.pump();
+    expect(find.text('Phone number is required.'), findsOneWidget);
+    expect(find.text('Email is required.'), findsOneWidget);
+  });
+
+  testWidgets('login skips address setup when Laravel has a saved address', (
+    WidgetTester tester,
+  ) async {
+    final addresses = FakeCustomerAddressRepository()
+      ..addresses = const [
+        CustomerAddress(
+          id: 1,
+          label: 'Home',
+          recipientName: 'Test Customer',
+          phone: '09171234567',
+          addressLine: '123 Example Street',
+          city: 'Cabanatuan City',
+          province: 'Nueva Ecija',
+          isDefault: true,
+        ),
+      ];
+    await tester.pumpWidget(
+      TalaCustomerApp(
+        dependencies: fakeCustomerDependencies(addresses: addresses),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('login-email')),
+      'customer@example.com',
+    );
+    await tester.enterText(
+      find.byKey(const Key('login-password')),
+      'password123',
+    );
+    await tester.tap(find.text('Log in'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Available stores'), findsOneWidget);
+    expect(find.text('Where should we deliver?'), findsNothing);
   });
 
   testWidgets('address setup requires the Laravel address fields', (

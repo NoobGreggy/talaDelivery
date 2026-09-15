@@ -71,6 +71,16 @@ class CustomerAddressRouteArgs {
   final CustomerAddress? address;
 }
 
+class CustomerStoreListingRouteArgs {
+  const CustomerStoreListingRouteArgs({
+    this.initialSearch = '',
+    this.initialFilter = 0,
+  });
+
+  final String initialSearch;
+  final int initialFilter;
+}
+
 class CustomerRouteScope extends InheritedWidget {
   const CustomerRouteScope({
     super.key,
@@ -246,10 +256,16 @@ class CustomerRouteController {
       case CustomerRoutes.profile:
         return const CustomerShell(initialTab: 2);
       case CustomerRoutes.stores:
+        final args = switch (settings.arguments) {
+          CustomerStoreListingRouteArgs args => args,
+          int initialFilter => CustomerStoreListingRouteArgs(
+            initialFilter: initialFilter,
+          ),
+          _ => const CustomerStoreListingRouteArgs(),
+        };
         return StoreListingPage(
-          initialFilter: settings.arguments is int
-              ? settings.arguments! as int
-              : 0,
+          initialSearch: args.initialSearch,
+          initialFilter: args.initialFilter,
         );
       case CustomerRoutes.storeDetails:
         if (settings.arguments is StoreData) {

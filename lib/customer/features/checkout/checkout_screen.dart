@@ -172,20 +172,24 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         children: [
                           Text(
                             selectedAddress!.recipientName,
-                            style: const TextStyle(
-                              color: text,
+                            style: TextStyle(
+                              color: appPaletteOf(context).text,
                               fontWeight: FontWeight.w900,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             selectedAddress!.formatted,
-                            style: const TextStyle(color: quiet),
+                            style: TextStyle(
+                              color: appPaletteOf(context).quiet,
+                            ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             selectedAddress!.phone,
-                            style: const TextStyle(color: quiet),
+                            style: TextStyle(
+                              color: appPaletteOf(context).quiet,
+                            ),
                           ),
                         ],
                       ),
@@ -209,16 +213,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       title: 'Payment',
                     ),
                     const SizedBox(height: 10),
-                    const InfoCard(
+                    InfoCard(
                       child: Row(
                         children: [
-                          Icon(Icons.radio_button_checked_rounded, color: sky),
-                          SizedBox(width: 10),
+                          const Icon(
+                            Icons.radio_button_checked_rounded,
+                            color: sky,
+                          ),
+                          const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               'Cash on Delivery',
                               style: TextStyle(
-                                color: text,
+                                color: appPaletteOf(context).text,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),

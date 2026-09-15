@@ -46,7 +46,11 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               const SizedBox(height: 10),
               Text(
                 widget.product.description ?? 'No description provided.',
-                style: const TextStyle(color: quiet, fontSize: 15, height: 1.5),
+                style: TextStyle(
+                  color: appPaletteOf(context).quiet,
+                  fontSize: 15,
+                  height: 1.5,
+                ),
               ),
               const SizedBox(height: 18),
               Text(
@@ -60,7 +64,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               const SizedBox(height: 8),
               Text(
                 '${widget.product.stock} in stock',
-                style: const TextStyle(color: quiet),
+                style: TextStyle(color: appPaletteOf(context).quiet),
               ),
               const SizedBox(height: 25),
               Row(

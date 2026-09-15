@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 part 'core/config/customer_api_config.dart';
 part 'core/di/customer_dependencies.dart';
@@ -35,7 +36,11 @@ part 'core/notifications/data/notification_models.dart';
 part 'core/notifications/data/notification_repository.dart';
 part 'core/notifications/notifications_screen.dart';
 
-void main() => runApp(const TalaCustomerApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final themeController = await ThemeController.restore();
+  runApp(TalaCustomerApp(themeController: themeController));
+}
 
 class TalaCustomerApp extends StatefulWidget {
   const TalaCustomerApp({
@@ -43,11 +48,15 @@ class TalaCustomerApp extends StatefulWidget {
     this.onContinueAsRider,
     this.session,
     this.dependencies,
+    this.themeController,
+    this.initialThemeMode = ThemeMode.system,
   });
 
   final VoidCallback? onContinueAsRider;
   final CustomerSession? session;
   final CustomerAppDependencies? dependencies;
+  final ThemeController? themeController;
+  final ThemeMode initialThemeMode;
 
   @override
   State<TalaCustomerApp> createState() => _TalaCustomerAppState();
@@ -56,16 +65,20 @@ class TalaCustomerApp extends StatefulWidget {
 class _TalaCustomerAppState extends State<TalaCustomerApp> {
   late final CustomerRouteController routes;
   late final CustomerAppDependencies dependencies;
+  late final ThemeController themeController;
 
   @override
   void initState() {
     super.initState();
     dependencies = widget.dependencies ?? CustomerAppDependencies.live();
     routes = CustomerRouteController(widget.session ?? CustomerSession());
+    themeController =
+        widget.themeController ?? ThemeController(widget.initialThemeMode);
   }
 
   @override
   void dispose() {
+    if (widget.themeController == null) themeController.dispose();
     if (widget.dependencies == null) dependencies.dispose();
     super.dispose();
   }
@@ -73,61 +86,83 @@ class _TalaCustomerAppState extends State<TalaCustomerApp> {
   @override
   Widget build(BuildContext context) => RiderSwitchScope(
     onContinueAsRider: widget.onContinueAsRider,
-    child: CustomerDependencyScope(
-      dependencies: dependencies,
-      child: CustomerRouteScope(
-        controller: routes,
-        child: MaterialApp(
-          debugShowCheckedModeBanner: false,
-          title: 'TalaDelivery',
-          initialRoute: CustomerRoutes.splash,
-          onGenerateRoute: routes.onGenerateRoute,
-          theme: ThemeData(
-            useMaterial3: true,
-            fontFamily: 'Arial',
-            scaffoldBackgroundColor: background,
-            colorScheme: ColorScheme.fromSeed(seedColor: sky, primary: sky),
-            textTheme: const TextTheme(
-              displaySmall: TextStyle(
-                color: text,
-                fontWeight: FontWeight.w900,
-                height: 1.05,
-              ),
-              headlineMedium: TextStyle(
-                color: text,
-                fontWeight: FontWeight.w900,
-                height: 1.1,
-              ),
-              titleLarge: TextStyle(color: text, fontWeight: FontWeight.w800),
-              titleMedium: TextStyle(color: text, fontWeight: FontWeight.w800),
-              bodyLarge: TextStyle(color: text, height: 1.4),
-              bodyMedium: TextStyle(color: quiet, height: 1.4),
-            ),
-            inputDecorationTheme: InputDecorationTheme(
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 17,
-                vertical: 16,
-              ),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: line),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: line),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: sky, width: 1.5),
-              ),
+    child: ThemeScope(
+      controller: themeController,
+      child: CustomerDependencyScope(
+        dependencies: dependencies,
+        child: CustomerRouteScope(
+          controller: routes,
+          child: ListenableBuilder(
+            listenable: themeController,
+            builder: (context, _) => MaterialApp(
+              debugShowCheckedModeBanner: false,
+              title: 'TalaDelivery',
+              initialRoute: CustomerRoutes.splash,
+              onGenerateRoute: routes.onGenerateRoute,
+              themeMode: themeController.mode,
+              theme: buildAppTheme(AppPalette.light),
+              darkTheme: buildAppTheme(AppPalette.dark),
             ),
           ),
         ),
       ),
     ),
   );
+}
+
+class ThemeController extends ValueNotifier<ThemeMode> {
+  ThemeController([
+    super.value = ThemeMode.system,
+    SharedPreferences? preferences,
+  ]) : _preferences = preferences;
+
+  static const preferenceKey = 'customer_theme_mode';
+
+  final SharedPreferences? _preferences;
+
+  static Future<ThemeController> restore() async {
+    final preferences = await SharedPreferences.getInstance();
+    final savedMode = preferences.getString(preferenceKey);
+    final mode = switch (savedMode) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
+    return ThemeController(mode, preferences);
+  }
+
+  ThemeMode get mode => value;
+  set mode(ThemeMode next) => unawaited(setMode(next));
+
+  Future<void> setMode(ThemeMode next) async {
+    if (value == next) return;
+    value = next;
+    await _preferences?.setString(preferenceKey, next.name);
+  }
+
+  void cycle() {
+    mode = switch (value) {
+      ThemeMode.system => ThemeMode.light,
+      ThemeMode.light => ThemeMode.dark,
+      ThemeMode.dark => ThemeMode.system,
+    };
+  }
+}
+
+class ThemeScope extends InheritedWidget {
+  const ThemeScope({super.key, required this.controller, required super.child});
+
+  final ThemeController controller;
+
+  static ThemeController of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<ThemeScope>();
+    assert(scope != null, 'ThemeScope is missing above this context.');
+    return scope!.controller;
+  }
+
+  @override
+  bool updateShouldNotify(ThemeScope oldWidget) =>
+      controller != oldWidget.controller;
 }
 
 class RiderSwitchScope extends InheritedWidget {
@@ -174,8 +209,6 @@ class _CustomerShellState extends State<CustomerShell> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: tab,
         onDestinationSelected: (value) => setState(() => tab = value),
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFDCEEFF),
         height: 72,
         destinations: const [
           NavigationDestination(

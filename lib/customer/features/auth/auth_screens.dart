@@ -50,127 +50,134 @@ class _CustomerSplashState extends State<CustomerSplash> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFE4F3FF),
-    body: SizedBox.expand(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.white, Color(0xFFEAF6FF), Color(0xFFD8EDFF)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return Scaffold(
+      backgroundColor: palette.splashBg,
+      body: SizedBox.expand(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    palette.splashStart,
+                    palette.splashMid,
+                    palette.splashEnd,
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
               ),
             ),
-          ),
-          const CustomPaint(painter: _CustomerSplashPainter()),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
-              child: Column(
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: .76),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'CUSTOMER APP',
-                        style: TextStyle(
-                          color: sky,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.4,
+            CustomPaint(painter: _CustomerSplashPainter(palette: palette)),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
+                child: Column(
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: palette.frosted.withValues(alpha: .76),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          'CUSTOMER APP',
+                          style: TextStyle(
+                            color: sky,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.4,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const Spacer(),
-                  Container(
-                    width: 238,
-                    height: 238,
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: .72),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: sky.withValues(alpha: .15),
-                          blurRadius: 34,
-                          offset: const Offset(0, 18),
+                    const Spacer(),
+                    Container(
+                      width: 238,
+                      height: 238,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: palette.frosted.withValues(alpha: .72),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: palette.frosted, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: sky.withValues(alpha: .15),
+                            blurRadius: 34,
+                            offset: const Offset(0, 18),
+                          ),
+                        ],
+                      ),
+                      child: Image.asset('assets/images/tala_rider.png'),
+                    ),
+                    const SizedBox(height: 24),
+                    const Brand(size: 38, centered: true),
+                    const SizedBox(height: 9),
+                    Text(
+                      'Your neighborhood, delivered.',
+                      style: TextStyle(color: palette.quiet, fontSize: 16),
+                    ),
+                    const Spacer(),
+                    const Wrap(
+                      alignment: WrapAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _SplashFeature(
+                          icon: Icons.restaurant_rounded,
+                          label: 'Food',
+                        ),
+                        _SplashFeature(
+                          icon: Icons.local_grocery_store_rounded,
+                          label: 'Grocery',
+                        ),
+                        _SplashFeature(
+                          icon: Icons.medication_rounded,
+                          label: 'Pharmacy',
                         ),
                       ],
                     ),
-                    child: Image.asset('assets/images/tala_rider.png'),
-                  ),
-                  const SizedBox(height: 24),
-                  const Brand(size: 38, centered: true),
-                  const SizedBox(height: 9),
-                  const Text(
-                    'Your neighborhood, delivered.',
-                    style: TextStyle(color: quiet, fontSize: 16),
-                  ),
-                  const Spacer(),
-                  const Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _SplashFeature(
-                        icon: Icons.restaurant_rounded,
-                        label: 'Food',
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: 150,
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0, end: 1),
+                        duration: const Duration(milliseconds: 1250),
+                        builder: (context, value, child) =>
+                            LinearProgressIndicator(
+                              value: value,
+                              minHeight: 5,
+                              borderRadius: BorderRadius.circular(8),
+                              backgroundColor: palette.surface,
+                            ),
                       ),
-                      _SplashFeature(
-                        icon: Icons.local_grocery_store_rounded,
-                        label: 'Grocery',
-                      ),
-                      _SplashFeature(
-                        icon: Icons.medication_rounded,
-                        label: 'Pharmacy',
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: 150,
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0, end: 1),
-                      duration: const Duration(milliseconds: 1250),
-                      builder: (context, value, child) =>
-                          LinearProgressIndicator(
-                            value: value,
-                            minHeight: 5,
-                            borderRadius: BorderRadius.circular(8),
-                            backgroundColor: Colors.white,
-                          ),
                     ),
-                  ),
-                  const SizedBox(height: 11),
-                  const Text(
-                    'Preparing stores near you…',
-                    style: TextStyle(
-                      color: quiet,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
+                    const SizedBox(height: 11),
+                    Text(
+                      'Preparing stores near you…',
+                      style: TextStyle(
+                        color: palette.quiet,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class _SplashFeature extends StatelessWidget {
@@ -179,32 +186,37 @@ class _SplashFeature extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-    decoration: BoxDecoration(
-      color: Colors.white.withValues(alpha: .76),
-      borderRadius: BorderRadius.circular(18),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: sky, size: 15),
-        const SizedBox(width: 5),
-        Text(
-          label,
-          style: const TextStyle(
-            color: text,
-            fontWeight: FontWeight.w700,
-            fontSize: 11,
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
+      decoration: BoxDecoration(
+        color: palette.frosted.withValues(alpha: .76),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: sky, size: 15),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: palette.text,
+              fontWeight: FontWeight.w700,
+              fontSize: 11,
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class _CustomerSplashPainter extends CustomPainter {
-  const _CustomerSplashPainter();
+  const _CustomerSplashPainter({required this.palette});
+
+  final AppPalette palette;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -218,12 +230,13 @@ class _CustomerSplashPainter extends CustomPainter {
     canvas.drawCircle(
       Offset(size.width * .72, size.height * .7),
       34,
-      Paint()..color = Colors.white.withValues(alpha: .32),
+      Paint()..color = palette.frosted.withValues(alpha: .32),
     );
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _CustomerSplashPainter oldDelegate) =>
+      oldDelegate.palette != palette;
 }
 
 class LoginPage extends StatefulWidget {
@@ -238,6 +251,8 @@ class _LoginPageState extends State<LoginPage> {
   final passwordController = TextEditingController();
   CustomerAuthViewModel? viewModel;
   bool hidden = true;
+  bool isCheckingAddress = false;
+  bool hasSubmitted = false;
 
   @override
   void didChangeDependencies() {
@@ -256,6 +271,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> submit() async {
+    if (!hasSubmitted) setState(() => hasSubmitted = true);
     if (!(formKey.currentState?.validate() ?? false)) return;
     final user = await viewModel!.login(
       email: emailController.text,
@@ -263,7 +279,26 @@ class _LoginPageState extends State<LoginPage> {
     );
     if (!mounted || user == null) return;
 
-    final routes = CustomerRouteScope.of(context)..signInWithUser(user);
+    var hasDeliveryAddress = false;
+    if (user.role == 'customer') {
+      setState(() => isCheckingAddress = true);
+      try {
+        hasDeliveryAddress = (await CustomerDependencyScope.of(
+          context,
+        ).addressRepository.list()).isNotEmpty;
+      } catch (error) {
+        if (mounted) {
+          message(context, apiErrorMessage(error), kind: ToastKind.error);
+        }
+        return;
+      } finally {
+        if (mounted) setState(() => isCheckingAddress = false);
+      }
+    }
+    if (!mounted) return;
+
+    final routes = CustomerRouteScope.of(context)
+      ..signInWithUser(user, hasDeliveryAddress: hasDeliveryAddress);
     final destination = routes.destinationAfterSignIn();
     message(context, 'Login successful.', kind: ToastKind.success);
     Navigator.of(context).pushNamedAndRemoveUntil(
@@ -280,6 +315,9 @@ class _LoginPageState extends State<LoginPage> {
       listenable: viewModel!,
       builder: (context, _) => AuthScaffold(
         formKey: formKey,
+        autovalidateMode: hasSubmitted
+            ? AutovalidateMode.onUserInteraction
+            : AutovalidateMode.disabled,
         title: 'Welcome back',
         subtitle: 'Log in to order from stores near you.',
         children: [
@@ -325,27 +363,33 @@ class _LoginPageState extends State<LoginPage> {
           AuthErrorBanner(errorMessage: viewModel!.errorMessage),
           const SizedBox(height: 14),
           PrimaryAction(
-            label: viewModel!.isSubmitting ? 'Logging in…' : 'Log in',
-            onTap: viewModel!.isSubmitting ? () {} : submit,
+            label: viewModel!.isSubmitting
+                ? 'Logging in…'
+                : isCheckingAddress
+                ? 'Checking saved address…'
+                : 'Log in',
+            onTap: viewModel!.isSubmitting || isCheckingAddress
+                ? () {}
+                : submit,
           ),
           const SizedBox(height: 18),
           if (continueAsRider != null) ...[
-            const Row(
+            Row(
               children: [
-                Expanded(child: Divider()),
+                const Expanded(child: Divider()),
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
                     'NOT A CUSTOMER?',
                     style: TextStyle(
-                      color: quiet,
+                      color: appPaletteOf(context).quiet,
                       fontSize: 10,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1,
                     ),
                   ),
                 ),
-                Expanded(child: Divider()),
+                const Expanded(child: Divider()),
               ],
             ),
             const SizedBox(height: 14),
@@ -399,6 +443,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final confirmationController = TextEditingController();
   CustomerAuthViewModel? viewModel;
   bool hidden = true;
+  bool hasSubmitted = false;
 
   @override
   void didChangeDependencies() {
@@ -420,6 +465,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> submit() async {
+    if (!hasSubmitted) setState(() => hasSubmitted = true);
     if (!(formKey.currentState?.validate() ?? false)) return;
     final user = await viewModel!.register(
       name: nameController.text,
@@ -444,6 +490,9 @@ class _RegisterPageState extends State<RegisterPage> {
     listenable: viewModel!,
     builder: (context, _) => AuthScaffold(
       formKey: formKey,
+      autovalidateMode: hasSubmitted
+          ? AutovalidateMode.onUserInteraction
+          : AutovalidateMode.disabled,
       canPop: true,
       title: 'Create your account',
       subtitle: 'A few details and you’re ready to order.',
@@ -525,10 +574,10 @@ class _RegisterPageState extends State<RegisterPage> {
           onTap: viewModel!.isSubmitting ? () {} : submit,
         ),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'By creating an account, you agree to TalaDelivery’s terms and privacy policy.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: quiet, fontSize: 12),
+          style: TextStyle(color: appPaletteOf(context).quiet, fontSize: 12),
         ),
       ],
     ),
@@ -545,6 +594,7 @@ class ForgotPasswordPage extends StatefulWidget {
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   final formKey = GlobalKey<FormState>();
   final emailController = TextEditingController();
+  bool hasSubmitted = false;
 
   @override
   void dispose() {
@@ -555,6 +605,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
   @override
   Widget build(BuildContext context) => AuthScaffold(
     formKey: formKey,
+    autovalidateMode: hasSubmitted
+        ? AutovalidateMode.onUserInteraction
+        : AutovalidateMode.disabled,
     canPop: true,
     title: 'Reset password',
     subtitle: 'We’ll send recovery instructions to your account.',
@@ -573,6 +626,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       PrimaryAction(
         label: 'Send reset link',
         onTap: () {
+          if (!hasSubmitted) setState(() => hasSubmitted = true);
           if (!(formKey.currentState?.validate() ?? false)) return;
           message(
             context,
@@ -592,15 +646,19 @@ class AuthScaffold extends StatelessWidget {
     required this.children,
     this.canPop = false,
     this.formKey,
+    this.autovalidateMode = AutovalidateMode.disabled,
   });
   final String title;
   final String subtitle;
   final List<Widget> children;
   final bool canPop;
   final GlobalKey<FormState>? formKey;
+  final AutovalidateMode autovalidateMode;
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: canPop ? AppBar(backgroundColor: background) : null,
+    appBar: canPop
+        ? AppBar(backgroundColor: appPaletteOf(context).background)
+        : null,
     body: SafeArea(
       child: Center(
         child: SingleChildScrollView(
@@ -623,7 +681,7 @@ class AuthScaffold extends StatelessWidget {
                 else
                   Form(
                     key: formKey,
-                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    autovalidateMode: autovalidateMode,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: children,

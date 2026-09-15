@@ -1,25 +1,36 @@
 part of '../../app.dart';
 
 class StoreListingPage extends StatefulWidget {
-  const StoreListingPage({super.key, this.initialFilter = 0});
+  const StoreListingPage({
+    super.key,
+    this.initialFilter = 0,
+    this.initialSearch = '',
+  });
 
   final int initialFilter;
+  final String initialSearch;
 
   @override
   State<StoreListingPage> createState() => _StoreListingPageState();
 }
 
 class _StoreListingPageState extends State<StoreListingPage> {
-  final searchController = TextEditingController();
+  late final TextEditingController searchController;
   CustomerCatalogRepository? repository;
   Future<List<StoreData>>? future;
   Timer? debounce;
 
   @override
+  void initState() {
+    super.initState();
+    searchController = TextEditingController(text: widget.initialSearch);
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     repository ??= CustomerDependencyScope.of(context).catalogRepository;
-    future ??= repository!.listStores();
+    future ??= repository!.listStores(search: searchController.text);
   }
 
   @override
@@ -69,6 +80,9 @@ class _StoreListingPageState extends State<StoreListingPage> {
             child: TextField(
               key: const Key('store-search'),
               controller: searchController,
+              autofocus: true,
+              textInputAction: TextInputAction.search,
+              autocorrect: false,
               decoration: const InputDecoration(
                 hintText: 'Search stores',
                 prefixIcon: Icon(Icons.search_rounded),
@@ -225,8 +239,8 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
               SliverAppBar(
                 expandedHeight: 220,
                 pinned: true,
-                backgroundColor: Colors.white,
-                foregroundColor: dark,
+                backgroundColor: appPaletteOf(context).surface,
+                foregroundColor: appPaletteOf(context).text,
                 actions: [
                   ListenableBuilder(
                     listenable: cart,

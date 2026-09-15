@@ -40,14 +40,17 @@ class CartPage extends StatelessWidget {
                               children: [
                                 Text(
                                   cart.store!.name,
-                                  style: const TextStyle(
-                                    color: text,
+                                  style: TextStyle(
+                                    color: appPaletteOf(context).text,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
-                                const Text(
+                                Text(
                                   'One store per order',
-                                  style: TextStyle(color: quiet, fontSize: 12),
+                                  style: TextStyle(
+                                    color: appPaletteOf(context).quiet,
+                                    fontSize: 12,
+                                  ),
                                 ),
                               ],
                             ),

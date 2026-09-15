@@ -5,27 +5,30 @@ class Brand extends StatelessWidget {
   final double size;
   final bool centered;
   @override
-  Widget build(BuildContext context) => RichText(
-    textAlign: centered ? TextAlign.center : TextAlign.start,
-    text: TextSpan(
-      style: TextStyle(
-        fontFamily: 'Arial',
-        fontSize: size,
-        fontWeight: FontWeight.w900,
-        letterSpacing: -1,
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return RichText(
+      textAlign: centered ? TextAlign.center : TextAlign.start,
+      text: TextSpan(
+        style: TextStyle(
+          fontFamily: 'Arial',
+          fontSize: size,
+          fontWeight: FontWeight.w900,
+          letterSpacing: -1,
+        ),
+        children: [
+          TextSpan(
+            text: 'Tala',
+            style: TextStyle(color: palette.brand),
+          ),
+          const TextSpan(
+            text: 'Delivery',
+            style: TextStyle(color: sky),
+          ),
+        ],
       ),
-      children: const [
-        TextSpan(
-          text: 'Tala',
-          style: TextStyle(color: dark),
-        ),
-        TextSpan(
-          text: 'Delivery',
-          style: TextStyle(color: sky),
-        ),
-      ],
-    ),
-  );
+    );
+  }
 }
 
 class PrimaryAction extends StatelessWidget {
@@ -71,7 +74,7 @@ class BottomAction extends StatelessWidget {
   final bool enabled;
   @override
   Widget build(BuildContext context) => Container(
-    color: Colors.white,
+    color: appPaletteOf(context).surface,
     padding: EdgeInsets.fromLTRB(
       20,
       13,
@@ -94,15 +97,18 @@ class InfoCard extends StatelessWidget {
   const InfoCard({super.key, required this.child});
   final Widget child;
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: const Color(0xFFEBF0F5)),
-    ),
-    child: child,
-  );
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: palette.cardBorder),
+      ),
+      child: child,
+    );
+  }
 }
 
 class SectionHeading extends StatelessWidget {
@@ -172,8 +178,8 @@ class _CategoryButtonState extends State<CategoryButton> {
             widget.label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: text,
+            style: TextStyle(
+              color: appPaletteOf(context).text,
               fontSize: 10.5,
               fontWeight: FontWeight.w800,
             ),
@@ -239,66 +245,69 @@ class StoreCard extends StatelessWidget {
   final StoreData store;
   final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(20),
-    child: InkWell(
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return Material(
+      color: palette.surface,
       borderRadius: BorderRadius.circular(20),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(13),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 96,
-              child: StoreArtwork(icon: store.icon, color: store.color),
-            ),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          store.name,
-                          style: const TextStyle(
-                            color: text,
-                            fontWeight: FontWeight.w900,
-                            fontSize: 16,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(13),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 96,
+                child: StoreArtwork(icon: store.icon, color: store.color),
+              ),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            store.name,
+                            style: TextStyle(
+                              color: palette.text,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
-                      ),
-                      StatusPill(
-                        label: store.open ? 'Open' : 'Closed',
-                        color: store.open ? success : danger,
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    store.address ?? store.description ?? 'Store details',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: quiet, fontSize: 12),
-                  ),
-                  const SizedBox(height: 7),
-                  Metric(
-                    icon: Icons.schedule_rounded,
-                    value: store.openingTime == null
-                        ? 'Hours not provided'
-                        : '${store.openingTime} – ${store.closingTime ?? ''}',
-                    color: quiet,
-                  ),
-                ],
+                        StatusPill(
+                          label: store.open ? 'Open' : 'Closed',
+                          color: store.open ? success : danger,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      store.address ?? store.description ?? 'Store details',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: palette.quiet, fontSize: 12),
+                    ),
+                    const SizedBox(height: 7),
+                    Metric(
+                      icon: Icons.schedule_rounded,
+                      value: store.openingTime == null
+                          ? 'Hours not provided'
+                          : '${store.openingTime} – ${store.closingTime ?? ''}',
+                      color: palette.quiet,
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class Metric extends StatelessWidget {
@@ -322,8 +331,8 @@ class Metric extends StatelessWidget {
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            color: quiet,
+          style: TextStyle(
+            color: appPaletteOf(context).quiet,
             fontSize: 11,
             fontWeight: FontWeight.w700,
           ),
@@ -344,76 +353,79 @@ class ProductRow extends StatelessWidget {
   final VoidCallback onOpen;
   final VoidCallback? onAdd;
   @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(19),
-    child: InkWell(
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return Material(
+      color: palette.surface,
       borderRadius: BorderRadius.circular(19),
-      onTap: onOpen,
-      child: Padding(
-        padding: const EdgeInsets.all(13),
-        child: Row(
-          children: [
-            Hero(
-              tag: product.name,
-              child: SizedBox(
-                width: 76,
-                child: StoreArtwork(
-                  icon: product.icon,
-                  color: product.color,
-                  height: 76,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(19),
+        onTap: onOpen,
+        child: Padding(
+          padding: const EdgeInsets.all(13),
+          child: Row(
+            children: [
+              Hero(
+                tag: product.name,
+                child: SizedBox(
+                  width: 76,
+                  child: StoreArtwork(
+                    icon: product.icon,
+                    color: product.color,
+                    height: 76,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                      color: text,
-                      fontWeight: FontWeight.w900,
+              const SizedBox(width: 13),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      style: TextStyle(
+                        color: palette.text,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    product.description ?? 'No description provided.',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: quiet, fontSize: 12),
-                  ),
-                  const SizedBox(height: 7),
-                  Text(
-                    peso(product.price),
-                    style: const TextStyle(
-                      color: sky,
-                      fontWeight: FontWeight.w900,
+                    const SizedBox(height: 3),
+                    Text(
+                      product.description ?? 'No description provided.',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: palette.quiet, fontSize: 12),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 7),
-            FilledButton(
-              onPressed: onAdd,
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(48, 42),
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(13),
+                    const SizedBox(height: 7),
+                    Text(
+                      peso(product.price),
+                      style: const TextStyle(
+                        color: sky,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              child: onAdd == null
-                  ? const Icon(Icons.block_rounded, size: 18)
-                  : const Text('Add'),
-            ),
-          ],
+              const SizedBox(width: 7),
+              FilledButton(
+                onPressed: onAdd,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(48, 42),
+                  padding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                ),
+                child: onAdd == null
+                    ? const Icon(Icons.block_rounded, size: 18)
+                    : const Text('Add'),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class QuantityControl extends StatelessWidget {
@@ -427,31 +439,40 @@ class QuantityControl extends StatelessWidget {
   final VoidCallback? onMinus;
   final VoidCallback? onPlus;
   @override
-  Widget build(BuildContext context) => Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(15),
-      border: Border.all(color: line),
-    ),
-    child: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(onPressed: onMinus, icon: const Icon(Icons.remove_rounded)),
-        SizedBox(
-          width: 30,
-          child: Text(
-            '$value',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: text, fontWeight: FontWeight.w900),
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: palette.line),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            onPressed: onMinus,
+            icon: const Icon(Icons.remove_rounded),
           ),
-        ),
-        IconButton(
-          onPressed: onPlus,
-          icon: const Icon(Icons.add_rounded, color: sky),
-        ),
-      ],
-    ),
-  );
+          SizedBox(
+            width: 30,
+            child: Text(
+              '$value',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: palette.text,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: onPlus,
+            icon: const Icon(Icons.add_rounded, color: sky),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class CartItem extends StatelessWidget {
@@ -471,42 +492,45 @@ class CartItem extends StatelessWidget {
   final VoidCallback onMinus;
   final VoidCallback onPlus;
   @override
-  Widget build(BuildContext context) => InfoCard(
-    child: Row(
-      children: [
-        StoreArtwork(icon: icon, color: sky, height: 58, width: 58),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  color: text,
-                  fontWeight: FontWeight.w900,
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return InfoCard(
+      child: Row(
+        children: [
+          StoreArtwork(icon: icon, color: sky, height: 58, width: 58),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: TextStyle(
+                    color: palette.text,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              ),
-              Text(
-                '${peso(price)} × $quantity',
-                style: const TextStyle(color: quiet, fontSize: 12),
-              ),
-              const SizedBox(height: 7),
-              QuantityControl(
-                value: quantity,
-                onMinus: onMinus,
-                onPlus: onPlus,
-              ),
-            ],
+                Text(
+                  '${peso(price)} × $quantity',
+                  style: TextStyle(color: palette.quiet, fontSize: 12),
+                ),
+                const SizedBox(height: 7),
+                QuantityControl(
+                  value: quantity,
+                  onMinus: onMinus,
+                  onPlus: onPlus,
+                ),
+              ],
+            ),
           ),
-        ),
-        Text(
-          peso(price * quantity),
-          style: const TextStyle(color: text, fontWeight: FontWeight.w900),
-        ),
-      ],
-    ),
-  );
+          Text(
+            peso(price * quantity),
+            style: TextStyle(color: palette.text, fontWeight: FontWeight.w900),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class PriceSummary extends StatelessWidget {
@@ -554,30 +578,33 @@ class SummaryLine extends StatelessWidget {
   final bool bold;
   final bool last;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: EdgeInsets.only(bottom: last ? 0 : 13),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: bold ? text : quiet,
-              fontWeight: bold ? FontWeight.w900 : FontWeight.w400,
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return Padding(
+      padding: EdgeInsets.only(bottom: last ? 0 : 13),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: bold ? palette.text : palette.quiet,
+                fontWeight: bold ? FontWeight.w900 : FontWeight.w400,
+              ),
             ),
           ),
-        ),
-        Text(
-          value,
-          style: TextStyle(
-            color: text,
-            fontWeight: bold ? FontWeight.w900 : FontWeight.w700,
-            fontSize: bold ? 18 : 14,
+          Text(
+            value,
+            style: TextStyle(
+              color: palette.text,
+              fontWeight: bold ? FontWeight.w900 : FontWeight.w700,
+              fontSize: bold ? 18 : 14,
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class CheckoutTitle extends StatelessWidget {
@@ -599,6 +626,7 @@ class TrackingHero extends StatelessWidget {
   final OrderStage stage;
   @override
   Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
     final done = stage == OrderStage.delivered;
     final cancelled = stage == OrderStage.cancelled;
     final accent = cancelled
@@ -610,10 +638,10 @@ class TrackingHero extends StatelessWidget {
       padding: const EdgeInsets.all(21),
       decoration: BoxDecoration(
         color: cancelled
-            ? const Color(0xFFFFEEEE)
+            ? palette.dangerFill
             : done
-            ? const Color(0xFFE7F8F0)
-            : const Color(0xFFE7F4FF),
+            ? palette.successFill
+            : palette.softBlue,
         borderRadius: BorderRadius.circular(23),
       ),
       child: Column(
@@ -622,7 +650,7 @@ class TrackingHero extends StatelessWidget {
             width: 64,
             height: 64,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: palette.surface,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(color: accent.withValues(alpha: .16), blurRadius: 15),
@@ -645,8 +673,8 @@ class TrackingHero extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             stage.title,
-            style: const TextStyle(
-              color: text,
+            style: TextStyle(
+              color: palette.text,
               fontWeight: FontWeight.w900,
               fontSize: 21,
             ),
@@ -656,10 +684,10 @@ class TrackingHero extends StatelessWidget {
           Text(stage.description, textAlign: TextAlign.center),
           if (stage == OrderStage.findingRider) ...[
             const SizedBox(height: 14),
-            const LinearProgressIndicator(
+            LinearProgressIndicator(
               minHeight: 5,
-              borderRadius: BorderRadius.all(Radius.circular(6)),
-              backgroundColor: Colors.white,
+              borderRadius: const BorderRadius.all(Radius.circular(6)),
+              backgroundColor: palette.surface,
             ),
           ],
         ],
@@ -681,46 +709,52 @@ class TimelineItem extends StatelessWidget {
   final bool active;
   final bool last;
   @override
-  Widget build(BuildContext context) => IntrinsicHeight(
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SizedBox(
-          width: 22,
-          child: Column(
-            children: [
-              Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  color: complete || active ? sky : const Color(0xFFCCD7E2),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 4),
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 22,
+            child: Column(
+              children: [
+                Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: complete || active ? sky : palette.inactiveStep,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: palette.surface, width: 4),
+                  ),
                 ),
-              ),
-              if (!last)
-                Expanded(
-                  child: Container(width: 2, color: complete ? sky : line),
-                ),
-            ],
+                if (!last)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      color: complete ? sky : palette.line,
+                    ),
+                  ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 17),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: complete || active ? text : quiet,
-                fontWeight: active ? FontWeight.w900 : FontWeight.w600,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 17),
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: complete || active ? palette.text : palette.quiet,
+                  fontWeight: active ? FontWeight.w900 : FontWeight.w600,
+                ),
               ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class OrderHistoryCard extends StatelessWidget {
@@ -742,62 +776,65 @@ class OrderHistoryCard extends StatelessWidget {
   final String date;
   final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(20),
-    child: InkWell(
-      onTap: onTap,
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return Material(
+      color: palette.surface,
       borderRadius: BorderRadius.circular(20),
-      child: Padding(
-        padding: const EdgeInsets.all(17),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    store,
-                    style: const TextStyle(
-                      color: text,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.all(17),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      store,
+                      style: TextStyle(
+                        color: palette.text,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  StatusPill(label: status, color: color),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      '$id\n$date',
+                      style: TextStyle(
+                        color: palette.quiet,
+                        fontSize: 12,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    total,
+                    style: TextStyle(
+                      color: palette.text,
                       fontWeight: FontWeight.w900,
-                      fontSize: 16,
+                      fontSize: 19,
                     ),
                   ),
-                ),
-                StatusPill(label: status, color: color),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    '$id\n$date',
-                    style: const TextStyle(
-                      color: quiet,
-                      fontSize: 12,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-                Text(
-                  total,
-                  style: const TextStyle(
-                    color: text,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 19,
-                  ),
-                ),
-                const SizedBox(width: 5),
-                const Icon(Icons.chevron_right_rounded, color: sky),
-              ],
-            ),
-          ],
+                  const SizedBox(width: 5),
+                  const Icon(Icons.chevron_right_rounded, color: sky),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class AddressCard extends StatelessWidget {
@@ -817,63 +854,66 @@ class AddressCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback? onDelete;
   @override
-  Widget build(BuildContext context) => InfoCard(
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(
-          label == 'Home' ? Icons.home_rounded : Icons.work_rounded,
-          color: sky,
-        ),
-        const SizedBox(width: 13),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      color: text,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
-                    ),
-                  ),
-                  if (selected) ...[
-                    const SizedBox(width: 8),
-                    const StatusPill(label: 'Default', color: success),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 5),
-              Text(address, style: const TextStyle(color: quiet)),
-              const SizedBox(height: 11),
-              Wrap(
-                spacing: 6,
-                children: [
-                  if (!selected)
-                    TextButton(
-                      onPressed: onDefault,
-                      child: const Text('Set default'),
-                    ),
-                  TextButton(onPressed: onEdit, child: const Text('Edit')),
-                  if (onDelete != null)
-                    TextButton(
-                      onPressed: onDelete,
-                      child: const Text(
-                        'Delete',
-                        style: TextStyle(color: danger),
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return InfoCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            label == 'Home' ? Icons.home_rounded : Icons.work_rounded,
+            color: sky,
+          ),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: palette.text,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
                       ),
                     ),
-                ],
-              ),
-            ],
+                    if (selected) ...[
+                      const SizedBox(width: 8),
+                      const StatusPill(label: 'Default', color: success),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Text(address, style: TextStyle(color: palette.quiet)),
+                const SizedBox(height: 11),
+                Wrap(
+                  spacing: 6,
+                  children: [
+                    if (!selected)
+                      TextButton(
+                        onPressed: onDefault,
+                        child: const Text('Set default'),
+                      ),
+                    TextButton(onPressed: onEdit, child: const Text('Edit')),
+                    if (onDelete != null)
+                      TextButton(
+                        onPressed: onDelete,
+                        child: const Text(
+                          'Delete',
+                          style: TextStyle(color: danger),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }
 
 class NotificationTile extends StatelessWidget {
@@ -895,60 +935,63 @@ class NotificationTile extends StatelessWidget {
   final VoidCallback onTap;
   final bool isRead;
   @override
-  Widget build(BuildContext context) => Material(
-    color: isRead ? Colors.white : const Color(0xFFF0F7FF),
-    borderRadius: BorderRadius.circular(18),
-    child: InkWell(
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return Material(
+      color: isRead ? palette.surface : palette.unreadFill,
       borderRadius: BorderRadius.circular(18),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 45,
-              height: 45,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: .11),
-                borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 45,
+                height: 45,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: .11),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: color),
               ),
-              child: Icon(icon, color: color),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: text,
-                      fontWeight: FontWeight.w900,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: palette.text,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    messageText,
-                    style: const TextStyle(color: quiet, fontSize: 13),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    time,
-                    style: const TextStyle(
-                      color: sky,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                    const SizedBox(height: 3),
+                    Text(
+                      messageText,
+                      style: TextStyle(color: palette.quiet, fontSize: 13),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 5),
+                    Text(
+                      time,
+                      style: const TextStyle(
+                        color: sky,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class ProfileTile extends StatelessWidget {
@@ -964,36 +1007,39 @@ class ProfileTile extends StatelessWidget {
   final VoidCallback onTap;
   final bool destructive;
   @override
-  Widget build(BuildContext context) => Material(
-    color: Colors.white,
-    borderRadius: BorderRadius.circular(17),
-    child: InkWell(
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return Material(
+      color: palette.surface,
       borderRadius: BorderRadius.circular(17),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Icon(icon, color: destructive ? danger : sky),
-            const SizedBox(width: 13),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  color: destructive ? danger : text,
-                  fontWeight: FontWeight.w700,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(17),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(icon, color: destructive ? danger : sky),
+              const SizedBox(width: 13),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: destructive ? danger : palette.text,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: destructive ? danger : quiet,
-            ),
-          ],
+              Icon(
+                Icons.chevron_right_rounded,
+                color: destructive ? danger : palette.quiet,
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class InfoBanner extends StatelessWidget {
@@ -1001,22 +1047,28 @@ class InfoBanner extends StatelessWidget {
   final IconData icon;
   final String text;
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: const Color(0xFFE8F4FF),
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Row(
-      children: [
-        Icon(icon, color: sky, size: 20),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Text(text, style: const TextStyle(color: quiet, fontSize: 12)),
-        ),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: palette.infoFill,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline_rounded, color: sky, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: palette.quiet, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class StatusPill extends StatelessWidget {
@@ -1060,7 +1112,7 @@ class EmptyState extends StatelessWidget {
     padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
     child: Column(
       children: [
-        Icon(icon, color: const Color(0xFFB8C7D5), size: 58),
+        Icon(icon, color: appPaletteOf(context).emptyIcon, size: 58),
         const SizedBox(height: 15),
         Text(title, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 6),
@@ -1154,19 +1206,8 @@ Future<bool> confirmAction(
   return result ?? false;
 }
 
-PreferredSizeWidget simpleBar(String title, {List<Widget>? actions}) => AppBar(
-  backgroundColor: Colors.white,
-  surfaceTintColor: Colors.white,
-  title: Text(
-    title,
-    style: const TextStyle(
-      color: text,
-      fontWeight: FontWeight.w900,
-      fontSize: 18,
-    ),
-  ),
-  actions: actions,
-);
+PreferredSizeWidget simpleBar(String title, {List<Widget>? actions}) =>
+    AppBar(title: Text(title), actions: actions);
 Route<T> fade<T>(Widget page) => PageRouteBuilder<T>(
   pageBuilder: (context, animation, secondaryAnimation) =>
       FadeTransition(opacity: animation, child: page),
@@ -1187,9 +1228,10 @@ void message(
   String value, {
   ToastKind kind = ToastKind.info,
 }) {
+  final palette = appPaletteOf(context);
   final color = switch (kind) {
     ToastKind.success => success,
-    ToastKind.info => dark,
+    ToastKind.info => palette.brand,
     ToastKind.warning => warning,
     ToastKind.error => danger,
   };

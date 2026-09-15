@@ -33,7 +33,7 @@ Router implementation:
 | `/auth/forgot-password` | Public-only | Authenticated customers are sent to setup or home. |
 | `/address/setup` | Authenticated customer | Unauthenticated users are sent to login; also used for adding and editing addresses. |
 | `/home` | Authenticated customer with address | Missing setup redirects to address setup. |
-| `/stores` | Authenticated customer with address | Accepts an optional category index argument. |
+| `/stores` | Authenticated customer with address | Accepts an optional initial search query and category index. |
 | `/stores/details` | Authenticated customer with address | Requires a `StoreData` argument. |
 | `/products/details` | Authenticated customer with address | Requires a `ProductData` argument and can return a quantity. |
 | `/cart` | Authenticated customer with address | Opens the current cart. |
@@ -92,20 +92,23 @@ The customer application now:
 2. Sends the configured `X-App-Key` on every request.
 3. Sends the returned Sanctum token as a bearer token on protected requests.
 4. Restores an available session through `GET /api/v1/auth/me`.
-5. Uses the authenticated user name and phone to prefill address onboarding.
-6. Lists, creates, updates, defaults, and deletes saved addresses through the
+5. Checks `GET /api/v1/addresses` after login and session restoration, so
+   customers with a saved address go directly home and new customers enter
+   address setup.
+6. Uses the authenticated user name and phone to prefill address onboarding.
+7. Lists, creates, updates, defaults, and deletes saved addresses through the
    `/api/v1/addresses` endpoints.
-7. Loads active stores and products through `/api/v1/stores` and
+8. Loads active stores and products through `/api/v1/stores` and
    `/api/v1/products`; empty backend data produces an empty state rather than
    sample shops.
-8. Keeps the selected cart locally, then creates and validates the real order
+9. Keeps the selected cart locally, then creates and validates the real order
    through `POST /api/v1/orders`.
-9. Loads, tracks, refreshes, and cancels customer orders through
+10. Loads, tracks, refreshes, and cancels customer orders through
    `/api/v1/orders`.
-10. Loads notifications and marks individual notifications as read through
+11. Loads notifications and marks individual notifications as read through
     `/api/v1/notifications`.
-11. Displays the authenticated Laravel user in the customer home and profile.
-12. Calls `POST /api/v1/auth/logout` and clears the local token and cart.
+12. Displays the authenticated Laravel user in the customer home and profile.
+13. Calls `POST /api/v1/auth/logout` and clears the local token and cart.
 
 Delivery fees, product prices, availability, and stock are treated as
 server-authoritative during order creation. The cart itself remains local UI

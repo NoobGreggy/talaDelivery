@@ -91,7 +91,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 icon: notification.type.startsWith('order')
                     ? Icons.receipt_long_outlined
                     : Icons.notifications_outlined,
-                color: notification.isRead ? quiet : sky,
+                color: notification.isRead ? appPaletteOf(context).quiet : sky,
                 title: notification.title,
                 messageText: notification.messageText,
                 time: notificationTime(notification.createdAt),

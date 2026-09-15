@@ -16,8 +16,8 @@ class OrderSuccessPage extends StatelessWidget {
             Container(
               width: 112,
               height: 112,
-              decoration: const BoxDecoration(
-                color: Color(0xFFE3F8EF),
+              decoration: BoxDecoration(
+                color: appPaletteOf(context).successCircleFill,
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.check_rounded, color: success, size: 60),
@@ -249,8 +249,8 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                   children: [
                     Text(
                       order.store?.name ?? 'Store',
-                      style: const TextStyle(
-                        color: text,
+                      style: TextStyle(
+                        color: appPaletteOf(context).text,
                         fontWeight: FontWeight.w900,
                         fontSize: 17,
                       ),
@@ -258,12 +258,12 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
                     const SizedBox(height: 4),
                     Text(
                       '${order.orderNumber} • ${peso(order.total)}',
-                      style: const TextStyle(color: quiet),
+                      style: TextStyle(color: appPaletteOf(context).quiet),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       order.deliveryAddress,
-                      style: const TextStyle(color: quiet),
+                      style: TextStyle(color: appPaletteOf(context).quiet),
                     ),
                     if (!order.isCancelled) ...[
                       const SizedBox(height: 20),
