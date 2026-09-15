@@ -16,7 +16,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
   void openLogin() {
     if (mounted) {
-      Navigator.of(context).pushReplacement(fadeRoute(const LoginScreen()));
+      RiderRouteScope.of(context).finishRestoring();
+      Navigator.of(context).pushReplacementNamed(RiderRoutes.login);
     }
   }
 
@@ -159,8 +160,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         'Rider login successful.',
                         kind: RiderToastKind.success,
                       );
-                      Navigator.of(context)
-                          .pushReplacement(fadeRoute(const RiderShell()));
+                      final routes = RiderRouteScope.of(context)
+                        ..signInAsRider();
+                      final destination = routes.destinationAfterSignIn();
+                      Navigator.of(context).pushNamedAndRemoveUntil(
+                        destination.name!,
+                        (_) => false,
+                        arguments: destination.arguments,
+                      );
                     },
                   ),
                   if (continueAsCustomer != null) ...[

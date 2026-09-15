@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 part 'shared/theme/theme.dart';
 part 'shared/models/delivery_stage.dart';
 part 'shared/widgets/ui_widgets.dart';
+part 'core/routing/rider_router.dart';
 part 'features/auth/auth_screens.dart';
 part 'features/dashboard/dashboard_screen.dart';
 part 'features/offers/offer_screen.dart';
@@ -15,60 +16,78 @@ part 'features/profile/profile_screen.dart';
 
 void main() => runApp(const TalaDeliveryApp());
 
-class TalaDeliveryApp extends StatelessWidget {
-  const TalaDeliveryApp({super.key, this.onContinueAsCustomer});
+class TalaDeliveryApp extends StatefulWidget {
+  const TalaDeliveryApp({super.key, this.onContinueAsCustomer, this.session});
 
   final VoidCallback? onContinueAsCustomer;
+  final RiderSession? session;
+
+  @override
+  State<TalaDeliveryApp> createState() => _TalaDeliveryAppState();
+}
+
+class _TalaDeliveryAppState extends State<TalaDeliveryApp> {
+  late final RiderRouteController routes;
+
+  @override
+  void initState() {
+    super.initState();
+    routes = RiderRouteController(widget.session ?? RiderSession());
+  }
 
   @override
   Widget build(BuildContext context) => CustomerSwitchScope(
-    onContinueAsCustomer: onContinueAsCustomer,
-    child: MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'TalaDelivery Rider',
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: blue, primary: blue),
-        scaffoldBackgroundColor: canvas,
-        fontFamily: 'Arial',
-        textTheme: const TextTheme(
-          displaySmall: TextStyle(
-            fontWeight: FontWeight.w800,
-            color: ink,
-            height: 1.05,
+    onContinueAsCustomer: widget.onContinueAsCustomer,
+    child: RiderRouteScope(
+      controller: routes,
+      child: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'TalaDelivery Rider',
+        initialRoute: RiderRoutes.splash,
+        onGenerateRoute: routes.onGenerateRoute,
+        theme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(seedColor: blue, primary: blue),
+          scaffoldBackgroundColor: canvas,
+          fontFamily: 'Arial',
+          textTheme: const TextTheme(
+            displaySmall: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: ink,
+              height: 1.05,
+            ),
+            headlineMedium: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: ink,
+              height: 1.12,
+            ),
+            titleLarge: TextStyle(fontWeight: FontWeight.w800, color: ink),
+            titleMedium: TextStyle(fontWeight: FontWeight.w700, color: ink),
+            bodyLarge: TextStyle(color: ink, height: 1.4),
+            bodyMedium: TextStyle(color: muted, height: 1.4),
           ),
-          headlineMedium: TextStyle(
-            fontWeight: FontWeight.w800,
-            color: ink,
-            height: 1.12,
-          ),
-          titleLarge: TextStyle(fontWeight: FontWeight.w800, color: ink),
-          titleMedium: TextStyle(fontWeight: FontWeight.w700, color: ink),
-          bodyLarge: TextStyle(color: ink, height: 1.4),
-          bodyMedium: TextStyle(color: muted, height: 1.4),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: const Color(0xFFF8FAFD),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 18,
-            vertical: 17,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xFFDDE7F1)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Color(0xFFDDE7F1)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: blue, width: 1.5),
+          inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: const Color(0xFFF8FAFD),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 18,
+              vertical: 17,
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFFDDE7F1)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFFDDE7F1)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: blue, width: 1.5),
+            ),
           ),
         ),
       ),
-      home: const SplashScreen(),
     ),
   );
 }
@@ -92,22 +111,32 @@ class CustomerSwitchScope extends InheritedWidget {
 }
 
 class RiderShell extends StatefulWidget {
-  const RiderShell({super.key});
+  const RiderShell({super.key, this.initialTab = 0});
+
+  final int initialTab;
+
   @override
   State<RiderShell> createState() => _RiderShellState();
 }
 
 class _RiderShellState extends State<RiderShell> {
-  int tab = 0;
-  bool online = false;
+  late int tab;
+
+  @override
+  void initState() {
+    super.initState();
+    tab = widget.initialTab;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final routes = RiderRouteScope.of(context);
+    final online = routes.session.isOnline;
     final pages = [
       DashboardScreen(
         online: online,
-        onToggle: () => setState(() => online = !online),
-        onOffer: () =>
-            Navigator.of(context).push(slideRoute(const OfferScreen())),
+        onToggle: () => setState(() => routes.setOnline(!online)),
+        onOffer: () => Navigator.of(context).pushNamed(RiderRoutes.offer),
         onEarnings: () => setState(() => tab = 1),
       ),
       const HistoryScreen(),

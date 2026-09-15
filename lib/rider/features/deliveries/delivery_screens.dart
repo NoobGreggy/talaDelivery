@@ -94,8 +94,9 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
                 'Delivery completed successfully.',
                 kind: RiderToastKind.success,
               );
+              RiderRouteScope.of(context).completeDelivery();
               Navigator.of(context)
-                  .pushReplacement(fadeRoute(const DeliveryCompleteScreen()));
+                  .pushReplacementNamed(RiderRoutes.deliveryComplete);
             },
           ),
           const SizedBox(height: 8),
@@ -290,7 +291,15 @@ class DeliveryCompleteScreen extends StatelessWidget {
               ),
             ),
             const Spacer(),
-            PrimaryButton(label: 'Done', onPressed: null),
+            PrimaryButton(
+              label: 'Done',
+              onPressed: () {
+                RiderRouteScope.of(context).finishDelivery();
+                Navigator.of(
+                  context,
+                ).pushNamedAndRemoveUntil(RiderRoutes.dashboard, (_) => false);
+              },
+            ),
           ],
         ),
       ),

@@ -111,10 +111,9 @@ class ProfileScreen extends StatelessWidget {
                 destructive: true,
               );
               if (context.mounted && confirmed) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  fadeRoute(const LoginScreen()),
-                  (_) => false,
-                );
+                RiderRouteScope.of(context).signOut();
+                Navigator.of(context)
+                    .pushNamedAndRemoveUntil(RiderRoutes.login, (_) => false);
               }
             },
           ),

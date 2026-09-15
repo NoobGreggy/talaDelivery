@@ -126,9 +126,9 @@ class _OfferScreenState extends State<OfferScreen> {
                         'Delivery accepted. Head to the pickup location.',
                         kind: RiderToastKind.success,
                       );
-                      Navigator.of(context).pushReplacement(
-                        slideRoute(const ActiveDeliveryScreen()),
-                      );
+                      RiderRouteScope.of(context).startDelivery();
+                      Navigator.of(context)
+                          .pushReplacementNamed(RiderRoutes.activeDelivery);
                     },
                   ),
                   const SizedBox(height: 10),
