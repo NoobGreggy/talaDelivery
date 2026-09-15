@@ -61,7 +61,7 @@ class ProfilePage extends StatelessWidget {
         ProfileTile(
           icon: Icons.location_on_outlined,
           title: 'My addresses',
-          onTap: () => Navigator.push(context, slide(const AddressesPage())),
+          onTap: () => Navigator.pushNamed(context, CustomerRoutes.addresses),
         ),
         const SizedBox(height: 10),
         ProfileTile(
@@ -75,7 +75,7 @@ class ProfilePage extends StatelessWidget {
           icon: Icons.notifications_outlined,
           title: 'Notifications',
           onTap: () =>
-              Navigator.push(context, slide(const NotificationsPage())),
+              Navigator.pushNamed(context, CustomerRoutes.notifications),
         ),
         const SizedBox(height: 10),
         ProfileTile(
@@ -97,8 +97,9 @@ class ProfilePage extends StatelessWidget {
               destructive: true,
             );
             if (context.mounted && confirmed) {
+              CustomerRouteScope.of(context).signOut();
               Navigator.of(context)
-                  .pushAndRemoveUntil(fade(const LoginPage()), (_) => false);
+                  .pushNamedAndRemoveUntil(CustomerRoutes.login, (_) => false);
             }
           },
         ),

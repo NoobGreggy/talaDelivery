@@ -155,9 +155,10 @@ class CheckoutPage extends StatelessWidget {
               confirmLabel: 'Place order',
             );
             if (context.mounted && confirmed) {
-              Navigator.push(
+              Navigator.pushNamed(
                 context,
-                fade(OrderSuccessPage(total: subtotal + 49)),
+                CustomerRoutes.orderSuccess,
+                arguments: subtotal + 49,
               );
               message(
                 context,

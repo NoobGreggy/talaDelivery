@@ -33,7 +33,7 @@ class HomePage extends StatelessWidget {
             ),
             IconButton.filledTonal(
               onPressed: () =>
-                  Navigator.push(context, slide(const NotificationsPage())),
+                  Navigator.pushNamed(context, CustomerRoutes.notifications),
               icon: const Badge(
                 smallSize: 8,
                 child: Icon(Icons.notifications_none_rounded),
@@ -41,7 +41,8 @@ class HomePage extends StatelessWidget {
             ),
             const SizedBox(width: 3),
             IconButton.filledTonal(
-              onPressed: () => Navigator.push(context, slide(const CartPage())),
+              onPressed: () =>
+                  Navigator.pushNamed(context, CustomerRoutes.cart),
               icon: Badge.count(
                 count: 3,
                 child: Icon(Icons.shopping_cart_outlined),
@@ -55,7 +56,7 @@ class HomePage extends StatelessWidget {
           borderRadius: BorderRadius.circular(17),
           child: InkWell(
             borderRadius: BorderRadius.circular(17),
-            onTap: () => Navigator.push(context, slide(const AddressesPage())),
+            onTap: () => Navigator.pushNamed(context, CustomerRoutes.addresses),
             child: const Padding(
               padding: EdgeInsets.all(15),
               child: Row(
@@ -94,7 +95,7 @@ class HomePage extends StatelessWidget {
         const SizedBox(height: 16),
         TextField(
           readOnly: true,
-          onTap: () => Navigator.push(context, slide(const StoreListingPage())),
+          onTap: () => Navigator.pushNamed(context, CustomerRoutes.stores),
           decoration: const InputDecoration(
             hintText: 'Search stores or products',
             prefixIcon: Icon(Icons.search_rounded),
@@ -152,20 +153,29 @@ class HomePage extends StatelessWidget {
         const SizedBox(height: 13),
         StoreCard(
           store: stores[0],
-          onTap: () =>
-              Navigator.push(context, slide(StoreDetailPage(store: stores[0]))),
+          onTap: () => Navigator.pushNamed(
+            context,
+            CustomerRoutes.storeDetails,
+            arguments: stores[0],
+          ),
         ),
         const SizedBox(height: 13),
         StoreCard(
           store: stores[1],
-          onTap: () =>
-              Navigator.push(context, slide(StoreDetailPage(store: stores[1]))),
+          onTap: () => Navigator.pushNamed(
+            context,
+            CustomerRoutes.storeDetails,
+            arguments: stores[1],
+          ),
         ),
         const SizedBox(height: 13),
         StoreCard(
           store: stores[2],
-          onTap: () =>
-              Navigator.push(context, slide(StoreDetailPage(store: stores[2]))),
+          onTap: () => Navigator.pushNamed(
+            context,
+            CustomerRoutes.storeDetails,
+            arguments: stores[2],
+          ),
         ),
       ],
     ),
@@ -173,4 +183,4 @@ class HomePage extends StatelessWidget {
 }
 
 void openStores(BuildContext context, int filter) =>
-    Navigator.push(context, slide(StoreListingPage(initialFilter: filter)));
+    Navigator.pushNamed(context, CustomerRoutes.stores, arguments: filter);

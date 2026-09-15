@@ -24,7 +24,7 @@ class _StoreListingPageState extends State<StoreListingPage> {
         'Stores',
         actions: [
           IconButton(
-            onPressed: () => Navigator.push(context, slide(const CartPage())),
+            onPressed: () => Navigator.pushNamed(context, CustomerRoutes.cart),
             icon: Badge.count(
               count: 3,
               child: Icon(Icons.shopping_cart_outlined),
@@ -84,9 +84,10 @@ class _StoreListingPageState extends State<StoreListingPage> {
                   child: StoreCard(
                     store: store,
                     onTap: store.open
-                        ? () => Navigator.push(
+                        ? () => Navigator.pushNamed(
                             context,
-                            slide(StoreDetailPage(store: store)),
+                            CustomerRoutes.storeDetails,
+                            arguments: store,
                           )
                         : () => message(
                             context,
@@ -112,9 +113,10 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
   int cartCount = 0;
   int category = 0;
   Future<void> openProduct(ProductData product) async {
-    final quantity = await Navigator.push<int>(
+    final quantity = await Navigator.pushNamed<int>(
       context,
-      slide(ProductDetailPage(product: product)),
+      CustomerRoutes.productDetails,
+      arguments: product,
     );
     if (quantity != null && mounted) {
       setState(() => cartCount += quantity);
@@ -146,7 +148,8 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
           foregroundColor: dark,
           actions: [
             IconButton.filledTonal(
-              onPressed: () => Navigator.push(context, slide(const CartPage())),
+              onPressed: () =>
+                  Navigator.pushNamed(context, CustomerRoutes.cart),
               icon: Badge.count(
                 count: cartCount,
                 isLabelVisible: cartCount > 0,
@@ -259,7 +262,7 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
               label:
                   'View cart • $cartCount ${cartCount == 1 ? 'item' : 'items'}',
               icon: Icons.shopping_cart_rounded,
-              onTap: () => Navigator.push(context, slide(const CartPage())),
+              onTap: () => Navigator.pushNamed(context, CustomerRoutes.cart),
             ),
           )
         : null,

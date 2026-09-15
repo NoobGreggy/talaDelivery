@@ -49,13 +49,10 @@ class OrderSuccessPage extends StatelessWidget {
             PrimaryAction(
               label: 'Track order',
               icon: Icons.location_on_rounded,
-              onTap: () => Navigator.pushReplacement(
+              onTap: () => Navigator.pushReplacementNamed(
                 context,
-                slide(
-                  const OrderTrackingPage(
-                    initialStage: OrderStage.findingRider,
-                  ),
-                ),
+                CustomerRoutes.orderTracking,
+                arguments: OrderStage.findingRider,
               ),
             ),
             const SizedBox(height: 9),
@@ -147,7 +144,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
         actions: [
           IconButton(
             onPressed: () =>
-                Navigator.push(context, slide(const NotificationsPage())),
+                Navigator.pushNamed(context, CustomerRoutes.notifications),
             icon: const Icon(Icons.notifications_none_rounded),
           ),
         ],
@@ -286,7 +283,7 @@ class _OrdersPageState extends State<OrdersPage> {
             color: sky,
             date: 'September 13, 2026',
             onTap: () =>
-                Navigator.push(context, slide(const OrderTrackingPage())),
+                Navigator.pushNamed(context, CustomerRoutes.orderTracking),
           ),
           const SizedBox(height: 11),
           OrderHistoryCard(
@@ -296,9 +293,10 @@ class _OrdersPageState extends State<OrdersPage> {
             status: 'PENDING',
             color: warning,
             date: 'September 13, 2026',
-            onTap: () => Navigator.push(
+            onTap: () => Navigator.pushNamed(
               context,
-              slide(const OrderTrackingPage(initialStage: OrderStage.placed)),
+              CustomerRoutes.orderTracking,
+              arguments: OrderStage.placed,
             ),
           ),
         ] else if (tab == 1) ...[
@@ -309,11 +307,10 @@ class _OrdersPageState extends State<OrdersPage> {
             status: 'DELIVERED',
             color: success,
             date: 'September 11, 2026',
-            onTap: () => Navigator.push(
+            onTap: () => Navigator.pushNamed(
               context,
-              slide(
-                const OrderTrackingPage(initialStage: OrderStage.delivered),
-              ),
+              CustomerRoutes.orderTracking,
+              arguments: OrderStage.delivered,
             ),
           ),
           const SizedBox(height: 11),
@@ -324,11 +321,10 @@ class _OrdersPageState extends State<OrdersPage> {
             status: 'DELIVERED',
             color: success,
             date: 'September 8, 2026',
-            onTap: () => Navigator.push(
+            onTap: () => Navigator.pushNamed(
               context,
-              slide(
-                const OrderTrackingPage(initialStage: OrderStage.delivered),
-              ),
+              CustomerRoutes.orderTracking,
+              arguments: OrderStage.delivered,
             ),
           ),
         ] else

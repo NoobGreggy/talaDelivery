@@ -96,8 +96,11 @@ class _CartPageState extends State<CartPage> {
         ),
         BottomAction(
           label: 'Checkout • ₱${subtotal + 49}',
-          onTap: () =>
-              Navigator.push(context, slide(CheckoutPage(subtotal: subtotal))),
+          onTap: () => Navigator.pushNamed(
+            context,
+            CustomerRoutes.checkout,
+            arguments: subtotal,
+          ),
         ),
       ],
     ),

@@ -944,7 +944,7 @@ class NotificationTile extends StatelessWidget {
     borderRadius: BorderRadius.circular(18),
     child: InkWell(
       borderRadius: BorderRadius.circular(18),
-      onTap: () => Navigator.push(context, slide(const OrderTrackingPage())),
+      onTap: () => Navigator.pushNamed(context, CustomerRoutes.orderTracking),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(

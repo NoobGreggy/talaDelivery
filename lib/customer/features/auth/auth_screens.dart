@@ -13,7 +13,8 @@ class _CustomerSplashState extends State<CustomerSplash> {
     super.initState();
     timer = Timer(const Duration(milliseconds: 1600), () {
       if (mounted) {
-        Navigator.of(context).pushReplacement(fade(const LoginPage()));
+        CustomerRouteScope.of(context).finishRestoring();
+        Navigator.of(context).pushReplacementNamed(CustomerRoutes.login);
       }
     });
   }
@@ -242,7 +243,7 @@ class _LoginPageState extends State<LoginPage> {
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: () =>
-                Navigator.push(context, slide(const ForgotPasswordPage())),
+                Navigator.pushNamed(context, CustomerRoutes.forgotPassword),
             child: const Text('Forgot password?'),
           ),
         ),
@@ -251,8 +252,13 @@ class _LoginPageState extends State<LoginPage> {
           label: 'Log in',
           onTap: () {
             message(context, 'Login successful.', kind: ToastKind.success);
-            Navigator.of(context)
-                .pushReplacement(slide(const AddressSetupPage(firstRun: true)));
+            final routes = CustomerRouteScope.of(context)..signInAsCustomer();
+            final destination = routes.destinationAfterSignIn();
+            Navigator.of(context).pushNamedAndRemoveUntil(
+              destination.name!,
+              (_) => false,
+              arguments: destination.arguments,
+            );
           },
         ),
         const SizedBox(height: 18),
@@ -300,7 +306,7 @@ class _LoginPageState extends State<LoginPage> {
             const Text('Don’t have an account?'),
             TextButton(
               onPressed: () =>
-                  Navigator.push(context, slide(const RegisterPage())),
+                  Navigator.pushNamed(context, CustomerRoutes.register),
               child: const Text('Create account'),
             ),
           ],
@@ -379,8 +385,13 @@ class _RegisterPageState extends State<RegisterPage> {
             'Account created successfully.',
             kind: ToastKind.success,
           );
-          Navigator.of(context)
-              .pushReplacement(slide(const AddressSetupPage(firstRun: true)));
+          final routes = CustomerRouteScope.of(context)..signInAsCustomer();
+          final destination = routes.destinationAfterSignIn();
+          Navigator.of(context).pushNamedAndRemoveUntil(
+            destination.name!,
+            (_) => false,
+            arguments: destination.arguments,
+          );
         },
       ),
       const SizedBox(height: 12),

@@ -192,9 +192,14 @@ class _AddressSetupPageState extends State<AddressSetupPage> {
                 kind: ToastKind.success,
               );
               if (widget.firstRun) {
-                Navigator.of(
-                  context,
-                ).pushAndRemoveUntil(fade(const CustomerShell()), (_) => false);
+                final routes = CustomerRouteScope.of(context)
+                  ..completeAddressSetup();
+                final destination = routes.destinationAfterAddressSetup();
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  destination.name!,
+                  (_) => false,
+                  arguments: destination.arguments,
+                );
               } else {
                 Navigator.pop(context);
               }
@@ -226,9 +231,10 @@ class _AddressesPageState extends State<AddressesPage> {
           address: '123 Example Street\nCabanatuan City, Nueva Ecija',
           selected: selected == 0,
           onDefault: () => setState(() => selected = 0),
-          onEdit: () => Navigator.push(
+          onEdit: () => Navigator.pushNamed(
             context,
-            slide(const AddressSetupPage(editing: true)),
+            CustomerRoutes.addressSetup,
+            arguments: const CustomerAddressRouteArgs(editing: true),
           ),
           onDelete: null,
         ),
@@ -246,9 +252,10 @@ class _AddressesPageState extends State<AddressesPage> {
                 kind: ToastKind.success,
               );
             },
-            onEdit: () => Navigator.push(
+            onEdit: () => Navigator.pushNamed(
               context,
-              slide(const AddressSetupPage(editing: true)),
+              CustomerRoutes.addressSetup,
+              arguments: const CustomerAddressRouteArgs(editing: true),
             ),
             onDelete: () async {
               final confirmed = await confirmAction(
@@ -271,8 +278,11 @@ class _AddressesPageState extends State<AddressesPage> {
         ],
         const SizedBox(height: 18),
         OutlinedButton.icon(
-          onPressed: () =>
-              Navigator.push(context, slide(const AddressSetupPage())),
+          onPressed: () => Navigator.pushNamed(
+            context,
+            CustomerRoutes.addressSetup,
+            arguments: const CustomerAddressRouteArgs(),
+          ),
           style: OutlinedButton.styleFrom(
             minimumSize: const Size.fromHeight(54),
             side: const BorderSide(color: sky),
