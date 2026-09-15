@@ -98,6 +98,49 @@ class AuthTest extends ApiTestCase
             ->assertJsonPath('data.roles.0', Role::Customer->value);
     }
 
+    public function test_authenticated_user_can_update_profile(): void
+    {
+        $user = User::factory()->create([
+            'name' => 'Old Name',
+            'email' => 'old@example.com',
+            'phone' => null,
+            'role' => Role::Customer->value,
+        ]);
+        $user->assignRole(Role::Customer->value);
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        $this->withToken($token)->putJson('/api/v1/auth/profile', [
+            'name' => 'Updated Customer',
+            'email' => 'updated@example.com',
+            'phone' => '09171234567',
+        ])->assertOk()
+            ->assertJsonPath('data.name', 'Updated Customer')
+            ->assertJsonPath('data.email', 'updated@example.com')
+            ->assertJsonPath('data.phone', '09171234567');
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'name' => 'Updated Customer',
+            'email' => 'updated@example.com',
+            'phone' => '09171234567',
+        ]);
+    }
+
+    public function test_profile_update_requires_unique_valid_details(): void
+    {
+        $user = User::factory()->create(['role' => Role::Customer->value]);
+        $user->assignRole(Role::Customer->value);
+        $other = User::factory()->create(['email' => 'taken@example.com']);
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        $this->withToken($token)->putJson('/api/v1/auth/profile', [
+            'name' => '',
+            'email' => $other->email,
+            'phone' => '09171234567',
+        ])->assertUnprocessable()
+            ->assertJsonStructure(['errors' => ['name', 'email']]);
+    }
+
     public function test_logout_revokes_token(): void
     {
         $user = User::factory()->create(['role' => Role::Customer->value]);
