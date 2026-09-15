@@ -83,6 +83,12 @@ class RiderRouteController {
       ..role = RiderUserRole.rider;
   }
 
+  void sync(RiderAppController controller) {
+    session
+      ..isOnline = controller.profile?.isOnline ?? false
+      ..hasActiveDelivery = controller.activeDelivery != null;
+  }
+
   void setOnline(bool value) => session.isOnline = value;
 
   void startDelivery() {
@@ -170,12 +176,12 @@ class RiderRouteController {
     );
     return MaterialPageRoute<dynamic>(
       settings: guardedSettings,
-      builder: (_) => _pageFor(guardedSettings.name),
+      builder: (_) => _pageFor(guardedSettings),
     );
   }
 
-  Widget _pageFor(String? name) {
-    switch (name) {
+  Widget _pageFor(RouteSettings settings) {
+    switch (settings.name) {
       case RiderRoutes.splash:
         return const SplashScreen();
       case RiderRoutes.login:
@@ -187,11 +193,15 @@ class RiderRouteController {
       case RiderRoutes.profile:
         return const RiderShell(initialTab: 2);
       case RiderRoutes.offer:
-        return const OfferScreen();
+        return OfferScreen(offer: settings.arguments as RiderOffer?);
       case RiderRoutes.activeDelivery:
-        return const ActiveDeliveryScreen();
+        return ActiveDeliveryScreen(
+          delivery: settings.arguments as RiderDelivery?,
+        );
       case RiderRoutes.deliveryComplete:
-        return const DeliveryCompleteScreen();
+        return DeliveryCompleteScreen(
+          delivery: settings.arguments as RiderDelivery?,
+        );
       case RiderRoutes.accessDenied:
         return const RiderRouteErrorPage(
           title: 'Rider access required',

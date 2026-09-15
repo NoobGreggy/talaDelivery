@@ -1,26 +1,49 @@
 import 'dart:async';
-import 'dart:math' as math;
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
+part 'core/config/rider_api_config.dart';
+part 'core/network/rider_api_client.dart';
+part 'core/di/rider_dependencies.dart';
+part 'data/rider_repository.dart';
+part 'logic/rider_app_controller.dart';
 part 'shared/theme/theme.dart';
+part 'shared/models/rider_models.dart';
 part 'shared/models/delivery_stage.dart';
-part 'shared/widgets/ui_widgets.dart';
+part 'shared/widgets/rider_widgets.dart';
 part 'core/routing/rider_router.dart';
-part 'features/auth/auth_screens.dart';
-part 'features/dashboard/dashboard_screen.dart';
-part 'features/offers/offer_screen.dart';
-part 'features/deliveries/delivery_screens.dart';
-part 'features/history/history_screen.dart';
-part 'features/profile/profile_screen.dart';
+part 'features/auth/rider_auth_screens.dart';
+part 'features/dashboard/rider_dashboard_screen.dart';
+part 'features/offers/rider_offer_screen.dart';
+part 'features/deliveries/rider_delivery_screens.dart';
+part 'features/history/rider_history_screen.dart';
+part 'features/profile/rider_profile_screen.dart';
 
-void main() => runApp(const TalaDeliveryApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final dependencies = await RiderAppDependencies.live();
+  final theme = await RiderThemeController.restore();
+  runApp(TalaDeliveryApp(dependencies: dependencies, themeController: theme));
+}
 
 class TalaDeliveryApp extends StatefulWidget {
-  const TalaDeliveryApp({super.key, this.onContinueAsCustomer, this.session});
+  const TalaDeliveryApp({
+    super.key,
+    this.onContinueAsCustomer,
+    this.session,
+    this.dependencies,
+    this.themeController,
+    this.initialThemeMode = ThemeMode.system,
+  });
 
   final VoidCallback? onContinueAsCustomer;
   final RiderSession? session;
+  final RiderAppDependencies? dependencies;
+  final RiderThemeController? themeController;
+  final ThemeMode initialThemeMode;
 
   @override
   State<TalaDeliveryApp> createState() => _TalaDeliveryAppState();
@@ -28,62 +51,44 @@ class TalaDeliveryApp extends StatefulWidget {
 
 class _TalaDeliveryAppState extends State<TalaDeliveryApp> {
   late final RiderRouteController routes;
+  late final RiderAppDependencies dependencies;
+  late final RiderThemeController themeController;
 
   @override
   void initState() {
     super.initState();
     routes = RiderRouteController(widget.session ?? RiderSession());
+    dependencies = widget.dependencies ?? RiderAppDependencies.transient();
+    themeController =
+        widget.themeController ?? RiderThemeController(widget.initialThemeMode);
+  }
+
+  @override
+  void dispose() {
+    if (widget.dependencies == null) dependencies.dispose();
+    if (widget.themeController == null) themeController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => CustomerSwitchScope(
     onContinueAsCustomer: widget.onContinueAsCustomer,
-    child: RiderRouteScope(
-      controller: routes,
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'TalaDelivery Rider',
-        initialRoute: RiderRoutes.splash,
-        onGenerateRoute: routes.onGenerateRoute,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorScheme: ColorScheme.fromSeed(seedColor: blue, primary: blue),
-          scaffoldBackgroundColor: canvas,
-          fontFamily: 'Arial',
-          textTheme: const TextTheme(
-            displaySmall: TextStyle(
-              fontWeight: FontWeight.w800,
-              color: ink,
-              height: 1.05,
-            ),
-            headlineMedium: TextStyle(
-              fontWeight: FontWeight.w800,
-              color: ink,
-              height: 1.12,
-            ),
-            titleLarge: TextStyle(fontWeight: FontWeight.w800, color: ink),
-            titleMedium: TextStyle(fontWeight: FontWeight.w700, color: ink),
-            bodyLarge: TextStyle(color: ink, height: 1.4),
-            bodyMedium: TextStyle(color: muted, height: 1.4),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: const Color(0xFFF8FAFD),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 18,
-              vertical: 17,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: Color(0xFFDDE7F1)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: Color(0xFFDDE7F1)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: blue, width: 1.5),
+    child: RiderThemeScope(
+      controller: themeController,
+      child: RiderDependencyScope(
+        dependencies: dependencies,
+        child: RiderRouteScope(
+          controller: routes,
+          child: ListenableBuilder(
+            listenable: themeController,
+            builder: (context, _) => MaterialApp(
+              debugShowCheckedModeBanner: false,
+              title: 'TalaDelivery Rider',
+              initialRoute: RiderRoutes.splash,
+              onGenerateRoute: routes.onGenerateRoute,
+              themeMode: themeController.mode,
+              theme: buildRiderTheme(RiderPalette.light),
+              darkTheme: buildRiderTheme(RiderPalette.dark),
             ),
           ),
         ),
@@ -131,43 +136,49 @@ class _RiderShellState extends State<RiderShell> {
   @override
   Widget build(BuildContext context) {
     final routes = RiderRouteScope.of(context);
-    final online = routes.session.isOnline;
-    final pages = [
-      DashboardScreen(
-        online: online,
-        onToggle: () => setState(() => routes.setOnline(!online)),
-        onOffer: () => Navigator.of(context).pushNamed(RiderRoutes.offer),
-        onEarnings: () => setState(() => tab = 1),
-      ),
-      const HistoryScreen(),
-      const ProfileScreen(),
-    ];
-    return Scaffold(
-      body: IndexedStack(index: tab, children: pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: tab,
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFDCEEFF),
-        height: 72,
-        onDestinationSelected: (index) => setState(() => tab = index),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
+    final controller = RiderDependencyScope.of(context).controller;
+    return ListenableBuilder(
+      listenable: controller,
+      builder: (context, _) {
+        routes.sync(controller);
+        final pages = [
+          DashboardScreen(
+            controller: controller,
+            onOffer: () => Navigator.of(context).pushNamed(
+              RiderRoutes.offer,
+              arguments: controller.offers.firstOrNull,
+            ),
+            onEarnings: () => setState(() => tab = 1),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long_rounded),
-            label: 'History',
+          HistoryScreen(controller: controller),
+          ProfileScreen(controller: controller),
+        ];
+        return Scaffold(
+          body: IndexedStack(index: tab, children: pages),
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: tab,
+            height: 72,
+            onDestinationSelected: (index) => setState(() => tab = index),
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home_rounded),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.receipt_long_outlined),
+                selectedIcon: Icon(Icons.receipt_long_rounded),
+                label: 'History',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline_rounded),
+                selectedIcon: Icon(Icons.person_rounded),
+                label: 'Profile',
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

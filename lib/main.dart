@@ -4,4 +4,11 @@ import 'rider/app.dart';
 
 export 'rider/app.dart' hide main;
 
-void main() => runApp(const TalaDeliveryApp());
+Future<void> main() => riderMain();
+
+Future<void> riderMain() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final dependencies = await RiderAppDependencies.live();
+  final theme = await RiderThemeController.restore();
+  runApp(TalaDeliveryApp(dependencies: dependencies, themeController: theme));
+}

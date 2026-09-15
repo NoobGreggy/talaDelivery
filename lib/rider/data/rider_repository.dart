@@ -1,0 +1,115 @@
+part of '../app.dart';
+
+abstract class RiderRepository {
+  Future<RiderUser?> restoreSession();
+  Future<RiderUser> login({required String email, required String password});
+  Future<void> logout();
+  Future<RiderProfile> profile();
+  Future<RiderProfile> setOnline(bool online);
+  Future<List<RiderOffer>> offers();
+  Future<RiderOffer> acceptOffer(int offerId);
+  Future<void> rejectOffer(int offerId);
+  Future<List<RiderDelivery>> deliveries();
+  Future<RiderDelivery> updateDelivery(int deliveryId, String action);
+}
+
+class ApiRiderRepository implements RiderRepository {
+  ApiRiderRepository(this._api, this._tokens);
+
+  final RiderApiClient _api;
+  final RiderTokenStore _tokens;
+
+  @override
+  Future<RiderUser> login({
+    required String email,
+    required String password,
+  }) async {
+    final payload = await _api.post(
+      'auth/login',
+      authenticated: false,
+      body: {'email': email.trim(), 'password': password},
+    );
+    final result = RiderAuthResult.fromJson(_riderPayloadMap(payload));
+    if (result.user.role.toLowerCase() != 'rider') {
+      throw const RiderApiException(
+        'This account is not registered as a rider.',
+        statusCode: 403,
+      );
+    }
+    await _tokens.save(result.token);
+    return result.user;
+  }
+
+  @override
+  Future<RiderUser?> restoreSession() async {
+    if (await _tokens.read() == null) return null;
+    try {
+      final user = RiderUser.fromJson(
+        _riderPayloadMap(await _api.get('auth/me')),
+      );
+      if (user.role.toLowerCase() != 'rider') {
+        await _tokens.clear();
+        return null;
+      }
+      return user;
+    } on RiderApiException catch (error) {
+      if (error.statusCode == 401) {
+        await _tokens.clear();
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> logout() async {
+    try {
+      if (await _tokens.read() != null) await _api.post('auth/logout');
+    } finally {
+      await _tokens.clear();
+    }
+  }
+
+  @override
+  Future<RiderProfile> profile() async =>
+      RiderProfile.fromJson(_riderPayloadMap(await _api.get('rider/profile')));
+
+  @override
+  Future<RiderProfile> setOnline(bool online) async => RiderProfile.fromJson(
+    _riderPayloadMap(
+      await _api.post(online ? 'rider/online' : 'rider/offline'),
+    ),
+  );
+
+  @override
+  Future<List<RiderOffer>> offers() async =>
+      _riderPayloadList(await _api.get('rider/offers'))
+          .whereType<Map<String, dynamic>>()
+          .map(RiderOffer.fromJson)
+          .toList(growable: false);
+
+  @override
+  Future<RiderOffer> acceptOffer(int offerId) async => RiderOffer.fromJson(
+    _riderPayloadMap(await _api.post('rider/offers/$offerId/accept')),
+  );
+
+  @override
+  Future<void> rejectOffer(int offerId) async {
+    await _api.post('rider/offers/$offerId/reject');
+  }
+
+  @override
+  Future<List<RiderDelivery>> deliveries() async =>
+      _riderPayloadList(await _api.get('rider/deliveries?per_page=100'))
+          .whereType<Map<String, dynamic>>()
+          .map(RiderDelivery.fromJson)
+          .toList(growable: false);
+
+  @override
+  Future<RiderDelivery> updateDelivery(int deliveryId, String action) async =>
+      RiderDelivery.fromJson(
+        _riderPayloadMap(
+          await _api.post('rider/deliveries/$deliveryId/$action'),
+        ),
+      );
+}
