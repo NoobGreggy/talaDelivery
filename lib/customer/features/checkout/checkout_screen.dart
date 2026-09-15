@@ -1,174 +1,251 @@
 part of '../../app.dart';
 
-class CheckoutPage extends StatelessWidget {
-  const CheckoutPage({super.key, required this.subtotal});
-  final int subtotal;
+class CheckoutPage extends StatefulWidget {
+  const CheckoutPage({super.key});
+
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: simpleBar('Checkout'),
-    body: Column(
-      children: [
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              const CheckoutTitle(
-                icon: Icons.location_on_outlined,
-                title: 'Delivery address',
-              ),
-              const SizedBox(height: 10),
-              InfoCard(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Juan Dela Cruz',
-                            style: TextStyle(
-                              color: text,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '123 Example Street\nCabanatuan City',
-                            style: TextStyle(color: quiet),
-                          ),
-                        ],
-                      ),
-                    ),
-                    TextButton(onPressed: null, child: Text('Change')),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              const CheckoutTitle(icon: Icons.phone_outlined, title: 'Contact'),
-              const SizedBox(height: 10),
-              const InfoCard(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Recipient',
-                            style: TextStyle(color: quiet, fontSize: 11),
-                          ),
-                          Text(
-                            'Juan Dela Cruz',
-                            style: TextStyle(
-                              color: text,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Phone',
-                            style: TextStyle(color: quiet, fontSize: 11),
-                          ),
-                          Text(
-                            '0917 123 4567',
-                            style: TextStyle(
-                              color: text,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              const CheckoutTitle(
-                icon: Icons.sticky_note_2_outlined,
-                title: 'Delivery notes',
-              ),
-              const SizedBox(height: 10),
-              const TextField(
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Please call when outside.',
-                ),
-              ),
-              const SizedBox(height: 20),
-              const CheckoutTitle(
-                icon: Icons.payments_outlined,
-                title: 'Payment',
-              ),
-              const SizedBox(height: 10),
-              const InfoCard(
-                child: Row(
-                  children: [
-                    Icon(Icons.radio_button_checked_rounded, color: sky),
-                    Icon(Icons.payments_rounded, color: success),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Cash on Delivery',
-                            style: TextStyle(
-                              color: text,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          Text(
-                            'Pay ₱299 when your order arrives',
-                            style: TextStyle(color: quiet, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              const CheckoutTitle(
-                icon: Icons.receipt_long_outlined,
-                title: 'Summary',
-              ),
-              const SizedBox(height: 10),
-              PriceSummary(subtotal: subtotal, delivery: 49),
-            ],
-          ),
+  State<CheckoutPage> createState() => _CheckoutPageState();
+}
+
+class _CheckoutPageState extends State<CheckoutPage> {
+  final notesController = TextEditingController();
+  Future<List<CustomerAddress>>? addressesFuture;
+  CustomerAddress? selectedAddress;
+  bool submitting = false;
+  String? errorMessage;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    addressesFuture ??= CustomerDependencyScope.of(context).addressRepository
+        .list();
+  }
+
+  @override
+  void dispose() {
+    notesController.dispose();
+    super.dispose();
+  }
+
+  Future<void> placeOrder() async {
+    final dependencies = CustomerDependencyScope.of(context);
+    final cart = dependencies.cartController;
+    final address = selectedAddress;
+    if (cart.isEmpty || cart.store == null) {
+      message(context, 'Your cart is empty.', kind: ToastKind.error);
+      return;
+    }
+    if (address == null) {
+      message(context, 'Choose a delivery address.', kind: ToastKind.error);
+      return;
+    }
+    final confirmed = await confirmAction(
+      context,
+      title: 'Place this order?',
+      body: '${cart.store!.name} • ${peso(cart.subtotal)} before delivery fee',
+      confirmLabel: 'Place order',
+    );
+    if (!confirmed || !mounted) return;
+    setState(() {
+      submitting = true;
+      errorMessage = null;
+    });
+    try {
+      final order = await dependencies.orderRepository.create(
+        store: cart.store!,
+        lines: cart.lines,
+        address: address,
+        notes: notesController.text,
+      );
+      cart.clear();
+      if (!mounted) return;
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        CustomerRoutes.orderSuccess,
+        (route) => route.settings.name == CustomerRoutes.home,
+        arguments: order,
+      );
+    } on CustomerApiException catch (error) {
+      if (mounted) setState(() => errorMessage = error.message);
+    } catch (error) {
+      if (mounted) setState(() => errorMessage = apiErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cart = CustomerDependencyScope.of(context).cartController;
+    if (cart.isEmpty) {
+      return Scaffold(
+        appBar: simpleBar('Checkout'),
+        body: const EmptyState(
+          icon: Icons.shopping_cart_outlined,
+          title: 'Your cart is empty',
+          subtitle: 'Add products before checking out.',
         ),
-        BottomAction(
-          label: 'Place order • ₱${subtotal + 49}',
-          onTap: () async {
-            final confirmed = await confirmAction(
-              context,
-              title: 'Place this order?',
-              body:
-                  'ABC Mini Mart • ₱${subtotal + 49}\nPayment: Cash on Delivery',
-              confirmLabel: 'Place order',
+      );
+    }
+    return Scaffold(
+      appBar: simpleBar('Checkout'),
+      body: FutureBuilder<List<CustomerAddress>>(
+        future: addressesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return ApiErrorState(
+              messageText: apiErrorMessage(snapshot.error),
+              onRetry: () => setState(
+                () =>
+                    addressesFuture = CustomerDependencyScope.of(context)
+                        .addressRepository
+                        .list(),
+              ),
             );
-            if (context.mounted && confirmed) {
-              Navigator.pushNamed(
-                context,
-                CustomerRoutes.orderSuccess,
-                arguments: subtotal + 49,
-              );
-              message(
-                context,
-                'Order placed successfully.',
-                kind: ToastKind.success,
-              );
-            }
-          },
-        ),
-      ],
-    ),
-  );
+          }
+          final addresses = snapshot.data ?? const [];
+          selectedAddress ??= addresses.cast<CustomerAddress?>().firstWhere(
+            (item) => item?.isDefault == true,
+            orElse: () => addresses.isEmpty ? null : addresses.first,
+          );
+          if (addresses.isEmpty) {
+            return EmptyState(
+              icon: Icons.location_off_outlined,
+              title: 'Delivery address required',
+              subtitle: 'Add an address before placing your order.',
+              action: () async {
+                await Navigator.pushNamed(
+                  context,
+                  CustomerRoutes.addressSetup,
+                  arguments: const CustomerAddressRouteArgs(),
+                );
+                if (mounted) {
+                  setState(
+                    () =>
+                        addressesFuture = CustomerDependencyScope.of(context)
+                            .addressRepository
+                            .list(),
+                  );
+                }
+              },
+              actionLabel: 'Add address',
+            );
+          }
+          return Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(20),
+                  children: [
+                    const CheckoutTitle(
+                      icon: Icons.location_on_outlined,
+                      title: 'Delivery address',
+                    ),
+                    const SizedBox(height: 10),
+                    DropdownButtonFormField<int>(
+                      isExpanded: true,
+                      initialValue: selectedAddress?.id,
+                      items: addresses
+                          .map(
+                            (address) => DropdownMenuItem(
+                              value: address.id,
+                              child: Text(
+                                '${address.label ?? 'Address'} • ${address.city}',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: (id) => setState(
+                        () => selectedAddress = addresses.firstWhere(
+                          (address) => address.id == id,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    InfoCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            selectedAddress!.recipientName,
+                            style: const TextStyle(
+                              color: text,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            selectedAddress!.formatted,
+                            style: const TextStyle(color: quiet),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            selectedAddress!.phone,
+                            style: const TextStyle(color: quiet),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const CheckoutTitle(
+                      icon: Icons.sticky_note_2_outlined,
+                      title: 'Delivery notes',
+                    ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: notesController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        hintText: 'Optional instructions for the rider',
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const CheckoutTitle(
+                      icon: Icons.payments_outlined,
+                      title: 'Payment',
+                    ),
+                    const SizedBox(height: 10),
+                    const InfoCard(
+                      child: Row(
+                        children: [
+                          Icon(Icons.radio_button_checked_rounded, color: sky),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              'Cash on Delivery',
+                              style: TextStyle(
+                                color: text,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    PriceSummary(subtotal: cart.subtotal),
+                    if (errorMessage != null) ...[
+                      const SizedBox(height: 12),
+                      AuthErrorBanner(errorMessage: errorMessage),
+                    ],
+                  ],
+                ),
+              ),
+              BottomAction(
+                label: submitting
+                    ? 'Placing order…'
+                    : 'Place order • ${peso(cart.subtotal)} + delivery',
+                enabled: !submitting,
+                onTap: placeOrder,
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 }

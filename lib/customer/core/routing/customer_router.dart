@@ -8,12 +8,14 @@ class CustomerSession {
     this.isAuthenticated = false,
     this.role,
     this.hasDeliveryAddress = false,
+    this.user,
   });
 
   bool isRestoring;
   bool isAuthenticated;
   CustomerUserRole? role;
   bool hasDeliveryAddress;
+  CustomerUser? user;
 }
 
 class CustomerRoutes {
@@ -63,10 +65,10 @@ class CustomerRoutes {
 }
 
 class CustomerAddressRouteArgs {
-  const CustomerAddressRouteArgs({this.firstRun = false, this.editing = false});
+  const CustomerAddressRouteArgs({this.firstRun = false, this.address});
 
   final bool firstRun;
-  final bool editing;
+  final CustomerAddress? address;
 }
 
 class CustomerRouteScope extends InheritedWidget {
@@ -120,10 +122,24 @@ class CustomerRouteController {
   void finishRestoring() => session.isRestoring = false;
 
   void signInAsCustomer() {
+    signInWithRole('customer');
+  }
+
+  void signInWithRole(String role, {bool hasDeliveryAddress = false}) {
     session
       ..isRestoring = false
       ..isAuthenticated = true
-      ..role = CustomerUserRole.customer;
+      ..role = switch (role) {
+        'customer' => CustomerUserRole.customer,
+        'rider' => CustomerUserRole.rider,
+        _ => null,
+      }
+      ..hasDeliveryAddress = hasDeliveryAddress;
+  }
+
+  void signInWithUser(CustomerUser user, {bool hasDeliveryAddress = false}) {
+    signInWithRole(user.role, hasDeliveryAddress: hasDeliveryAddress);
+    session.user = user;
   }
 
   void completeAddressSetup() => session.hasDeliveryAddress = true;
@@ -132,7 +148,8 @@ class CustomerRouteController {
     session
       ..isAuthenticated = false
       ..role = null
-      ..hasDeliveryAddress = false;
+      ..hasDeliveryAddress = false
+      ..user = null;
     _pendingRoute = null;
   }
 
@@ -221,7 +238,7 @@ class CustomerRouteController {
         final args = settings.arguments is CustomerAddressRouteArgs
             ? settings.arguments! as CustomerAddressRouteArgs
             : const CustomerAddressRouteArgs(firstRun: true);
-        return AddressSetupPage(firstRun: args.firstRun, editing: args.editing);
+        return AddressSetupPage(firstRun: args.firstRun, address: args.address);
       case CustomerRoutes.home:
         return const CustomerShell();
       case CustomerRoutes.orders:
@@ -253,22 +270,25 @@ class CustomerRouteController {
       case CustomerRoutes.cart:
         return const CartPage();
       case CustomerRoutes.checkout:
-        if (settings.arguments is int) {
-          return CheckoutPage(subtotal: settings.arguments! as int);
+        return const CheckoutPage();
+      case CustomerRoutes.orderSuccess:
+        if (settings.arguments is CustomerOrder) {
+          return OrderSuccessPage(order: settings.arguments! as CustomerOrder);
         }
         return const RouteErrorPage(
-          title: 'Cart required',
-          message: 'Add products to your cart before checking out.',
-        );
-      case CustomerRoutes.orderSuccess:
-        return OrderSuccessPage(
-          total: settings.arguments is int ? settings.arguments! as int : 0,
+          title: 'Order unavailable',
+          message: 'The completed order could not be loaded.',
         );
       case CustomerRoutes.orderTracking:
-        return OrderTrackingPage(
-          initialStage: settings.arguments is OrderStage
-              ? settings.arguments! as OrderStage
-              : OrderStage.placed,
+        if (settings.arguments is CustomerOrder) {
+          return OrderTrackingPage(order: settings.arguments! as CustomerOrder);
+        }
+        if (settings.arguments is int) {
+          return OrderTrackingPage(orderId: settings.arguments! as int);
+        }
+        return const RouteErrorPage(
+          title: 'Order unavailable',
+          message: 'Choose an order from your order history.',
         );
       case CustomerRoutes.addresses:
         return const AddressesPage();

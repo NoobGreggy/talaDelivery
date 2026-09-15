@@ -1,10 +1,9 @@
 # TalaDelivery route guards
 
 This document summarizes the Flutter navigation routes and guards for the
-customer and rider applications. The guards currently use in-memory session
-objects so the navigation behavior can be developed and tested without a
-database. They are ready to be connected to the Laravel API authentication
-response later.
+customer and rider applications. The customer guard is now populated by the
+Laravel authentication and address APIs. The rider guard still uses an
+in-memory session while its API integration is pending.
 
 ## Guard priority
 
@@ -86,15 +85,51 @@ Rider session state:
 
 ## Laravel API integration
 
-When the API environment is available, the in-memory session objects should be
-populated through an authentication repository:
+The customer application now:
 
-1. Send credentials to `POST /api/v1/auth/login` with `X-App-Key`.
-2. Securely store the returned Sanctum bearer token.
-3. Restore the session with `GET /api/v1/auth/me`.
-4. Map the returned `user.role` to the Flutter role state.
-5. Map customer addresses and rider status to the app-specific guard state.
-6. Clear the local session on logout or any API `401` response.
+1. Registers and logs in through `POST /api/v1/auth/register` and
+   `POST /api/v1/auth/login`.
+2. Sends the configured `X-App-Key` on every request.
+3. Sends the returned Sanctum token as a bearer token on protected requests.
+4. Restores an available session through `GET /api/v1/auth/me`.
+5. Uses the authenticated user name and phone to prefill address onboarding.
+6. Lists, creates, updates, defaults, and deletes saved addresses through the
+   `/api/v1/addresses` endpoints.
+7. Loads active stores and products through `/api/v1/stores` and
+   `/api/v1/products`; empty backend data produces an empty state rather than
+   sample shops.
+8. Keeps the selected cart locally, then creates and validates the real order
+   through `POST /api/v1/orders`.
+9. Loads, tracks, refreshes, and cancels customer orders through
+   `/api/v1/orders`.
+10. Loads notifications and marks individual notifications as read through
+    `/api/v1/notifications`.
+11. Displays the authenticated Laravel user in the customer home and profile.
+12. Calls `POST /api/v1/auth/logout` and clears the local token and cart.
+
+Delivery fees, product prices, availability, and stock are treated as
+server-authoritative during order creation. The cart itself remains local UI
+state until the customer places the order.
+
+The token store is currently in memory, so users sign in again after a full app
+restart. A secure persistent token store can replace it without changing the
+screens or repositories.
+
+For local development, copy `config/local.example.json` to
+`config/local.json`, set `TALA_API_KEY` to Laravel's `APP_API_KEY`, and select
+the **TalaDelivery Customer (local API)** IDE launch configuration. The local
+file is ignored by Git so the key is not committed.
+
+The equivalent terminal command is:
+
+```sh
+flutter run \
+  --dart-define-from-file=config/local.json
+```
+
+Use `http://10.0.2.2:8000/api/v1/` for an Android emulator, or the development
+computer's LAN address for a physical device. The API key is the Laravel
+`APP_API_KEY` value and is not committed to the Flutter repository.
 
 The backend is maintained on `feature/tala-api`. Its customer and rider API
 groups should continue to enforce authorization regardless of the Flutter
@@ -104,5 +139,7 @@ route result.
 
 - Customer flow: `tala_delivery_customer/test/customer_app_test.dart`
 - Customer guards: `tala_delivery_customer/test/customer_route_guard_test.dart`
+- Customer input validation: `tala_delivery_customer/test/customer_input_validation_test.dart`
+- Customer API mapping: `tala_delivery_customer/test/customer_api_test.dart`
 - Rider flow: `tala_delivery_rider/test/rider_app_test.dart`
 - Rider guards: `tala_delivery_rider/test/rider_route_guard_test.dart`

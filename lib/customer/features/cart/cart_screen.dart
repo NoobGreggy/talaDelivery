@@ -1,108 +1,105 @@
 part of '../../app.dart';
 
-class CartPage extends StatefulWidget {
+class CartPage extends StatelessWidget {
   const CartPage({super.key});
-  @override
-  State<CartPage> createState() => _CartPageState();
-}
-
-class _CartPageState extends State<CartPage> {
-  int rice = 2;
-  int drink = 1;
-  int get subtotal => rice * 100 + drink * 50;
-
-  void updateQuantity(String item, bool increase) {
-    setState(() {
-      if (item == 'rice') {
-        rice = increase ? rice + 1 : (rice > 1 ? rice - 1 : 1);
-      } else {
-        drink = increase ? drink + 1 : (drink > 1 ? drink - 1 : 1);
-      }
-    });
-    message(context, 'Cart quantity updated.', kind: ToastKind.success);
-  }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: simpleBar('Your cart'),
-    body: Column(
-      children: [
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(20),
+  Widget build(BuildContext context) {
+    final cart = CustomerDependencyScope.of(context).cartController;
+    return Scaffold(
+      appBar: simpleBar('Your cart'),
+      body: ListenableBuilder(
+        listenable: cart,
+        builder: (context, _) {
+          if (cart.isEmpty) {
+            return const EmptyState(
+              icon: Icons.shopping_cart_outlined,
+              title: 'Your cart is empty',
+              subtitle: 'Choose an available product from a store.',
+            );
+          }
+          return Column(
             children: [
-              InfoCard(
-                child: Row(
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(20),
                   children: [
-                    const StoreArtwork(
-                      icon: Icons.storefront_rounded,
-                      color: sky,
-                      height: 54,
-                      width: 54,
-                    ),
-                    const SizedBox(width: 13),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    InfoCard(
+                      child: Row(
                         children: [
-                          Text(
-                            'ABC Mini Mart',
-                            style: TextStyle(
-                              color: text,
-                              fontWeight: FontWeight.w900,
+                          StoreArtwork(
+                            icon: cart.store!.icon,
+                            color: cart.store!.color,
+                            height: 54,
+                            width: 54,
+                          ),
+                          const SizedBox(width: 13),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  cart.store!.name,
+                                  style: const TextStyle(
+                                    color: text,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const Text(
+                                  'One store per order',
+                                  style: TextStyle(color: quiet, fontSize: 12),
+                                ),
+                              ],
                             ),
                           ),
-                          Text(
-                            'Items from one store only',
-                            style: TextStyle(color: quiet, fontSize: 12),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Add items'),
                           ),
                         ],
                       ),
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Add items'),
+                    const SizedBox(height: 14),
+                    ...cart.lines.map(
+                      (line) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: CartItem(
+                          name: line.product.name,
+                          price: line.product.price,
+                          quantity: line.quantity,
+                          icon: line.product.icon,
+                          onMinus: () => cart.setQuantity(
+                            line.product.id,
+                            line.quantity - 1,
+                          ),
+                          onPlus: line.quantity < line.product.stock
+                              ? () => cart.setQuantity(
+                                  line.product.id,
+                                  line.quantity + 1,
+                                )
+                              : () {},
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    PriceSummary(subtotal: cart.subtotal),
+                    const SizedBox(height: 15),
+                    const InfoBanner(
+                      icon: Icons.info_outline_rounded,
+                      text: 'Laravel validates current stock, prices, and the delivery fee when you place the order.',
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 14),
-              CartItem(
-                name: 'Chicken Rice Bowl',
-                price: 100,
-                quantity: rice,
-                icon: Icons.rice_bowl_rounded,
-                onMinus: () => updateQuantity('rice', false),
-                onPlus: () => updateQuantity('rice', true),
-              ),
-              const SizedBox(height: 10),
-              CartItem(
-                name: 'Iced Tea',
-                price: 50,
-                quantity: drink,
-                icon: Icons.local_drink_rounded,
-                onMinus: () => updateQuantity('drink', false),
-                onPlus: () => updateQuantity('drink', true),
-              ),
-              const SizedBox(height: 18),
-              PriceSummary(subtotal: subtotal, delivery: 49),
-              const SizedBox(height: 15),
-              const InfoBanner(
-                icon: Icons.info_outline_rounded,
-                text: 'Product availability and prices will be validated at checkout.',
+              BottomAction(
+                label: 'Continue to checkout • ${peso(cart.subtotal)}',
+                onTap: () =>
+                    Navigator.pushNamed(context, CustomerRoutes.checkout),
               ),
             ],
-          ),
-        ),
-        BottomAction(
-          label: 'Checkout • ₱${subtotal + 49}',
-          onTap: () => Navigator.pushNamed(
-            context,
-            CustomerRoutes.checkout,
-            arguments: subtotal,
-          ),
-        ),
-      ],
-    ),
-  );
+          );
+        },
+      ),
+    );
+  }
 }

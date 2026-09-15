@@ -1,186 +1,254 @@
 part of '../../app.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
-  @override
-  Widget build(BuildContext context) => SafeArea(
-    bottom: false,
-    child: ListView(
-      padding: const EdgeInsets.fromLTRB(20, 17, 20, 28),
-      children: [
-        Row(
-          children: [
-            const CircleAvatar(
-              radius: 22,
-              backgroundColor: Color(0xFFE1F0FD),
-              child: Text(
-                'GG',
-                style: TextStyle(color: sky, fontWeight: FontWeight.w900),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Good evening,',
-                    style: TextStyle(color: quiet, fontSize: 12),
-                  ),
-                  Text('Gregg', style: Theme.of(context).textTheme.titleLarge),
-                ],
-              ),
-            ),
-            IconButton.filledTonal(
-              onPressed: () =>
-                  Navigator.pushNamed(context, CustomerRoutes.notifications),
-              icon: const Badge(
-                smallSize: 8,
-                child: Icon(Icons.notifications_none_rounded),
-              ),
-            ),
-            const SizedBox(width: 3),
-            IconButton.filledTonal(
-              onPressed: () =>
-                  Navigator.pushNamed(context, CustomerRoutes.cart),
-              icon: Badge.count(
-                count: 3,
-                child: Icon(Icons.shopping_cart_outlined),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 20),
-        Material(
-          color: const Color(0xFFE7F4FF),
-          borderRadius: BorderRadius.circular(17),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(17),
-            onTap: () => Navigator.pushNamed(context, CustomerRoutes.addresses),
-            child: const Padding(
-              padding: EdgeInsets.all(15),
-              child: Row(
-                children: [
-                  Icon(Icons.location_on_rounded, color: sky),
-                  SizedBox(width: 11),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'DELIVER TO',
-                          style: TextStyle(
-                            color: sky,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                        Text(
-                          'Home • Cabanatuan City',
-                          style: TextStyle(
-                            color: text,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.keyboard_arrow_down_rounded, color: sky),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          readOnly: true,
-          onTap: () => Navigator.pushNamed(context, CustomerRoutes.stores),
-          decoration: const InputDecoration(
-            hintText: 'Search stores or products',
-            prefixIcon: Icon(Icons.search_rounded),
-            suffixIcon: Icon(Icons.tune_rounded),
-          ),
-        ),
-        const SizedBox(height: 26),
-        const SectionHeading(title: 'Categories'),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: CategoryButton(
-                label: 'Food',
-                icon: Icons.restaurant_rounded,
-                color: Color(0xFFFF8749),
-                onTap: () => openStores(context, 1),
-              ),
-            ),
-            const SizedBox(width: 9),
-            Expanded(
-              child: CategoryButton(
-                label: 'Grocery',
-                icon: Icons.local_grocery_store_rounded,
-                color: sky,
-                onTap: () => openStores(context, 2),
-              ),
-            ),
-            const SizedBox(width: 9),
-            Expanded(
-              child: CategoryButton(
-                label: 'Pharmacy',
-                icon: Icons.medication_rounded,
-                color: Color(0xFF18AF78),
-                onTap: () => openStores(context, 3),
-              ),
-            ),
-            const SizedBox(width: 9),
-            Expanded(
-              child: CategoryButton(
-                label: 'Other',
-                icon: Icons.grid_view_rounded,
-                color: Color(0xFF7659E9),
-                onTap: () => openStores(context, 4),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 27),
-        SectionHeading(
-          title: 'Nearby stores',
-          action: 'See all',
-          onTap: () => openStores(context, 0),
-        ),
-        const SizedBox(height: 13),
-        StoreCard(
-          store: stores[0],
-          onTap: () => Navigator.pushNamed(
-            context,
-            CustomerRoutes.storeDetails,
-            arguments: stores[0],
-          ),
-        ),
-        const SizedBox(height: 13),
-        StoreCard(
-          store: stores[1],
-          onTap: () => Navigator.pushNamed(
-            context,
-            CustomerRoutes.storeDetails,
-            arguments: stores[1],
-          ),
-        ),
-        const SizedBox(height: 13),
-        StoreCard(
-          store: stores[2],
-          onTap: () => Navigator.pushNamed(
-            context,
-            CustomerRoutes.storeDetails,
-            arguments: stores[2],
-          ),
-        ),
-      ],
-    ),
-  );
+class _CustomerHomeData {
+  const _CustomerHomeData({
+    required this.stores,
+    required this.addresses,
+    required this.notifications,
+  });
+
+  final List<StoreData> stores;
+  final List<CustomerAddress> addresses;
+  final List<CustomerNotification> notifications;
 }
 
-void openStores(BuildContext context, int filter) =>
-    Navigator.pushNamed(context, CustomerRoutes.stores, arguments: filter);
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  Future<_CustomerHomeData>? future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    future ??= load();
+  }
+
+  Future<_CustomerHomeData> load() async {
+    final dependencies = CustomerDependencyScope.of(context);
+    final results = await Future.wait<dynamic>([
+      dependencies.catalogRepository.listStores(),
+      dependencies.addressRepository.list(),
+      dependencies.notificationRepository.list(),
+    ]);
+    return _CustomerHomeData(
+      stores: results[0] as List<StoreData>,
+      addresses: results[1] as List<CustomerAddress>,
+      notifications: results[2] as List<CustomerNotification>,
+    );
+  }
+
+  Future<void> reload() async {
+    final next = load();
+    setState(() => future = next);
+    await next;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = CustomerRouteScope.of(context).session.user;
+    final cart = CustomerDependencyScope.of(context).cartController;
+    final firstName =
+        user?.name.trim().split(RegExp(r'\s+')).first ?? 'Customer';
+    final initials =
+        user?.name
+            .trim()
+            .split(RegExp(r'\s+'))
+            .where((part) => part.isNotEmpty)
+            .take(2)
+            .map((part) => part[0].toUpperCase())
+            .join() ??
+        'CU';
+    return SafeArea(
+      bottom: false,
+      child: FutureBuilder<_CustomerHomeData>(
+        future: future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return ApiErrorState(
+              messageText: apiErrorMessage(snapshot.error),
+              onRetry: reload,
+            );
+          }
+          final data = snapshot.data!;
+          final address = data.addresses.cast<CustomerAddress?>().firstWhere(
+            (item) => item?.isDefault == true,
+            orElse: () => data.addresses.isEmpty ? null : data.addresses.first,
+          );
+          final unread = data.notifications
+              .where((item) => !item.isRead)
+              .length;
+          return RefreshIndicator(
+            onRefresh: reload,
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 17, 20, 28),
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 22,
+                      backgroundColor: const Color(0xFFE1F0FD),
+                      child: Text(
+                        initials,
+                        style: const TextStyle(
+                          color: sky,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Welcome back,',
+                            style: TextStyle(color: quiet, fontSize: 12),
+                          ),
+                          Text(
+                            firstName,
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton.filledTonal(
+                      onPressed: () async {
+                        await Navigator.pushNamed(
+                          context,
+                          CustomerRoutes.notifications,
+                        );
+                        if (mounted) reload();
+                      },
+                      icon: Badge.count(
+                        count: unread,
+                        isLabelVisible: unread > 0,
+                        child: const Icon(Icons.notifications_none_rounded),
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    ListenableBuilder(
+                      listenable: cart,
+                      builder: (context, _) => IconButton.filledTonal(
+                        onPressed: () =>
+                            Navigator.pushNamed(context, CustomerRoutes.cart),
+                        icon: Badge.count(
+                          count: cart.itemCount,
+                          isLabelVisible: cart.itemCount > 0,
+                          child: const Icon(Icons.shopping_cart_outlined),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Material(
+                  color: const Color(0xFFE7F4FF),
+                  borderRadius: BorderRadius.circular(17),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(17),
+                    onTap: () async {
+                      await Navigator.pushNamed(
+                        context,
+                        CustomerRoutes.addresses,
+                      );
+                      if (mounted) reload();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(15),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.location_on_rounded, color: sky),
+                          const SizedBox(width: 11),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'DELIVER TO',
+                                  style: TextStyle(
+                                    color: sky,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 1,
+                                  ),
+                                ),
+                                Text(
+                                  address == null
+                                      ? 'Add a delivery address'
+                                      : '${address.label ?? 'Address'} • ${address.city}',
+                                  style: const TextStyle(
+                                    color: text,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: sky,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  readOnly: true,
+                  onTap: () =>
+                      Navigator.pushNamed(context, CustomerRoutes.stores),
+                  decoration: const InputDecoration(
+                    hintText: 'Search stores',
+                    prefixIcon: Icon(Icons.search_rounded),
+                  ),
+                ),
+                const SizedBox(height: 26),
+                SectionHeading(
+                  title: 'Available stores',
+                  action: data.stores.isEmpty ? null : 'See all',
+                  onTap: data.stores.isEmpty
+                      ? null
+                      : () =>
+                            Navigator.pushNamed(context, CustomerRoutes.stores),
+                ),
+                const SizedBox(height: 13),
+                if (data.stores.isEmpty)
+                  const EmptyState(
+                    icon: Icons.storefront_outlined,
+                    title: 'No stores available',
+                    subtitle: 'Active stores added in Laravel will appear here automatically.',
+                  )
+                else
+                  ...data.stores
+                      .take(3)
+                      .map(
+                        (store) => Padding(
+                          padding: const EdgeInsets.only(bottom: 13),
+                          child: StoreCard(
+                            store: store,
+                            onTap: () => Navigator.pushNamed(
+                              context,
+                              CustomerRoutes.storeDetails,
+                              arguments: store,
+                            ),
+                          ),
+                        ),
+                      ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}

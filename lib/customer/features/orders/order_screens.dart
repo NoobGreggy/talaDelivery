@@ -1,8 +1,10 @@
 part of '../../app.dart';
 
 class OrderSuccessPage extends StatelessWidget {
-  const OrderSuccessPage({super.key, required this.total});
-  final int total;
+  const OrderSuccessPage({super.key, required this.order});
+
+  final CustomerOrder order;
+
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
@@ -26,20 +28,31 @@ class OrderSuccessPage extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Your order has been sent to ABC Mini Mart.',
+            Text(
+              'Your order was sent to ${order.store?.name ?? 'the store'}.',
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 25),
             InfoCard(
               child: Column(
                 children: [
-                  const SummaryLine(label: 'Order', value: '#TD-100001'),
-                  const SummaryLine(label: 'Store', value: 'ABC Mini Mart'),
-                  SummaryLine(label: 'Total', value: '₱$total', bold: true),
-                  const SummaryLine(
+                  SummaryLine(label: 'Order', value: order.orderNumber),
+                  SummaryLine(
+                    label: 'Store',
+                    value: order.store?.name ?? 'Store',
+                  ),
+                  SummaryLine(
+                    label: 'Delivery fee',
+                    value: peso(order.deliveryFee),
+                  ),
+                  SummaryLine(
+                    label: 'Total',
+                    value: peso(order.total),
+                    bold: true,
+                  ),
+                  SummaryLine(
                     label: 'Payment',
-                    value: 'Cash on Delivery',
+                    value: order.paymentMethod,
                     last: true,
                   ),
                 ],
@@ -52,13 +65,16 @@ class OrderSuccessPage extends StatelessWidget {
               onTap: () => Navigator.pushReplacementNamed(
                 context,
                 CustomerRoutes.orderTracking,
-                arguments: OrderStage.findingRider,
+                arguments: order,
               ),
             ),
             const SizedBox(height: 9),
             TextButton(
-              onPressed: () =>
-                  Navigator.of(context).popUntil((route) => route.isFirst),
+              onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                context,
+                CustomerRoutes.home,
+                (_) => false,
+              ),
               child: const Text('Back to home'),
             ),
           ],
@@ -77,6 +93,7 @@ enum OrderStage {
   pickedUp,
   outForDelivery,
   delivered,
+  cancelled,
 }
 
 extension StageUi on OrderStage {
@@ -89,250 +106,324 @@ extension StageUi on OrderStage {
     OrderStage.pickedUp => 'Order picked up',
     OrderStage.outForDelivery => 'Your order is on the way!',
     OrderStage.delivered => 'Delivered!',
+    OrderStage.cancelled => 'Order cancelled',
   };
+
   String get description => switch (this) {
     OrderStage.placed => 'Waiting for the store to confirm your order.',
-    OrderStage.confirmed => 'ABC Mini Mart has accepted your order.',
+    OrderStage.confirmed => 'The store accepted your order.',
     OrderStage.preparing => 'The store is preparing your items.',
-    OrderStage.findingRider =>
-      'We’re looking for a nearby rider to deliver your order.',
-    OrderStage.assigned => 'Juan is heading to the store.',
-    OrderStage.pickedUp => 'Juan has picked up your order.',
-    OrderStage.outForDelivery => 'Juan is delivering to 123 Example Street.',
-    OrderStage.delivered => 'Thank you for ordering with TalaDelivery.',
+    OrderStage.findingRider => 'Looking for an available nearby rider.',
+    OrderStage.assigned => 'A rider has been assigned to your delivery.',
+    OrderStage.pickedUp => 'Your order was picked up from the store.',
+    OrderStage.outForDelivery => 'Your rider is heading to your address.',
+    OrderStage.delivered => 'Your order has been delivered.',
+    OrderStage.cancelled => 'This order will not be delivered.',
   };
 }
 
+OrderStage stageForStatus(String status) => switch (status) {
+  'CONFIRMED' => OrderStage.confirmed,
+  'PREPARING' => OrderStage.preparing,
+  'READY_FOR_PICKUP' => OrderStage.findingRider,
+  'RIDER_ASSIGNED' => OrderStage.assigned,
+  'PICKED_UP' => OrderStage.pickedUp,
+  'OUT_FOR_DELIVERY' => OrderStage.outForDelivery,
+  'DELIVERED' => OrderStage.delivered,
+  'CANCELLED' => OrderStage.cancelled,
+  _ => OrderStage.placed,
+};
+
+Color colorForOrder(CustomerOrder order) => order.isCancelled
+    ? danger
+    : order.isDelivered
+    ? success
+    : order.isPending
+    ? warning
+    : sky;
+
 class OrderTrackingPage extends StatefulWidget {
-  const OrderTrackingPage({
-    super.key,
-    this.initialStage = OrderStage.findingRider,
-  });
-  final OrderStage initialStage;
+  const OrderTrackingPage({super.key, this.order, this.orderId})
+    : assert(order != null || orderId != null);
+
+  final CustomerOrder? order;
+  final int? orderId;
+
   @override
   State<OrderTrackingPage> createState() => _OrderTrackingPageState();
 }
 
 class _OrderTrackingPageState extends State<OrderTrackingPage> {
-  late OrderStage stage;
+  Future<CustomerOrder>? future;
+  Timer? timer;
+
+  int get id => widget.order?.id ?? widget.orderId!;
+
   @override
-  void initState() {
-    super.initState();
-    stage = widget.initialStage;
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    future ??= widget.order == null
+        ? CustomerDependencyScope.of(context).orderRepository.get(id)
+        : Future.value(widget.order);
+    timer ??= Timer.periodic(const Duration(seconds: 15), (_) {
+      if (mounted) reload();
+    });
   }
 
-  void next() {
-    if (stage.index < OrderStage.values.length - 1) {
-      final nextStage = OrderStage.values[stage.index + 1];
-      setState(() => stage = nextStage);
-      message(
-        context,
-        'Order updated: ${nextStage.title}.',
-        kind: ToastKind.success,
-      );
+  @override
+  void dispose() {
+    timer?.cancel();
+    super.dispose();
+  }
+
+  void reload() => setState(
+    () => future = CustomerDependencyScope.of(context).orderRepository.get(id),
+  );
+
+  Future<void> cancel(CustomerOrder order) async {
+    final repository = CustomerDependencyScope.of(context).orderRepository;
+    final confirmed = await confirmAction(
+      context,
+      title: 'Cancel order?',
+      body: 'Only pending orders can be cancelled.',
+      confirmLabel: 'Cancel order',
+      destructive: true,
+    );
+    if (!confirmed) return;
+    try {
+      final cancelled = await repository.cancel(order.id);
+      if (!mounted) return;
+      setState(() => future = Future.value(cancelled));
+      message(context, 'Order cancelled.', kind: ToastKind.success);
+    } on CustomerApiException catch (error) {
+      if (mounted) message(context, error.message, kind: ToastKind.error);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    final hasRider =
-        stage.index >= OrderStage.assigned.index &&
-        stage != OrderStage.delivered;
-    return Scaffold(
-      appBar: simpleBar(
-        'Order #TD-100001',
-        actions: [
-          IconButton(
-            onPressed: () =>
-                Navigator.pushNamed(context, CustomerRoutes.notifications),
-            icon: const Icon(Icons.notifications_none_rounded),
-          ),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-        children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: TrackingHero(key: ValueKey(stage), stage: stage),
-          ),
-          const SizedBox(height: 14),
-          if (hasRider) ...[
-            RiderCard(stage: stage),
-            const SizedBox(height: 14),
-          ],
-          InfoCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Row(
+  Widget build(BuildContext context) => Scaffold(
+    appBar: simpleBar(
+      'Order details',
+      actions: [
+        IconButton(onPressed: reload, icon: const Icon(Icons.refresh_rounded)),
+      ],
+    ),
+    body: FutureBuilder<CustomerOrder>(
+      future: future,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return ApiErrorState(
+            messageText: apiErrorMessage(snapshot.error),
+            onRetry: reload,
+          );
+        }
+        final order = snapshot.data!;
+        final stage = stageForStatus(order.status);
+        const timeline = [
+          OrderStage.placed,
+          OrderStage.confirmed,
+          OrderStage.preparing,
+          OrderStage.findingRider,
+          OrderStage.assigned,
+          OrderStage.pickedUp,
+          OrderStage.outForDelivery,
+          OrderStage.delivered,
+        ];
+        return RefreshIndicator(
+          onRefresh: () async {
+            reload();
+            await future;
+          },
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            children: [
+              TrackingHero(stage: stage),
+              const SizedBox(height: 14),
+              InfoCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    StoreArtwork(
-                      icon: Icons.storefront_rounded,
-                      color: sky,
-                      height: 48,
-                      width: 48,
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'ABC Mini Mart',
-                            style: TextStyle(
-                              color: text,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          Text(
-                            '₱299 • Cash on Delivery',
-                            style: TextStyle(color: quiet, fontSize: 12),
-                          ),
-                        ],
+                    Text(
+                      order.store?.name ?? 'Store',
+                      style: const TextStyle(
+                        color: text,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 17,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${order.orderNumber} • ${peso(order.total)}',
+                      style: const TextStyle(color: quiet),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      order.deliveryAddress,
+                      style: const TextStyle(color: quiet),
+                    ),
+                    if (!order.isCancelled) ...[
+                      const SizedBox(height: 20),
+                      ...timeline.map(
+                        (item) => TimelineItem(
+                          label: item.title,
+                          complete: item.index < stage.index,
+                          active: item == stage,
+                          last: item == timeline.last,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
-                const SizedBox(height: 20),
-                ...OrderStage.values.map(
-                  (item) => TimelineItem(
-                    label: item == OrderStage.findingRider
-                        ? 'Finding rider'
-                        : item.title,
-                    complete: item.index < stage.index,
-                    active: item == stage,
-                    last: item == OrderStage.delivered,
+              ),
+              const SizedBox(height: 14),
+              const InfoBanner(
+                icon: Icons.sync_rounded,
+                text: 'Order status refreshes automatically from Laravel.',
+              ),
+              if (order.isPending) ...[
+                const SizedBox(height: 14),
+                OutlinedButton(
+                  onPressed: () => cancel(order),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: danger,
+                    minimumSize: const Size.fromHeight(52),
+                    side: const BorderSide(color: danger),
                   ),
+                  child: const Text('Cancel order'),
                 ),
               ],
-            ),
+            ],
           ),
-          const SizedBox(height: 14),
-          const InfoBanner(
-            icon: Icons.sync_rounded,
-            text: 'This static preview represents automatic order updates in the connected app.',
-          ),
-          const SizedBox(height: 14),
-          if (stage != OrderStage.delivered)
-            PrimaryAction(
-              label: 'Preview next update',
-              icon: Icons.fast_forward_rounded,
-              onTap: next,
-            ),
-          if (stage == OrderStage.placed) ...[
-            const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: () => showCancelDialog(context),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: danger,
-                minimumSize: const Size.fromHeight(52),
-                side: const BorderSide(color: danger),
-              ),
-              child: const Text('Cancel order'),
-            ),
-          ],
-          if (stage == OrderStage.delivered) ...[
-            const SizedBox(height: 2),
-            PrimaryAction(
-              label: 'View order',
-              onTap: () => message(context, 'Order receipt preview opened.'),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+        );
+      },
+    ),
+  );
 }
 
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key});
+
   @override
   State<OrdersPage> createState() => _OrdersPageState();
 }
 
 class _OrdersPageState extends State<OrdersPage> {
   int tab = 0;
+  Future<List<CustomerOrder>>? future;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    future ??= CustomerDependencyScope.of(context).orderRepository.list();
+  }
+
+  void reload() => setState(
+    () => future = CustomerDependencyScope.of(context).orderRepository.list(),
+  );
+
   @override
   Widget build(BuildContext context) => SafeArea(
     bottom: false,
-    child: ListView(
-      padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('My orders', style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 6),
-        const Text('Track active orders and view your history.'),
-        const SizedBox(height: 20),
-        SegmentedButton<int>(
-          segments: const [
-            ButtonSegment(value: 0, label: Text('Active')),
-            ButtonSegment(value: 1, label: Text('Completed')),
-            ButtonSegment(value: 2, label: Text('Cancelled')),
-          ],
-          selected: {tab},
-          showSelectedIcon: false,
-          onSelectionChanged: (value) => setState(() => tab = value.first),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'My orders',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              const SizedBox(height: 6),
+              const Text('Track active orders and view your history.'),
+              const SizedBox(height: 20),
+              SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 0, label: Text('Active')),
+                  ButtonSegment(value: 1, label: Text('Completed')),
+                  ButtonSegment(value: 2, label: Text('Cancelled')),
+                ],
+                selected: {tab},
+                showSelectedIcon: false,
+                onSelectionChanged: (value) =>
+                    setState(() => tab = value.first),
+              ),
+            ],
+          ),
         ),
-        const SizedBox(height: 20),
-        if (tab == 0) ...[
-          OrderHistoryCard(
-            store: 'ABC Mini Mart',
-            id: '#TD-100001',
-            total: '₱299',
-            status: 'FINDING RIDER',
-            color: sky,
-            date: 'September 13, 2026',
-            onTap: () =>
-                Navigator.pushNamed(context, CustomerRoutes.orderTracking),
+        const SizedBox(height: 8),
+        Expanded(
+          child: FutureBuilder<List<CustomerOrder>>(
+            future: future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return ApiErrorState(
+                  messageText: apiErrorMessage(snapshot.error),
+                  onRetry: reload,
+                );
+              }
+              final all = snapshot.data ?? const [];
+              final orders = all
+                  .where((order) {
+                    if (tab == 1) return order.isDelivered;
+                    if (tab == 2) return order.isCancelled;
+                    return !order.isDelivered && !order.isCancelled;
+                  })
+                  .toList(growable: false);
+              if (orders.isEmpty) {
+                return EmptyState(
+                  icon: tab == 0
+                      ? Icons.receipt_long_outlined
+                      : tab == 1
+                      ? Icons.check_circle_outline_rounded
+                      : Icons.cancel_outlined,
+                  title: tab == 0
+                      ? 'No active orders'
+                      : tab == 1
+                      ? 'No completed orders'
+                      : 'No cancelled orders',
+                  subtitle: 'Orders from Laravel will appear here.',
+                );
+              }
+              return RefreshIndicator(
+                onRefresh: () async {
+                  reload();
+                  await future;
+                },
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+                  itemCount: orders.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 11),
+                  itemBuilder: (context, index) {
+                    final order = orders[index];
+                    return OrderHistoryCard(
+                      store: order.store?.name ?? 'Store',
+                      id: order.orderNumber,
+                      total: peso(order.total),
+                      status: order.statusLabel.toUpperCase(),
+                      color: colorForOrder(order),
+                      date: shortDate(order.createdAt),
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        CustomerRoutes.orderTracking,
+                        arguments: order,
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
           ),
-          const SizedBox(height: 11),
-          OrderHistoryCard(
-            store: 'XYZ Food House',
-            id: '#TD-100002',
-            total: '₱249',
-            status: 'PENDING',
-            color: warning,
-            date: 'September 13, 2026',
-            onTap: () => Navigator.pushNamed(
-              context,
-              CustomerRoutes.orderTracking,
-              arguments: OrderStage.placed,
-            ),
-          ),
-        ] else if (tab == 1) ...[
-          OrderHistoryCard(
-            store: 'ABC Mini Mart',
-            id: '#TD-099981',
-            total: '₱315',
-            status: 'DELIVERED',
-            color: success,
-            date: 'September 11, 2026',
-            onTap: () => Navigator.pushNamed(
-              context,
-              CustomerRoutes.orderTracking,
-              arguments: OrderStage.delivered,
-            ),
-          ),
-          const SizedBox(height: 11),
-          OrderHistoryCard(
-            store: 'Mercury Pharmacy',
-            id: '#TD-099944',
-            total: '₱540',
-            status: 'DELIVERED',
-            color: success,
-            date: 'September 8, 2026',
-            onTap: () => Navigator.pushNamed(
-              context,
-              CustomerRoutes.orderTracking,
-              arguments: OrderStage.delivered,
-            ),
-          ),
-        ] else
-          const EmptyState(
-            icon: Icons.cancel_outlined,
-            title: 'No cancelled orders',
-            subtitle: 'Orders you cancel will appear here.',
-          ),
+        ),
       ],
     ),
   );

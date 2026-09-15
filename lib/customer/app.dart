@@ -1,11 +1,22 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
+part 'core/config/customer_api_config.dart';
+part 'core/di/customer_dependencies.dart';
+part 'core/network/customer_api_client.dart';
 part 'shared/theme/theme.dart';
 part 'shared/models/catalog_models.dart';
 part 'shared/widgets/ui_widgets.dart';
 part 'core/routing/customer_router.dart';
+part 'features/catalog/data/catalog_repository.dart';
+part 'features/cart/logic/cart_controller.dart';
+part 'features/auth/data/auth_models.dart';
+part 'features/auth/data/auth_repository.dart';
+part 'features/auth/logic/auth_validators.dart';
+part 'features/auth/view_models/auth_view_model.dart';
 part 'features/auth/auth_screens.dart';
 part 'features/home/home_screen.dart';
 part 'features/stores/store_screens.dart';
@@ -13,17 +24,30 @@ part 'features/products/product_screen.dart';
 part 'features/cart/cart_screen.dart';
 part 'features/checkout/checkout_screen.dart';
 part 'features/orders/order_screens.dart';
+part 'features/orders/data/order_models.dart';
+part 'features/orders/data/order_repository.dart';
+part 'features/addresses/data/address_models.dart';
+part 'features/addresses/data/address_repository.dart';
+part 'features/addresses/view_models/address_view_model.dart';
 part 'features/addresses/address_screens.dart';
 part 'features/profile/profile_screen.dart';
+part 'core/notifications/data/notification_models.dart';
+part 'core/notifications/data/notification_repository.dart';
 part 'core/notifications/notifications_screen.dart';
 
 void main() => runApp(const TalaCustomerApp());
 
 class TalaCustomerApp extends StatefulWidget {
-  const TalaCustomerApp({super.key, this.onContinueAsRider, this.session});
+  const TalaCustomerApp({
+    super.key,
+    this.onContinueAsRider,
+    this.session,
+    this.dependencies,
+  });
 
   final VoidCallback? onContinueAsRider;
   final CustomerSession? session;
+  final CustomerAppDependencies? dependencies;
 
   @override
   State<TalaCustomerApp> createState() => _TalaCustomerAppState();
@@ -31,62 +55,73 @@ class TalaCustomerApp extends StatefulWidget {
 
 class _TalaCustomerAppState extends State<TalaCustomerApp> {
   late final CustomerRouteController routes;
+  late final CustomerAppDependencies dependencies;
 
   @override
   void initState() {
     super.initState();
+    dependencies = widget.dependencies ?? CustomerAppDependencies.live();
     routes = CustomerRouteController(widget.session ?? CustomerSession());
+  }
+
+  @override
+  void dispose() {
+    if (widget.dependencies == null) dependencies.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => RiderSwitchScope(
     onContinueAsRider: widget.onContinueAsRider,
-    child: CustomerRouteScope(
-      controller: routes,
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'TalaDelivery',
-        initialRoute: CustomerRoutes.splash,
-        onGenerateRoute: routes.onGenerateRoute,
-        theme: ThemeData(
-          useMaterial3: true,
-          fontFamily: 'Arial',
-          scaffoldBackgroundColor: background,
-          colorScheme: ColorScheme.fromSeed(seedColor: sky, primary: sky),
-          textTheme: const TextTheme(
-            displaySmall: TextStyle(
-              color: text,
-              fontWeight: FontWeight.w900,
-              height: 1.05,
+    child: CustomerDependencyScope(
+      dependencies: dependencies,
+      child: CustomerRouteScope(
+        controller: routes,
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          title: 'TalaDelivery',
+          initialRoute: CustomerRoutes.splash,
+          onGenerateRoute: routes.onGenerateRoute,
+          theme: ThemeData(
+            useMaterial3: true,
+            fontFamily: 'Arial',
+            scaffoldBackgroundColor: background,
+            colorScheme: ColorScheme.fromSeed(seedColor: sky, primary: sky),
+            textTheme: const TextTheme(
+              displaySmall: TextStyle(
+                color: text,
+                fontWeight: FontWeight.w900,
+                height: 1.05,
+              ),
+              headlineMedium: TextStyle(
+                color: text,
+                fontWeight: FontWeight.w900,
+                height: 1.1,
+              ),
+              titleLarge: TextStyle(color: text, fontWeight: FontWeight.w800),
+              titleMedium: TextStyle(color: text, fontWeight: FontWeight.w800),
+              bodyLarge: TextStyle(color: text, height: 1.4),
+              bodyMedium: TextStyle(color: quiet, height: 1.4),
             ),
-            headlineMedium: TextStyle(
-              color: text,
-              fontWeight: FontWeight.w900,
-              height: 1.1,
-            ),
-            titleLarge: TextStyle(color: text, fontWeight: FontWeight.w800),
-            titleMedium: TextStyle(color: text, fontWeight: FontWeight.w800),
-            bodyLarge: TextStyle(color: text, height: 1.4),
-            bodyMedium: TextStyle(color: quiet, height: 1.4),
-          ),
-          inputDecorationTheme: InputDecorationTheme(
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 17,
-              vertical: 16,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: line),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: line),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: sky, width: 1.5),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 17,
+                vertical: 16,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: line),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: line),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(color: sky, width: 1.5),
+              ),
             ),
           ),
         ),

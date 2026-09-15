@@ -278,36 +278,18 @@ class StoreCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    store.categoryIndex == 1
-                        ? 'Food'
-                        : store.categoryIndex == 2
-                        ? 'Grocery'
-                        : store.categoryIndex == 3
-                        ? 'Pharmacy'
-                        : 'Other',
+                    store.address ?? store.description ?? 'Store details',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: quiet, fontSize: 12),
                   ),
                   const SizedBox(height: 7),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 4,
-                    children: [
-                      Metric(
-                        icon: Icons.star_rounded,
-                        value: store.rating,
-                        color: warning,
-                      ),
-                      Metric(
-                        icon: Icons.delivery_dining_rounded,
-                        value: '₱${store.fee}',
-                        color: sky,
-                      ),
-                      Metric(
-                        icon: Icons.schedule_rounded,
-                        value: store.eta,
-                        color: quiet,
-                      ),
-                    ],
+                  Metric(
+                    icon: Icons.schedule_rounded,
+                    value: store.openingTime == null
+                        ? 'Hours not provided'
+                        : '${store.openingTime} – ${store.closingTime ?? ''}',
+                    color: quiet,
                   ),
                 ],
               ),
@@ -335,12 +317,16 @@ class Metric extends StatelessWidget {
     children: [
       Icon(icon, color: color, size: 15),
       const SizedBox(width: 4),
-      Text(
-        value,
-        style: const TextStyle(
-          color: quiet,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
+      Flexible(
+        child: Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: quiet,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
     ],
@@ -393,14 +379,14 @@ class ProductRow extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    product.description,
+                    product.description ?? 'No description provided.',
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(color: quiet, fontSize: 12),
                   ),
                   const SizedBox(height: 7),
                   Text(
-                    '₱${product.price}',
+                    peso(product.price),
                     style: const TextStyle(
                       color: sky,
                       fontWeight: FontWeight.w900,
@@ -479,7 +465,7 @@ class CartItem extends StatelessWidget {
     required this.onPlus,
   });
   final String name;
-  final int price;
+  final double price;
   final int quantity;
   final IconData icon;
   final VoidCallback onMinus;
@@ -502,7 +488,7 @@ class CartItem extends StatelessWidget {
                 ),
               ),
               Text(
-                '₱$price × $quantity',
+                '${peso(price)} × $quantity',
                 style: const TextStyle(color: quiet, fontSize: 12),
               ),
               const SizedBox(height: 7),
@@ -515,7 +501,7 @@ class CartItem extends StatelessWidget {
           ),
         ),
         Text(
-          '₱${price * quantity}',
+          peso(price * quantity),
           style: const TextStyle(color: text, fontWeight: FontWeight.w900),
         ),
       ],
@@ -527,19 +513,26 @@ class PriceSummary extends StatelessWidget {
   const PriceSummary({
     super.key,
     required this.subtotal,
-    required this.delivery,
+    this.delivery,
+    this.total,
   });
-  final int subtotal;
-  final int delivery;
+  final double subtotal;
+  final double? delivery;
+  final double? total;
   @override
   Widget build(BuildContext context) => InfoCard(
     child: Column(
       children: [
-        SummaryLine(label: 'Subtotal', value: '₱$subtotal'),
-        SummaryLine(label: 'Delivery fee', value: '₱$delivery'),
+        SummaryLine(label: 'Subtotal', value: peso(subtotal)),
+        SummaryLine(
+          label: 'Delivery fee',
+          value: delivery == null ? 'Calculated by API' : peso(delivery!),
+        ),
         SummaryLine(
           label: 'Total',
-          value: '₱${subtotal + delivery}',
+          value: total == null
+              ? peso(subtotal + (delivery ?? 0))
+              : peso(total!),
           bold: true,
           last: true,
         ),
@@ -607,10 +600,20 @@ class TrackingHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final done = stage == OrderStage.delivered;
+    final cancelled = stage == OrderStage.cancelled;
+    final accent = cancelled
+        ? danger
+        : done
+        ? success
+        : sky;
     return Container(
       padding: const EdgeInsets.all(21),
       decoration: BoxDecoration(
-        color: done ? const Color(0xFFE7F8F0) : const Color(0xFFE7F4FF),
+        color: cancelled
+            ? const Color(0xFFFFEEEE)
+            : done
+            ? const Color(0xFFE7F8F0)
+            : const Color(0xFFE7F4FF),
         borderRadius: BorderRadius.circular(23),
       ),
       child: Column(
@@ -622,21 +625,20 @@ class TrackingHero extends StatelessWidget {
               color: Colors.white,
               shape: BoxShape.circle,
               boxShadow: [
-                BoxShadow(
-                  color: (done ? success : sky).withValues(alpha: .16),
-                  blurRadius: 15,
-                ),
+                BoxShadow(color: accent.withValues(alpha: .16), blurRadius: 15),
               ],
             ),
             child: Icon(
-              done
+              cancelled
+                  ? Icons.close_rounded
+                  : done
                   ? Icons.check_rounded
                   : stage == OrderStage.findingRider
                   ? Icons.radar_rounded
                   : stage.index >= OrderStage.assigned.index
                   ? Icons.delivery_dining_rounded
                   : Icons.inventory_2_rounded,
-              color: done ? success : sky,
+              color: accent,
               size: 33,
             ),
           ),
@@ -664,57 +666,6 @@ class TrackingHero extends StatelessWidget {
       ),
     );
   }
-}
-
-class RiderCard extends StatelessWidget {
-  const RiderCard({super.key, required this.stage});
-  final OrderStage stage;
-  @override
-  Widget build(BuildContext context) => InfoCard(
-    child: Row(
-      children: [
-        const CircleAvatar(
-          radius: 27,
-          backgroundColor: Color(0xFFE1F0FD),
-          child: Text(
-            'JD',
-            style: TextStyle(color: sky, fontWeight: FontWeight.w900),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'YOUR RIDER',
-                style: TextStyle(
-                  color: sky,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1,
-                ),
-              ),
-              const Text(
-                'Juan Dela Cruz',
-                style: TextStyle(color: text, fontWeight: FontWeight.w900),
-              ),
-              Text(
-                stage == OrderStage.outForDelivery
-                    ? 'Motorcycle • On the way'
-                    : 'Motorcycle • Heading to store',
-                style: const TextStyle(color: quiet, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-        IconButton.filledTonal(
-          onPressed: () => message(context, 'Calling your rider…'),
-          icon: const Icon(Icons.call_rounded),
-        ),
-      ],
-    ),
-  );
 }
 
 class TimelineItem extends StatelessWidget {
@@ -901,10 +852,11 @@ class AddressCard extends StatelessWidget {
               Wrap(
                 spacing: 6,
                 children: [
-                  TextButton(
-                    onPressed: onDefault,
-                    child: const Text('Set default'),
-                  ),
+                  if (!selected)
+                    TextButton(
+                      onPressed: onDefault,
+                      child: const Text('Set default'),
+                    ),
                   TextButton(onPressed: onEdit, child: const Text('Edit')),
                   if (onDelete != null)
                     TextButton(
@@ -932,19 +884,23 @@ class NotificationTile extends StatelessWidget {
     required this.title,
     required this.messageText,
     required this.time,
+    required this.onTap,
+    this.isRead = false,
   });
   final IconData icon;
   final Color color;
   final String title;
   final String messageText;
   final String time;
+  final VoidCallback onTap;
+  final bool isRead;
   @override
   Widget build(BuildContext context) => Material(
-    color: Colors.white,
+    color: isRead ? Colors.white : const Color(0xFFF0F7FF),
     borderRadius: BorderRadius.circular(18),
     child: InkWell(
       borderRadius: BorderRadius.circular(18),
-      onTap: () => Navigator.pushNamed(context, CustomerRoutes.orderTracking),
+      onTap: onTap,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -1040,35 +996,6 @@ class ProfileTile extends StatelessWidget {
   );
 }
 
-class SavedAddressPicker extends StatelessWidget {
-  const SavedAddressPicker({super.key});
-  @override
-  Widget build(BuildContext context) => const InfoCard(
-    child: Row(
-      children: [
-        Icon(Icons.home_rounded, color: sky),
-        SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Home',
-                style: TextStyle(color: text, fontWeight: FontWeight.w900),
-              ),
-              Text(
-                '123 Example Street, Cabanatuan City',
-                style: TextStyle(color: quiet, fontSize: 12),
-              ),
-            ],
-          ),
-        ),
-        Icon(Icons.check_circle_rounded, color: success),
-      ],
-    ),
-  );
-}
-
 class InfoBanner extends StatelessWidget {
   const InfoBanner({super.key, required this.icon, required this.text});
   final IconData icon;
@@ -1120,10 +1047,14 @@ class EmptyState extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.action,
+    this.actionLabel,
   });
   final IconData icon;
   final String title;
   final String subtitle;
+  final VoidCallback? action;
+  final String? actionLabel;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 20),
@@ -1134,32 +1065,53 @@ class EmptyState extends StatelessWidget {
         Text(title, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 6),
         Text(subtitle, textAlign: TextAlign.center),
+        if (action != null && actionLabel != null) ...[
+          const SizedBox(height: 16),
+          FilledButton(onPressed: action, child: Text(actionLabel!)),
+        ],
       ],
     ),
   );
 }
 
-class StatePreviewRow extends StatelessWidget {
-  const StatePreviewRow({super.key});
+String apiErrorMessage(Object? error) => switch (error) {
+  CustomerApiException apiError => apiError.message,
+  FormatException _ => 'The server returned data in an unexpected format.',
+  _ => 'Unable to reach TalaDelivery. Please try again.',
+};
+
+class ApiErrorState extends StatelessWidget {
+  const ApiErrorState({
+    super.key,
+    required this.messageText,
+    required this.onRetry,
+  });
+
+  final String messageText;
+  final VoidCallback onRetry;
+
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.all(14),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(17),
-    ),
-    child: const Row(
-      children: [
-        Icon(Icons.hourglass_empty_rounded, color: sky),
-        SizedBox(width: 9),
-        Expanded(
-          child: Text(
-            'Loading  •  Empty  •  Error  •  Retry',
-            style: TextStyle(color: quiet, fontWeight: FontWeight.w700),
+  Widget build(BuildContext context) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.cloud_off_rounded, color: danger, size: 54),
+          const SizedBox(height: 14),
+          Text(
+            messageText,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium,
           ),
-        ),
-        Icon(Icons.refresh_rounded, color: sky),
-      ],
+          const SizedBox(height: 16),
+          OutlinedButton.icon(
+            onPressed: onRetry,
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Try again'),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -1200,19 +1152,6 @@ Future<bool> confirmAction(
     ),
   );
   return result ?? false;
-}
-
-Future<void> showCancelDialog(BuildContext context) async {
-  final confirmed = await confirmAction(
-    context,
-    title: 'Cancel order?',
-    body: 'You can cancel while the order is still pending. This action cannot be undone.',
-    confirmLabel: 'Cancel order',
-    destructive: true,
-  );
-  if (context.mounted && confirmed) {
-    message(context, 'Order cancelled successfully.', kind: ToastKind.success);
-  }
 }
 
 PreferredSizeWidget simpleBar(String title, {List<Widget>? actions}) => AppBar(

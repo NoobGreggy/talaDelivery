@@ -2,13 +2,16 @@ part of '../../app.dart';
 
 class ProductDetailPage extends StatefulWidget {
   const ProductDetailPage({super.key, required this.product});
+
   final ProductData product;
+
   @override
   State<ProductDetailPage> createState() => _ProductDetailPageState();
 }
 
 class _ProductDetailPageState extends State<ProductDetailPage> {
   int quantity = 1;
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: simpleBar('Product details'),
@@ -42,17 +45,22 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
               ),
               const SizedBox(height: 10),
               Text(
-                widget.product.description,
+                widget.product.description ?? 'No description provided.',
                 style: const TextStyle(color: quiet, fontSize: 15, height: 1.5),
               ),
               const SizedBox(height: 18),
               Text(
-                '₱${widget.product.price}',
+                peso(widget.product.price),
                 style: const TextStyle(
                   color: sky,
                   fontWeight: FontWeight.w900,
                   fontSize: 28,
                 ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${widget.product.stock} in stock',
+                style: const TextStyle(color: quiet),
               ),
               const SizedBox(height: 25),
               Row(
@@ -67,7 +75,9 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
                     onMinus: quantity > 1
                         ? () => setState(() => quantity--)
                         : null,
-                    onPlus: widget.product.available
+                    onPlus:
+                        widget.product.available &&
+                            quantity < widget.product.stock
                         ? () => setState(() => quantity++)
                         : null,
                   ),
@@ -78,7 +88,7 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
         ),
         BottomAction(
           label: widget.product.available
-              ? 'Add to cart • ₱${widget.product.price * quantity}'
+              ? 'Add to cart • ${peso(widget.product.price * quantity)}'
               : 'Currently unavailable',
           enabled: widget.product.available,
           onTap: () => Navigator.pop(context, quantity),
