@@ -18,9 +18,11 @@ class StoreController extends Controller
         $stores = Store::query()
             ->where('status', 'ACTIVE')
             ->when($request->filled('search'), function ($query) use ($request): void {
-                $search = $request->string('search');
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%");
+                $search = $request->string('search')->trim()->toString();
+                $query->where(function ($query) use ($search): void {
+                    $query->whereLike('name', "%{$search}%")
+                        ->orWhereLike('description', "%{$search}%");
+                });
             })
             ->latest()
             ->paginate((int) $request->integer('per_page', 15));
