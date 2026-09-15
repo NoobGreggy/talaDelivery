@@ -1,0 +1,141 @@
+<?php
+
+namespace App\Http\Controllers\Rider;
+
+use App\Enums\RiderStatus;
+use App\Enums\Role;
+use App\Enums\UserStatus;
+use App\Http\Controllers\Controller;
+use App\Http\Resources\DeliveryResource;
+use App\Http\Resources\RiderResource;
+use App\Http\Resources\UserResource;
+use App\Models\Rider;
+use App\Models\User;
+use App\Support\ApiResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class RiderController extends Controller
+{
+    public function register(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'password' => ['required', 'string', 'min:8'],
+            'vehicle_type' => ['required', 'string', 'in:MOTORCYCLE,BICYCLE,CAR'],
+            'vehicle_plate' => ['nullable', 'string', 'max:20'],
+            'license_number' => ['nullable', 'string', 'max:50'],
+            'requirements' => ['nullable', 'array'],
+        ]);
+
+        $user = User::query()->create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'password' => $validated['password'],
+            'role' => Role::Rider->value,
+            'status' => UserStatus::Active,
+        ]);
+
+        $user->assignRole(Role::Rider->value);
+
+        $user->rider()->create([
+            'vehicle_type' => $validated['vehicle_type'],
+            'vehicle_plate' => $validated['vehicle_plate'] ?? null,
+            'license_number' => $validated['license_number'] ?? null,
+            'requirements' => $validated['requirements'] ?? null,
+            'is_online' => false,
+            'status' => RiderStatus::Pending,
+        ]);
+
+        $token = $user->createToken('auth-token')->plainTextToken;
+
+        return ApiResponse::success('Rider application submitted. Please wait for admin approval.', [
+            'token' => $token,
+            'user' => new UserResource($user->load('rider')),
+        ], 201);
+    }
+
+    public function profile(Request $request): JsonResponse
+    {
+        $rider = $request->user()->rider;
+
+        if (! $rider) {
+            return ApiResponse::error('Rider profile not found.', null, 404);
+        }
+
+        return ApiResponse::success('Rider profile retrieved.', new RiderResource($rider->load('user')));
+    }
+
+    public function online(Request $request): JsonResponse
+    {
+        $rider = $this->rider($request);
+
+        if ($rider->status === RiderStatus::Pending) {
+            return ApiResponse::error('Your application is still pending admin approval.', null, 403);
+        }
+
+        if ($rider->status === RiderStatus::Rejected) {
+            return ApiResponse::error('Your application was rejected by the admin.', null, 403);
+        }
+
+        if ($rider->status === RiderStatus::Suspended) {
+            return ApiResponse::error('Suspended riders cannot go online.', null, 403);
+        }
+
+        $rider->update(['is_online' => true, 'status' => RiderStatus::Online]);
+
+        return ApiResponse::success('You are now online.', new RiderResource($rider->fresh('user')));
+    }
+
+    public function offline(Request $request): JsonResponse
+    {
+        $rider = $this->rider($request);
+
+        if ($rider->status === RiderStatus::Busy) {
+            return ApiResponse::error('You cannot go offline while delivering an order.', null, 422);
+        }
+
+        $rider->update(['is_online' => false, 'status' => RiderStatus::Offline]);
+
+        return ApiResponse::success('You are now offline.', new RiderResource($rider->fresh('user')));
+    }
+
+    public function location(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'latitude' => ['required', 'numeric', 'between:-90,90'],
+            'longitude' => ['required', 'numeric', 'between:-180,180'],
+        ]);
+
+        $rider = $this->rider($request);
+        $rider->update([
+            'current_latitude' => $validated['latitude'],
+            'current_longitude' => $validated['longitude'],
+        ]);
+
+        return ApiResponse::success('Location updated.', new RiderResource($rider->fresh('user')));
+    }
+
+    public function deliveries(Request $request): JsonResponse
+    {
+        $deliveries = $request->user()->deliveriesAsRider()
+            ->with(['order.items', 'store'])
+            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
+            ->latest()
+            ->paginate((int) $request->integer('per_page', 15));
+
+        return ApiResponse::success('Deliveries retrieved.', DeliveryResource::collection($deliveries));
+    }
+
+    private function rider(Request $request): Rider
+    {
+        $rider = $request->user()->rider;
+
+        abort_if($rider === null, 404, 'Rider profile not found.');
+
+        return $rider;
+    }
+}

@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "laravel-boost": {
+      "command": "C:\\php\\php-8.4.5-Win32-vs17-x64\\php.exe",
+      "args": [
+        "C:\\Users\\gregg\\system\\talaDelivery\\tala-api\\artisan",
+        "boost:mcp"
+      ]
+    }
+  }
+}
