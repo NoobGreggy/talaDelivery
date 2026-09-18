@@ -1,5 +1,3 @@
-part of '../../app.dart';
-
 class CustomerApiConfig {
   CustomerApiConfig({required String baseUrl, required this.apiKey})
     : baseUri = Uri.parse(_withTrailingSlash(baseUrl));

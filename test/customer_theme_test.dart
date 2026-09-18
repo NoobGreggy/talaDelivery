@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tala_delivery_customer/customer/app.dart';
 
+import 'support/customer_fakes.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -44,5 +46,23 @@ void main() {
       darkTheme.extension<AppPalette>()?.background,
       AppPalette.dark.background,
     );
+  });
+
+  testWidgets('normal app startup restores the saved theme', (tester) async {
+    SharedPreferences.setMockInitialValues({
+      ThemeController.preferenceKey: ThemeMode.dark.name,
+    });
+    final dependencies = fakeCustomerDependencies();
+    final app = await createCustomerApp(dependencies: dependencies);
+
+    await tester.pumpWidget(app);
+    expect(
+      tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode,
+      ThemeMode.dark,
+    );
+
+    await tester.pumpWidget(const SizedBox());
+    app.themeController!.dispose();
+    dependencies.dispose();
   });
 }

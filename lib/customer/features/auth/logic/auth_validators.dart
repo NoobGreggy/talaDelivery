@@ -1,5 +1,3 @@
-part of '../../../app.dart';
-
 class CustomerValidators {
   const CustomerValidators._();
 

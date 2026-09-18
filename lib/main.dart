@@ -1,7 +1,5 @@
-import 'package:flutter/material.dart';
-
-import 'customer/app.dart';
+import 'customer/app.dart' as customer;
 
 export 'customer/app.dart' hide main;
 
-void main() => runApp(const TalaCustomerApp());
+Future<void> main() => customer.main();

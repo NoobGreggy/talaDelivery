@@ -5,22 +5,28 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-part 'core/config/customer_api_config.dart';
+import 'core/config/customer_api_config.dart';
+import 'features/auth/logic/auth_validators.dart';
+import 'shared/theme/theme.dart';
+
+export 'core/config/customer_api_config.dart';
+export 'features/auth/logic/auth_validators.dart';
+export 'shared/theme/theme.dart';
+
 part 'core/di/customer_dependencies.dart';
 part 'core/network/customer_api_client.dart';
 part 'core/realtime/customer_realtime.dart';
-part 'shared/theme/theme.dart';
 part 'shared/models/catalog_models.dart';
 part 'shared/widgets/ui_widgets.dart';
+part 'shared/widgets/catalog_widgets.dart';
+part 'shared/widgets/feedback_widgets.dart';
 part 'core/routing/customer_router.dart';
 part 'features/catalog/data/catalog_repository.dart';
 part 'features/cart/logic/cart_controller.dart';
 part 'features/auth/data/auth_models.dart';
 part 'features/auth/data/auth_repository.dart';
-part 'features/auth/logic/auth_validators.dart';
 part 'features/auth/view_models/auth_view_model.dart';
 part 'features/auth/auth_screens.dart';
 part 'features/home/home_screen.dart';
@@ -42,11 +48,18 @@ part 'core/notifications/data/notification_models.dart';
 part 'core/notifications/data/notification_repository.dart';
 part 'core/notifications/notifications_screen.dart';
 
-Future<void> main() async {
+Future<TalaCustomerApp> createCustomerApp({
+  CustomerAppDependencies? dependencies,
+}) async {
   WidgetsFlutterBinding.ensureInitialized();
   final themeController = await ThemeController.restore();
-  runApp(TalaCustomerApp(themeController: themeController));
+  return TalaCustomerApp(
+    themeController: themeController,
+    dependencies: dependencies,
+  );
 }
+
+Future<void> main() async => runApp(await createCustomerApp());
 
 class TalaCustomerApp extends StatefulWidget {
   const TalaCustomerApp({
@@ -126,61 +139,6 @@ class _TalaCustomerAppState extends State<TalaCustomerApp>
       ),
     ),
   );
-}
-
-class ThemeController extends ValueNotifier<ThemeMode> {
-  ThemeController([
-    super.value = ThemeMode.system,
-    SharedPreferences? preferences,
-  ]) : _preferences = preferences;
-
-  static const preferenceKey = 'customer_theme_mode';
-
-  final SharedPreferences? _preferences;
-
-  static Future<ThemeController> restore() async {
-    final preferences = await SharedPreferences.getInstance();
-    final savedMode = preferences.getString(preferenceKey);
-    final mode = switch (savedMode) {
-      'light' => ThemeMode.light,
-      'dark' => ThemeMode.dark,
-      _ => ThemeMode.system,
-    };
-    return ThemeController(mode, preferences);
-  }
-
-  ThemeMode get mode => value;
-  set mode(ThemeMode next) => unawaited(setMode(next));
-
-  Future<void> setMode(ThemeMode next) async {
-    if (value == next) return;
-    value = next;
-    await _preferences?.setString(preferenceKey, next.name);
-  }
-
-  void cycle() {
-    mode = switch (value) {
-      ThemeMode.system => ThemeMode.light,
-      ThemeMode.light => ThemeMode.dark,
-      ThemeMode.dark => ThemeMode.system,
-    };
-  }
-}
-
-class ThemeScope extends InheritedWidget {
-  const ThemeScope({super.key, required this.controller, required super.child});
-
-  final ThemeController controller;
-
-  static ThemeController of(BuildContext context) {
-    final scope = context.dependOnInheritedWidgetOfExactType<ThemeScope>();
-    assert(scope != null, 'ThemeScope is missing above this context.');
-    return scope!.controller;
-  }
-
-  @override
-  bool updateShouldNotify(ThemeScope oldWidget) =>
-      controller != oldWidget.controller;
 }
 
 class RiderSwitchScope extends InheritedWidget {

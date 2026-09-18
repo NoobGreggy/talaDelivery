@@ -1,8 +1,6 @@
-import 'package:flutter/material.dart';
+import 'customer/app.dart' as customer;
 
-import 'customer/app.dart';
-
-export 'customer/app.dart';
+export 'customer/app.dart' hide main;
 
 /// Optional customer-only development entry point.
-void main() => runApp(const TalaCustomerApp());
+Future<void> main() => customer.main();

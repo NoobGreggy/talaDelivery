@@ -1,4 +1,7 @@
-part of '../../app.dart';
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const sky = Color(0xFF1688F8);
 const success = Color(0xFF18B878);
@@ -335,4 +338,59 @@ ThemeData buildAppTheme(AppPalette palette) {
     dividerTheme: DividerThemeData(color: palette.line),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
   );
+}
+
+class ThemeController extends ValueNotifier<ThemeMode> {
+  ThemeController([
+    super.value = ThemeMode.system,
+    SharedPreferences? preferences,
+  ]) : _preferences = preferences;
+
+  static const preferenceKey = 'customer_theme_mode';
+
+  final SharedPreferences? _preferences;
+
+  static Future<ThemeController> restore() async {
+    final preferences = await SharedPreferences.getInstance();
+    final savedMode = preferences.getString(preferenceKey);
+    final mode = switch (savedMode) {
+      'light' => ThemeMode.light,
+      'dark' => ThemeMode.dark,
+      _ => ThemeMode.system,
+    };
+    return ThemeController(mode, preferences);
+  }
+
+  ThemeMode get mode => value;
+  set mode(ThemeMode next) => unawaited(setMode(next));
+
+  Future<void> setMode(ThemeMode next) async {
+    if (value == next) return;
+    value = next;
+    await _preferences?.setString(preferenceKey, next.name);
+  }
+
+  void cycle() {
+    mode = switch (value) {
+      ThemeMode.system => ThemeMode.light,
+      ThemeMode.light => ThemeMode.dark,
+      ThemeMode.dark => ThemeMode.system,
+    };
+  }
+}
+
+class ThemeScope extends InheritedWidget {
+  const ThemeScope({super.key, required this.controller, required super.child});
+
+  final ThemeController controller;
+
+  static ThemeController of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<ThemeScope>();
+    assert(scope != null, 'ThemeScope is missing above this context.');
+    return scope!.controller;
+  }
+
+  @override
+  bool updateShouldNotify(ThemeScope oldWidget) =>
+      controller != oldWidget.controller;
 }
