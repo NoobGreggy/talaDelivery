@@ -17,6 +17,7 @@ class StoreController extends Controller
     {
         $stores = Store::query()
             ->where('status', 'ACTIVE')
+            ->with(['categories' => fn ($query) => $query->where('status', 'ACTIVE')])
             ->when($request->filled('search'), function ($query) use ($request): void {
                 $search = $request->string('search')->trim()->toString();
                 $query->where(function ($query) use ($search): void {
