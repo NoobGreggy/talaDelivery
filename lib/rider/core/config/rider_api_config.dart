@@ -1,5 +1,3 @@
-part of '../../app.dart';
-
 class RiderApiConfig {
   RiderApiConfig({
     required String baseUrl,

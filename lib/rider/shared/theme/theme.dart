@@ -1,4 +1,5 @@
-part of '../../app.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 const blue = Color(0xFF1688F8);
 const navy = Color(0xFF0B1F36);

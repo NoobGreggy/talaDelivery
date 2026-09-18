@@ -10,16 +10,21 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
-part 'core/config/rider_api_config.dart';
+import 'core/config/rider_api_config.dart';
+import 'shared/theme/theme.dart';
+
+export 'core/config/rider_api_config.dart';
+export 'shared/models/delivery_stage.dart';
+export 'shared/theme/theme.dart';
+
 part 'core/network/rider_api_client.dart';
 part 'core/realtime/rider_realtime_service.dart';
 part 'core/location/rider_location_service.dart';
 part 'core/di/rider_dependencies.dart';
 part 'data/rider_repository.dart';
 part 'logic/rider_app_controller.dart';
-part 'shared/theme/theme.dart';
+part 'logic/rider_shift_lifecycle.dart';
 part 'shared/models/rider_models.dart';
-part 'shared/models/delivery_stage.dart';
 part 'shared/widgets/rider_widgets.dart';
 part 'core/routing/rider_router.dart';
 part 'features/auth/rider_auth_screens.dart';
