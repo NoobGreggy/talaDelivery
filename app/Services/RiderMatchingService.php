@@ -9,6 +9,7 @@ use App\Enums\RiderStatus;
 use App\Enums\Role;
 use App\Enums\UserStatus;
 use App\Events\DeliveryOffered;
+use App\Events\DeliveryUpdated;
 use App\Events\OrderUpdated;
 use App\Jobs\ExpireDeliveryOffer;
 use App\Models\Delivery;
@@ -25,7 +26,7 @@ class RiderMatchingService
 
     public function match(Delivery $delivery): ?DeliveryOffer
     {
-        if ($delivery->status !== DeliveryStatus::Unassigned && $delivery->rider_id === null) {
+        if ($delivery->status !== DeliveryStatus::Unassigned || $delivery->rider_id !== null) {
             return null;
         }
 
@@ -39,7 +40,10 @@ class RiderMatchingService
             ->role(Role::Rider->value)
             ->where('status', UserStatus::Active)
             ->whereHas('rider', function ($query): void {
-                $query->where('status', RiderStatus::Online);
+                $query
+                    ->where('status', RiderStatus::Online)
+                    ->whereNotNull('current_latitude')
+                    ->whereNotNull('current_longitude');
             })
             ->when($alreadyOffered->isNotEmpty(), fn ($query) => $query->whereNotIn('id', $alreadyOffered))
             ->with('rider')
@@ -144,6 +148,8 @@ class RiderMatchingService
 
                 OrderUpdated::dispatch($order);
             }
+
+            DeliveryUpdated::dispatch($delivery->fresh());
 
             return $delivery->fresh('order');
         });

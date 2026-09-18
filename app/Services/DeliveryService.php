@@ -6,6 +6,7 @@ use App\Enums\DeliveryStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\RiderStatus;
+use App\Events\DeliveryUpdated;
 use App\Events\OrderUpdated;
 use App\Models\Delivery;
 use App\Models\User;
@@ -48,6 +49,8 @@ class DeliveryService
                 OrderUpdated::dispatch($locked->order);
             }
 
+            DeliveryUpdated::dispatch($locked->fresh('order'));
+
             return $locked->fresh('order');
         });
     }
@@ -63,6 +66,7 @@ class DeliveryService
         ]);
 
         $this->notifyStore($delivery, 'Rider arrived', 'The rider has arrived at the store.');
+        DeliveryUpdated::dispatch($delivery);
 
         return $delivery->fresh('order');
     }
@@ -85,6 +89,7 @@ class DeliveryService
 
         $this->notifyCustomer($delivery, 'Order picked up', 'Your order has been picked up by the rider.');
         $this->notifyStore($delivery, 'Order picked up', 'The order has been picked up.');
+        DeliveryUpdated::dispatch($delivery);
 
         return $delivery->fresh('order');
     }
@@ -106,6 +111,7 @@ class DeliveryService
         }
 
         $this->notifyCustomer($delivery, 'Out for delivery', 'Your order is on the way to you.');
+        DeliveryUpdated::dispatch($delivery);
 
         return $delivery->fresh('order');
     }
@@ -137,6 +143,7 @@ class DeliveryService
             }
 
             $this->notifyCustomer($delivery, 'Order delivered', 'Your order has been delivered. Enjoy!');
+            DeliveryUpdated::dispatch($delivery);
 
             return $delivery->fresh('order');
         });
@@ -170,6 +177,8 @@ class DeliveryService
 
                 OrderUpdated::dispatch($delivery->order);
             }
+
+            DeliveryUpdated::dispatch($delivery);
 
             return $delivery->fresh('order');
         });

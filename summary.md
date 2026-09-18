@@ -1,17 +1,17 @@
 # TalaDelivery development summary
 
-Last updated: September 16, 2026
+Last updated: September 18, 2026
 
 ## Repository layout and branches
 
 The project is split into three local repositories that point to
 `https://github.com/NoobGreggy/talaDelivery.git`:
 
-| Application | Local folder | Git branch | Latest pushed commit |
-| --- | --- | --- | --- |
-| Customer Flutter app | `tala_delivery_customer` | `customer` | `56a20f6` |
-| Rider Flutter app | `tala_delivery_rider` | `rider` | `a288331` |
-| Laravel API | `tala_delivery_api` | `feature/tala-api` | `3c9f00d` |
+| Application | Local folder | Git branch |
+| --- | --- | --- |
+| Customer Flutter app | `tala_delivery_customer` | `customer` |
+| Rider Flutter app | `tala_delivery_rider` | `rider` |
+| Laravel API | `tala_delivery_api` | `feature/tala-api` |
 
 Git commits use `yazzumi <horiuchiryuta@gmail.com>`.
 
@@ -148,6 +148,11 @@ Relevant completed functionality:
   delivery offer after the store marks an order ready.
 - Demo customer stores and products can be inserted with the development
   seeder for local testing.
+- Reverb broadcasting provides private user/store channels and events for
+  order updates, notifications, and rider offers. A new rider-scoped
+  `delivery.updated` event covers assignment and delivery transitions.
+- Rider matching now skips candidates with missing coordinates rather than
+  calculating distance from `(0, 0)`.
 
 Important API endpoints:
 
@@ -218,36 +223,29 @@ asynchronous.
 
 ## Realtime status and remaining work
 
-Delivery offers are not currently true realtime pop-ups. The backend stores
-offers and exposes them through `GET /api/v1/rider/offers`, while the rider app
-loads them during login, refresh, and the transition to online.
-
-Two possible next steps:
-
-1. Add app-lifecycle-aware polling every 3–5 seconds while the rider is online.
-   This works with the existing REST API.
-2. Add Laravel Reverb, Pusher, or Ably. The backend must broadcast a new-offer
-   event on a private rider channel and provide the WebSocket host, port,
-   scheme, app key, channel authentication endpoint, and queue configuration.
+The API broadcasts `order.updated`, `notification.created`,
+`delivery.offered`, and the new `delivery.updated` event. Both Flutter apps
+have foreground WebSocket clients and REST refresh/polling fallbacks. This is
+not proof of live delivery: a deployed environment must configure a reachable
+Reverb server, `BROADCAST_CONNECTION=reverb`, and a queue worker; the checked-in
+example still defaults to `log`. An end-to-end device/emulator test remains.
 
 Other known limitations:
 
-- The customer token store is currently memory-based, so a full app restart
-  requires customer login again.
-- The rider token is persisted with shared preferences. Production deployments
-  should use platform-secure token storage.
+- Both Flutter apps now use platform-secure token storage; native-device
+  verification remains.
+- Rider Android/iOS location permission declarations are still missing and
+  must be added before device location reporting works reliably.
 - Android packaging was not run locally because the Android SDK is not
   configured on the development machine. Flutter analysis, tests, and the rider
   web build succeeded.
 
 ## Verification status
 
-At the latest pushed commits:
-
-- Customer Flutter: `flutter analyze` passed and 21 tests passed.
-- Rider Flutter: `flutter analyze` passed and 9 tests passed.
-- Laravel API: formatting passed and 38 tests passed with 235 assertions.
-- Rider web compilation succeeded with the local API configuration.
+For this update, both Flutter apps passed `flutter analyze`; all 27 customer
+and 29 rider tests passed. The API passed Pint and 60 tests / 296 assertions.
+These checks do not replace a live device/emulator test with API, Reverb,
+queue worker, and seeded accounts running together.
 
 Primary test files:
 
