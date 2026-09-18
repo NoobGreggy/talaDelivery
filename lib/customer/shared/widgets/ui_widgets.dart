@@ -240,6 +240,84 @@ class StoreArtwork extends StatelessWidget {
   );
 }
 
+Uint8List? _productImageBytes(String? dataUri) {
+  if (dataUri == null || dataUri.length > 7 * 1024 * 1024 + 100) return null;
+  final comma = dataUri.indexOf(',');
+  if (comma < 0 ||
+      !RegExp(
+        r'^data:image/(png|jpe?g|gif|webp);base64$',
+        caseSensitive: false,
+      ).hasMatch(dataUri.substring(0, comma))) {
+    return null;
+  }
+  try {
+    final bytes = base64Decode(dataUri.substring(comma + 1));
+    return bytes.length <= 5 * 1024 * 1024 ? bytes : null;
+  } on FormatException {
+    return null;
+  }
+}
+
+class ProductArtwork extends StatefulWidget {
+  const ProductArtwork({
+    super.key,
+    required this.product,
+    this.large = false,
+    this.height,
+    this.width,
+  });
+
+  final ProductData product;
+  final bool large;
+  final double? height;
+  final double? width;
+
+  @override
+  State<ProductArtwork> createState() => _ProductArtworkState();
+}
+
+class _ProductArtworkState extends State<ProductArtwork> {
+  Uint8List? bytes;
+
+  @override
+  void initState() {
+    super.initState();
+    bytes = _productImageBytes(widget.product.image);
+  }
+
+  @override
+  void didUpdateWidget(ProductArtwork oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.product.image != widget.product.image) {
+      bytes = _productImageBytes(widget.product.image);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = StoreArtwork(
+      icon: widget.product.icon,
+      color: widget.product.color,
+      large: widget.large,
+      height: widget.height,
+      width: widget.width,
+    );
+    if (bytes == null) return fallback;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(widget.large ? 0 : 17),
+      child: Image.memory(
+        bytes!,
+        key: ValueKey('product-image-${widget.product.id}'),
+        width: widget.width,
+        height: widget.height ?? (widget.large ? 220 : 92),
+        fit: BoxFit.cover,
+        semanticLabel: widget.product.name,
+        errorBuilder: (_, _, _) => fallback,
+      ),
+    );
+  }
+}
+
 class StoreCard extends StatelessWidget {
   const StoreCard({super.key, required this.store, required this.onTap});
   final StoreData store;
@@ -369,11 +447,7 @@ class ProductRow extends StatelessWidget {
                 tag: product.name,
                 child: SizedBox(
                   width: 76,
-                  child: StoreArtwork(
-                    icon: product.icon,
-                    color: product.color,
-                    height: 76,
-                  ),
+                  child: ProductArtwork(product: product, height: 76),
                 ),
               ),
               const SizedBox(width: 13),

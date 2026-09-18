@@ -98,12 +98,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
           if (snapshot.hasError) {
             return ApiErrorState(
               messageText: apiErrorMessage(snapshot.error),
-              onRetry: () => setState(
-                () =>
-                    addressesFuture = CustomerDependencyScope.of(context)
-                        .addressRepository
-                        .list(),
-              ),
+              onRetry: () => setState(() {
+                addressesFuture = CustomerDependencyScope.of(context)
+                    .addressRepository
+                    .list();
+              }),
             );
           }
           final addresses = snapshot.data ?? const [];
@@ -123,12 +122,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   arguments: const CustomerAddressRouteArgs(),
                 );
                 if (mounted) {
-                  setState(
-                    () =>
-                        addressesFuture = CustomerDependencyScope.of(context)
-                            .addressRepository
-                            .list(),
-                  );
+                  setState(() {
+                    addressesFuture = CustomerDependencyScope.of(context)
+                        .addressRepository
+                        .list();
+                  });
                 }
               },
               actionLabel: 'Add address',

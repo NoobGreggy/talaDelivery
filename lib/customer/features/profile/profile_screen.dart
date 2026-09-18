@@ -177,6 +177,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   // Local logout must still complete if the API is unavailable.
                 }
                 if (!context.mounted) return;
+                CustomerDependencyScope.of(context).realtime.stop();
                 CustomerDependencyScope.of(context).cartController.clear();
                 CustomerRouteScope.of(context).signOut();
                 Navigator.of(

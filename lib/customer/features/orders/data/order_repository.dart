@@ -19,8 +19,8 @@ class ApiCustomerOrderRepository implements CustomerOrderRepository {
 
   @override
   Future<List<CustomerOrder>> list() async {
-    final payload = await _apiClient.get('orders?per_page=100');
-    return _payloadList(payload)
+    final items = await _allPages(_apiClient, 'orders');
+    return items
         .whereType<Map<String, dynamic>>()
         .map(CustomerOrder.fromJson)
         .toList(growable: false);

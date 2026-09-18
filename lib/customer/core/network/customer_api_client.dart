@@ -1,22 +1,38 @@
 part of '../../app.dart';
 
 abstract class CustomerTokenStore {
-  String? read();
-  void save(String token);
-  void clear();
+  Future<String?> read();
+  Future<void> save(String token);
+  Future<void> clear();
 }
 
 class MemoryCustomerTokenStore implements CustomerTokenStore {
   String? _token;
 
   @override
-  String? read() => _token;
+  Future<String?> read() async => _token;
 
   @override
-  void save(String token) => _token = token;
+  Future<void> save(String token) async => _token = token;
 
   @override
-  void clear() => _token = null;
+  Future<void> clear() async => _token = null;
+}
+
+class SecureCustomerTokenStore implements CustomerTokenStore {
+  SecureCustomerTokenStore(this._storage);
+
+  static const _key = 'customer_auth_token';
+  final FlutterSecureStorage _storage;
+
+  @override
+  Future<String?> read() => _storage.read(key: _key);
+
+  @override
+  Future<void> save(String token) => _storage.write(key: _key, value: token);
+
+  @override
+  Future<void> clear() => _storage.delete(key: _key);
 }
 
 class CustomerApiException implements Exception {
@@ -74,7 +90,7 @@ class CustomerApiClient {
       'X-App-Key': _config.apiKey,
     };
     if (authenticated) {
-      final token = _tokenStore.read();
+      final token = await _tokenStore.read();
       if (token == null || token.isEmpty) {
         throw const CustomerApiException(
           'Your session has expired. Please log in again.',

@@ -19,13 +19,13 @@ class ApiCustomerCatalogRepository implements CustomerCatalogRepository {
   Future<List<StoreData>> listStores({String? search}) async {
     final query = <String, String>{
       if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
-      'per_page': '100',
     };
-    final payload = await _apiClient.get(
+    final items = await _allPages(
+      _apiClient,
       Uri(path: 'stores', queryParameters: query).toString(),
       authenticated: false,
     );
-    return _payloadList(payload)
+    return items
         .whereType<Map<String, dynamic>>()
         .map(StoreData.fromJson)
         .toList(growable: false);
@@ -47,13 +47,13 @@ class ApiCustomerCatalogRepository implements CustomerCatalogRepository {
       if (storeId != null) 'store_id': '$storeId',
       if (categoryId != null) 'category_id': '$categoryId',
       if (search != null && search.trim().isNotEmpty) 'search': search.trim(),
-      'per_page': '100',
     };
-    final payload = await _apiClient.get(
+    final items = await _allPages(
+      _apiClient,
       Uri(path: 'products', queryParameters: query).toString(),
       authenticated: false,
     );
-    return _payloadList(payload)
+    return items
         .whereType<Map<String, dynamic>>()
         .map(ProductData.fromJson)
         .toList(growable: false);

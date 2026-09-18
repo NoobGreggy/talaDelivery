@@ -23,9 +23,8 @@ class _ProductDetailPageState extends State<ProductDetailPage> {
             children: [
               Hero(
                 tag: widget.product.name,
-                child: StoreArtwork(
-                  icon: widget.product.icon,
-                  color: widget.product.color,
+                child: ProductArtwork(
+                  product: widget.product,
                   large: true,
                   height: 250,
                 ),

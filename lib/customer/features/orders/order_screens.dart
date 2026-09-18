@@ -156,29 +156,49 @@ class OrderTrackingPage extends StatefulWidget {
 class _OrderTrackingPageState extends State<OrderTrackingPage> {
   Future<CustomerOrder>? future;
   Timer? timer;
+  CustomerRealtimeController? realtime;
+  int seenOrderVersion = 0;
 
   int get id => widget.order?.id ?? widget.orderId!;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final nextRealtime = CustomerDependencyScope.of(context).realtime;
+    if (realtime != nextRealtime) {
+      realtime?.removeListener(onOrderEvent);
+      realtime = nextRealtime;
+      seenOrderVersion = nextRealtime.orderVersion;
+      nextRealtime.addListener(onOrderEvent);
+    }
     future ??= widget.order == null
         ? CustomerDependencyScope.of(context).orderRepository.get(id)
         : Future.value(widget.order);
     timer ??= Timer.periodic(const Duration(seconds: 15), (_) {
-      if (mounted) reload();
+      final state = WidgetsBinding.instance.lifecycleState;
+      if (mounted && (state == null || state == AppLifecycleState.resumed)) {
+        reload();
+      }
     });
   }
 
   @override
   void dispose() {
+    realtime?.removeListener(onOrderEvent);
     timer?.cancel();
     super.dispose();
   }
 
-  void reload() => setState(
-    () => future = CustomerDependencyScope.of(context).orderRepository.get(id),
-  );
+  void onOrderEvent() {
+    final source = realtime!;
+    if (source.orderVersion == seenOrderVersion) return;
+    seenOrderVersion = source.orderVersion;
+    if (source.lastOrderId == null || source.lastOrderId == id) reload();
+  }
+
+  void reload() => setState(() {
+    future = CustomerDependencyScope.of(context).orderRepository.get(id);
+  });
 
   Future<void> cancel(CustomerOrder order) async {
     final repository = CustomerDependencyScope.of(context).orderRepository;
@@ -193,7 +213,9 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     try {
       final cancelled = await repository.cancel(order.id);
       if (!mounted) return;
-      setState(() => future = Future.value(cancelled));
+      setState(() {
+        future = Future.value(cancelled);
+      });
       message(context, 'Order cancelled.', kind: ToastKind.success);
     } on CustomerApiException catch (error) {
       if (mounted) message(context, error.message, kind: ToastKind.error);
@@ -314,16 +336,37 @@ class OrdersPage extends StatefulWidget {
 class _OrdersPageState extends State<OrdersPage> {
   int tab = 0;
   Future<List<CustomerOrder>>? future;
+  CustomerRealtimeController? realtime;
+  int seenOrderVersion = 0;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final nextRealtime = CustomerDependencyScope.of(context).realtime;
+    if (realtime != nextRealtime) {
+      realtime?.removeListener(onOrderEvent);
+      realtime = nextRealtime;
+      seenOrderVersion = nextRealtime.orderVersion;
+      nextRealtime.addListener(onOrderEvent);
+    }
     future ??= CustomerDependencyScope.of(context).orderRepository.list();
   }
 
-  void reload() => setState(
-    () => future = CustomerDependencyScope.of(context).orderRepository.list(),
-  );
+  @override
+  void dispose() {
+    realtime?.removeListener(onOrderEvent);
+    super.dispose();
+  }
+
+  void onOrderEvent() {
+    if (realtime!.orderVersion == seenOrderVersion) return;
+    seenOrderVersion = realtime!.orderVersion;
+    reload();
+  }
+
+  void reload() => setState(() {
+    future = CustomerDependencyScope.of(context).orderRepository.list();
+  });
 
   @override
   Widget build(BuildContext context) => SafeArea(

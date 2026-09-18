@@ -1,13 +1,17 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 part 'core/config/customer_api_config.dart';
 part 'core/di/customer_dependencies.dart';
 part 'core/network/customer_api_client.dart';
+part 'core/realtime/customer_realtime.dart';
 part 'shared/theme/theme.dart';
 part 'shared/models/catalog_models.dart';
 part 'shared/widgets/ui_widgets.dart';
@@ -64,7 +68,8 @@ class TalaCustomerApp extends StatefulWidget {
   State<TalaCustomerApp> createState() => _TalaCustomerAppState();
 }
 
-class _TalaCustomerAppState extends State<TalaCustomerApp> {
+class _TalaCustomerAppState extends State<TalaCustomerApp>
+    with WidgetsBindingObserver {
   late final CustomerRouteController routes;
   late final CustomerAppDependencies dependencies;
   late final ThemeController themeController;
@@ -73,6 +78,7 @@ class _TalaCustomerAppState extends State<TalaCustomerApp> {
   void initState() {
     super.initState();
     dependencies = widget.dependencies ?? CustomerAppDependencies.live();
+    WidgetsBinding.instance.addObserver(this);
     routes = CustomerRouteController(widget.session ?? CustomerSession());
     themeController =
         widget.themeController ?? ThemeController(widget.initialThemeMode);
@@ -80,9 +86,19 @@ class _TalaCustomerAppState extends State<TalaCustomerApp> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     if (widget.themeController == null) themeController.dispose();
     if (widget.dependencies == null) dependencies.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      dependencies.realtime.resume();
+    } else if (state == AppLifecycleState.paused) {
+      dependencies.realtime.pause();
+    }
   }
 
   @override

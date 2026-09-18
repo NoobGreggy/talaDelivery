@@ -22,11 +22,48 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final storeSearchController = TextEditingController();
   Future<_CustomerHomeData>? future;
+  CustomerRealtimeController? realtime;
+  int seenNotificationVersion = 0;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final nextRealtime = CustomerDependencyScope.of(context).realtime;
+    if (realtime != nextRealtime) {
+      realtime?.removeListener(onNotificationEvent);
+      realtime = nextRealtime;
+      seenNotificationVersion = nextRealtime.notificationVersion;
+      nextRealtime.addListener(onNotificationEvent);
+    }
     future ??= load();
+  }
+
+  void onNotificationEvent() {
+    if (realtime!.notificationVersion == seenNotificationVersion) return;
+    seenNotificationVersion = realtime!.notificationVersion;
+    unawaited(_reloadAfterEvent());
+  }
+
+  Future<void> _reloadAfterEvent() async {
+    try {
+      final current = await future;
+      if (!mounted || current == null) return;
+      final notifications = await CustomerDependencyScope.of(context)
+          .notificationRepository
+          .list();
+      if (!mounted) return;
+      setState(() {
+        future = Future.value(
+          _CustomerHomeData(
+            stores: current.stores,
+            addresses: current.addresses,
+            notifications: notifications,
+          ),
+        );
+      });
+    } catch (_) {
+      // Manual refresh remains available if the event-time fetch fails.
+    }
   }
 
   Future<_CustomerHomeData> load() async {
@@ -45,7 +82,9 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> reload() async {
     final next = load();
-    setState(() => future = next);
+    setState(() {
+      future = next;
+    });
     await next;
   }
 
@@ -60,6 +99,7 @@ class _HomePageState extends State<HomePage> {
 
   @override
   void dispose() {
+    realtime?.removeListener(onNotificationEvent);
     storeSearchController.dispose();
     super.dispose();
   }
@@ -148,6 +188,7 @@ class _HomePageState extends State<HomePage> {
                         if (mounted) reload();
                       },
                       icon: Badge.count(
+                        key: const Key('home-unread-badge'),
                         count: unread,
                         isLabelVisible: unread > 0,
                         child: const Icon(Icons.notifications_none_rounded),

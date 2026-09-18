@@ -33,6 +33,9 @@ class _CustomerSplashState extends State<CustomerSplash> {
     routes.finishRestoring();
     if (user != null) {
       routes.signInWithUser(user, hasDeliveryAddress: hasAddress);
+      if (user.role == 'customer') {
+        unawaited(dependencies.realtime.start(user.id));
+      }
       final destination = routes.destinationAfterSignIn();
       Navigator.of(context).pushReplacementNamed(
         destination.name!,
@@ -299,6 +302,9 @@ class _LoginPageState extends State<LoginPage> {
 
     final routes = CustomerRouteScope.of(context)
       ..signInWithUser(user, hasDeliveryAddress: hasDeliveryAddress);
+    if (user.role == 'customer') {
+      unawaited(CustomerDependencyScope.of(context).realtime.start(user.id));
+    }
     final destination = routes.destinationAfterSignIn();
     message(context, 'Login successful.', kind: ToastKind.success);
     Navigator.of(context).pushNamedAndRemoveUntil(
@@ -476,6 +482,9 @@ class _RegisterPageState extends State<RegisterPage> {
     if (!mounted || user == null) return;
 
     final routes = CustomerRouteScope.of(context)..signInWithUser(user);
+    if (user.role == 'customer') {
+      unawaited(CustomerDependencyScope.of(context).realtime.start(user.id));
+    }
     final destination = routes.destinationAfterSignIn();
     message(context, 'Account created successfully.', kind: ToastKind.success);
     Navigator.of(context).pushNamedAndRemoveUntil(

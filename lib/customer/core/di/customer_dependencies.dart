@@ -9,16 +9,14 @@ class CustomerAppDependencies {
     this.notificationRepository,
     this.cartController, [
     this._ownedClient,
-  ]);
+    CustomerRealtimeController? realtime,
+  ]) : realtime = realtime ?? CustomerRealtimeController();
 
   factory CustomerAppDependencies.live({CustomerApiConfig? config}) {
     final client = http.Client();
-    final tokenStore = MemoryCustomerTokenStore();
-    final apiClient = CustomerApiClient(
-      client,
-      config ?? CustomerApiConfig.fromEnvironment(),
-      tokenStore,
-    );
+    final resolvedConfig = config ?? CustomerApiConfig.fromEnvironment();
+    final tokenStore = SecureCustomerTokenStore(const FlutterSecureStorage());
+    final apiClient = CustomerApiClient(client, resolvedConfig, tokenStore);
     return CustomerAppDependencies(
       ApiCustomerAuthRepository(apiClient, tokenStore),
       ApiCustomerAddressRepository(apiClient),
@@ -27,6 +25,11 @@ class CustomerAppDependencies {
       ApiCustomerNotificationRepository(apiClient),
       CustomerCartController(),
       client,
+      CustomerRealtimeController(
+        config: CustomerRealtimeConfig.fromEnvironment(resolvedConfig),
+        tokenStore: tokenStore,
+        authClient: client,
+      ),
     );
   }
 
@@ -36,9 +39,11 @@ class CustomerAppDependencies {
   final CustomerOrderRepository orderRepository;
   final CustomerNotificationRepository notificationRepository;
   final CustomerCartController cartController;
+  final CustomerRealtimeController realtime;
   final http.Client? _ownedClient;
 
   void dispose() {
+    realtime.dispose();
     cartController.dispose();
     _ownedClient?.close();
   }

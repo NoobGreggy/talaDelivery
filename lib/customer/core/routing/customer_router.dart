@@ -353,6 +353,7 @@ class RouteErrorPage extends StatelessWidget {
             PrimaryAction(
               label: 'Go to login',
               onTap: () {
+                CustomerDependencyScope.of(context).realtime.stop();
                 CustomerRouteScope.of(context).signOut();
                 Navigator.of(
                   context,

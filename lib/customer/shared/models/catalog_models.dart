@@ -25,6 +25,43 @@ List<dynamic> _payloadList(Map<String, dynamic> payload) {
   };
 }
 
+Future<List<dynamic>> _allPages(
+  CustomerApiClient api,
+  String path, {
+  bool authenticated = true,
+}) async {
+  final uri = Uri.parse(path);
+  final results = <dynamic>[];
+  final seenIds = <int>{};
+  for (var page = 1; page <= 1000; page++) {
+    final pageUri = uri.replace(
+      queryParameters: {
+        ...uri.queryParameters,
+        'per_page': '100',
+        'page': '$page',
+      },
+    );
+    final payload = await api.get(
+      pageUri.toString(),
+      authenticated: authenticated,
+    );
+    final items = _payloadList(payload);
+    for (final item in items) {
+      final id = item is Map<String, dynamic> ? _jsonInt(item['id']) : 0;
+      if (id <= 0 || seenIds.add(id)) results.add(item);
+    }
+    final wrapped = payload['data'];
+    final meta = wrapped is Map<String, dynamic> ? wrapped['meta'] : null;
+    final lastPage = meta is Map<String, dynamic>
+        ? _jsonInt(meta['last_page'])
+        : 0;
+    if (lastPage <= page || items.isEmpty) return results;
+  }
+  throw const CustomerApiException(
+    'Too many result pages. Narrow your search.',
+  );
+}
+
 Map<String, dynamic> _payloadMap(Map<String, dynamic> payload) {
   final data = payload['data'];
   if (data is Map<String, dynamic>) return data;

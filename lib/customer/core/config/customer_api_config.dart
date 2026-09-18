@@ -9,10 +9,7 @@ class CustomerApiConfig {
       'TALA_API_BASE_URL',
       defaultValue: 'http://127.0.0.1:8000/api/v1/',
     ),
-    apiKey: const String.fromEnvironment(
-      'TALA_API_KEY',
-      defaultValue: 'base64:p1bMvccoy1PXI8O5Shqq+CyjUld8/3hVzHHrDy/W/uU=',
-    ),
+    apiKey: const String.fromEnvironment('TALA_API_KEY'),
   );
 
   final Uri baseUri;

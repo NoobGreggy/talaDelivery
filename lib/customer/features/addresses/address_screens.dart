@@ -288,7 +288,9 @@ class _AddressesPageState extends State<AddressesPage> {
     future = repository.list();
   }
 
-  void reload() => setState(() => future = repository.list());
+  void reload() => setState(() {
+    future = repository.list();
+  });
 
   CustomerAddressRequest requestFor(
     CustomerAddress address, {

@@ -44,13 +44,15 @@ class _StoreListingPageState extends State<StoreListingPage> {
     debounce?.cancel();
     debounce = Timer(const Duration(milliseconds: 350), () {
       if (!mounted) return;
-      setState(() => future = repository!.listStores(search: value));
+      setState(() {
+        future = repository!.listStores(search: value);
+      });
     });
   }
 
-  void reload() => setState(
-    () => future = repository!.listStores(search: searchController.text),
-  );
+  void reload() => setState(() {
+    future = repository!.listStores(search: searchController.text);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -167,11 +169,10 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
         .getStore(widget.store.id);
   }
 
-  void reload() => setState(
-    () =>
-        future = CustomerDependencyScope.of(context).catalogRepository
-            .getStore(widget.store.id),
-  );
+  void reload() => setState(() {
+    future = CustomerDependencyScope.of(context).catalogRepository
+        .getStore(widget.store.id);
+  });
 
   Future<void> addProduct(
     StoreData store,

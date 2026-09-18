@@ -18,19 +18,38 @@ class NotificationsPage extends StatefulWidget {
 
 class _NotificationsPageState extends State<NotificationsPage> {
   Future<List<CustomerNotification>>? future;
+  CustomerRealtimeController? realtime;
+  int seenNotificationVersion = 0;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final nextRealtime = CustomerDependencyScope.of(context).realtime;
+    if (realtime != nextRealtime) {
+      realtime?.removeListener(onNotificationEvent);
+      realtime = nextRealtime;
+      seenNotificationVersion = nextRealtime.notificationVersion;
+      nextRealtime.addListener(onNotificationEvent);
+    }
     future ??= CustomerDependencyScope.of(context).notificationRepository
         .list();
   }
 
-  void reload() => setState(
-    () =>
-        future = CustomerDependencyScope.of(context).notificationRepository
-            .list(),
-  );
+  @override
+  void dispose() {
+    realtime?.removeListener(onNotificationEvent);
+    super.dispose();
+  }
+
+  void onNotificationEvent() {
+    if (realtime!.notificationVersion == seenNotificationVersion) return;
+    seenNotificationVersion = realtime!.notificationVersion;
+    reload();
+  }
+
+  void reload() => setState(() {
+    future = CustomerDependencyScope.of(context).notificationRepository.list();
+  });
 
   Future<void> open(CustomerNotification notification) async {
     try {

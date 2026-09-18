@@ -36,7 +36,7 @@ class ApiCustomerAuthRepository implements CustomerAuthRepository {
       body: {'email': email.trim(), 'password': password},
     );
     final result = CustomerAuthResult.fromJson(_data(payload));
-    _tokenStore.save(result.token);
+    await _tokenStore.save(result.token);
     return result.user;
   }
 
@@ -58,19 +58,19 @@ class ApiCustomerAuthRepository implements CustomerAuthRepository {
       },
     );
     final result = CustomerAuthResult.fromJson(_data(payload));
-    _tokenStore.save(result.token);
+    await _tokenStore.save(result.token);
     return result.user;
   }
 
   @override
   Future<CustomerUser?> restoreSession() async {
-    if (_tokenStore.read() == null) return null;
+    if (await _tokenStore.read() == null) return null;
     try {
       final payload = await _apiClient.get('auth/me');
       return CustomerUser.fromJson(_data(payload));
     } on CustomerApiException catch (error) {
       if (error.statusCode == 401) {
-        _tokenStore.clear();
+        await _tokenStore.clear();
         return null;
       }
       rethrow;
@@ -97,9 +97,11 @@ class ApiCustomerAuthRepository implements CustomerAuthRepository {
   @override
   Future<void> logout() async {
     try {
-      if (_tokenStore.read() != null) await _apiClient.post('auth/logout');
+      if (await _tokenStore.read() != null) {
+        await _apiClient.post('auth/logout');
+      }
     } finally {
-      _tokenStore.clear();
+      await _tokenStore.clear();
     }
   }
 

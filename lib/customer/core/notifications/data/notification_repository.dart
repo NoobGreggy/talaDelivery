@@ -13,8 +13,8 @@ class ApiCustomerNotificationRepository
 
   @override
   Future<List<CustomerNotification>> list() async {
-    final payload = await _apiClient.get('notifications?per_page=100');
-    return _payloadList(payload)
+    final items = await _allPages(_apiClient, 'notifications');
+    return items
         .whereType<Map<String, dynamic>>()
         .map(CustomerNotification.fromJson)
         .toList(growable: false);
