@@ -8,6 +8,36 @@ const success = Color(0xFF18B878);
 const warning = Color(0xFFFFA23F);
 const danger = Color(0xFFE85656);
 
+/// Radius tokens used across the Tala redesign.
+class TalaRadius {
+  const TalaRadius._();
+
+  static const double sm = 10;
+  static const double md = 16;
+  static const double lg = 24;
+  static const double xl = 32;
+  static const double pill = 999;
+}
+
+/// Spacing tokens used across the Tala redesign.
+class TalaSpacing {
+  const TalaSpacing._();
+
+  static const double xs = 4;
+  static const double sm = 8;
+  static const double md = 16;
+  static const double lg = 24;
+  static const double xl = 32;
+}
+
+/// Returns [color] mixed toward white by [amount] (0..1).
+Color tint(Color color, double amount) =>
+    Color.lerp(color, Colors.white, amount) ?? color;
+
+/// Returns [color] mixed toward black by [amount] (0..1).
+Color shade(Color color, double amount) =>
+    Color.lerp(color, Colors.black, amount) ?? color;
+
 class AppPalette extends ThemeExtension<AppPalette> {
   const AppPalette({
     required this.brand,
@@ -257,7 +287,7 @@ ThemeData buildAppTheme(AppPalette palette) {
       );
   return ThemeData(
     useMaterial3: true,
-    fontFamily: 'Arial',
+    fontFamily: 'Poppins',
     scaffoldBackgroundColor: palette.background,
     colorScheme: colorScheme,
     extensions: <ThemeExtension<dynamic>>[palette],

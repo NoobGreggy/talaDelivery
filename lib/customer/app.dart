@@ -22,6 +22,7 @@ part 'shared/models/catalog_models.dart';
 part 'shared/widgets/ui_widgets.dart';
 part 'shared/widgets/catalog_widgets.dart';
 part 'shared/widgets/feedback_widgets.dart';
+part 'shared/widgets/tala_widgets.dart';
 part 'core/routing/customer_router.dart';
 part 'features/catalog/data/catalog_repository.dart';
 part 'features/cart/logic/cart_controller.dart';
@@ -180,29 +181,57 @@ class _CustomerShellState extends State<CustomerShell> {
   @override
   Widget build(BuildContext context) {
     const pages = [HomePage(), OrdersPage(), ProfilePage()];
+    final palette = appPaletteOf(context);
     return Scaffold(
-      body: IndexedStack(index: tab, children: pages),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: tab,
-        onDestinationSelected: (value) => setState(() => tab = value),
-        height: 72,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home_rounded),
-            label: 'Home',
+      body: SafeArea(
+        bottom: false,
+        child: IndexedStack(index: tab, children: pages),
+      ),
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: palette.surface.withValues(alpha: .97),
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: palette.cardBorder),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: .08),
+                  blurRadius: 30,
+                  offset: const Offset(0, -6),
+                ),
+              ],
+            ),
+            child: NavigationBar(
+              selectedIndex: tab,
+              onDestinationSelected: (value) => setState(() => tab = value),
+              height: 68,
+              backgroundColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              indicatorColor: palette.navIndicator,
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home_rounded),
+                  label: 'Home',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.receipt_long_outlined),
+                  selectedIcon: Icon(Icons.receipt_long_rounded),
+                  label: 'Orders',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline_rounded),
+                  selectedIcon: Icon(Icons.person_rounded),
+                  label: 'Profile',
+                ),
+              ],
+            ),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long_rounded),
-            label: 'Orders',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline_rounded),
-            selectedIcon: Icon(Icons.person_rounded),
-            label: 'Profile',
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -11,7 +11,7 @@ class Brand extends StatelessWidget {
       textAlign: centered ? TextAlign.center : TextAlign.start,
       text: TextSpan(
         style: TextStyle(
-          fontFamily: 'Arial',
+          fontFamily: 'Poppins',
           fontSize: size,
           fontWeight: FontWeight.w900,
           letterSpacing: -1,
@@ -289,6 +289,7 @@ class SummaryLine extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
+            flex: 2,
             child: Text(
               label,
               style: TextStyle(
@@ -297,12 +298,16 @@ class SummaryLine extends StatelessWidget {
               ),
             ),
           ),
-          Text(
-            value,
-            style: TextStyle(
-              color: palette.text,
-              fontWeight: bold ? FontWeight.w900 : FontWeight.w700,
-              fontSize: bold ? 18 : 14,
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                color: palette.text,
+                fontWeight: bold ? FontWeight.w900 : FontWeight.w700,
+                fontSize: bold ? 18 : 14,
+              ),
             ),
           ),
         ],

@@ -30,7 +30,7 @@ void main() {
       find.byKey(const Key('login-password')),
       'password123',
     );
-    await tester.tap(find.text('Log in'));
+    await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
     expect(find.text('Where should we deliver?'), findsOneWidget);
     expect(tester.takeException(), isNull, reason: 'address layout');

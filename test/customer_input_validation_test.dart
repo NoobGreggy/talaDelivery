@@ -21,7 +21,8 @@ void main() {
     await tester.pump();
     expect(find.text('Password is required.'), findsNothing);
 
-    await tester.tap(find.text('Log in'));
+    await tester.ensureVisible(find.text('Sign in'));
+    await tester.tap(find.text('Sign in'));
     await tester.pump();
     expect(find.text('Password is required.'), findsOneWidget);
 
@@ -48,7 +49,8 @@ void main() {
       'not-an-email',
     );
     await tester.enterText(find.byKey(const Key('login-password')), 'short');
-    await tester.tap(find.text('Log in'));
+    await tester.ensureVisible(find.text('Sign in'));
+    await tester.tap(find.text('Sign in'));
     await tester.pump();
 
     expect(find.text('Enter a valid email address.'), findsOneWidget);
@@ -70,6 +72,8 @@ void main() {
       TalaCustomerApp(dependencies: fakeCustomerDependencies()),
     );
     await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Create account'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
@@ -121,7 +125,8 @@ void main() {
       find.byKey(const Key('login-password')),
       'password123',
     );
-    await tester.tap(find.text('Log in'));
+    await tester.ensureVisible(find.text('Sign in'));
+    await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
 
     expect(find.text('Available stores'), findsOneWidget);
@@ -175,6 +180,8 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.text('Create account'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Create account'));
     await tester.pumpAndSettle();
     await tester.enterText(

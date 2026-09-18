@@ -8,76 +8,96 @@ class OrderSuccessPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     body: SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            const Spacer(),
-            Container(
-              width: 112,
-              height: 112,
-              decoration: BoxDecoration(
-                color: appPaletteOf(context).successCircleFill,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check_rounded, color: success, size: 60),
-            ),
-            const SizedBox(height: 25),
-            Text(
-              'Order placed!',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Your order was sent to ${order.store?.name ?? 'the store'}.',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 25),
-            InfoCard(
+      child: LayoutBuilder(
+        builder: (context, constraints) => SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  SummaryLine(label: 'Order', value: order.orderNumber),
-                  SummaryLine(
-                    label: 'Store',
-                    value: order.store?.name ?? 'Store',
+                  Column(
+                    children: [
+                      Container(
+                        width: 112,
+                        height: 112,
+                        decoration: BoxDecoration(
+                          color: appPaletteOf(context).successCircleFill,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check_rounded,
+                          color: success,
+                          size: 60,
+                        ),
+                      ),
+                      const SizedBox(height: 25),
+                      Text(
+                        'Order placed!',
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Your order was sent to ${order.store?.name ?? 'the store'}.',
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-                  SummaryLine(
-                    label: 'Delivery fee',
-                    value: peso(order.deliveryFee),
+                  const SizedBox(height: 25),
+                  InfoCard(
+                    child: Column(
+                      children: [
+                        SummaryLine(label: 'Order', value: order.orderNumber),
+                        SummaryLine(
+                          label: 'Store',
+                          value: order.store?.name ?? 'Store',
+                        ),
+                        SummaryLine(
+                          label: 'Delivery fee',
+                          value: peso(order.deliveryFee),
+                        ),
+                        SummaryLine(
+                          label: 'Total',
+                          value: peso(order.total),
+                          bold: true,
+                        ),
+                        SummaryLine(
+                          label: 'Payment',
+                          value: order.paymentMethod,
+                          last: true,
+                        ),
+                      ],
+                    ),
                   ),
-                  SummaryLine(
-                    label: 'Total',
-                    value: peso(order.total),
-                    bold: true,
-                  ),
-                  SummaryLine(
-                    label: 'Payment',
-                    value: order.paymentMethod,
-                    last: true,
+                  const SizedBox(height: 25),
+                  Column(
+                    children: [
+                      PrimaryAction(
+                        label: 'Track order',
+                        icon: Icons.location_on_rounded,
+                        onTap: () => Navigator.pushReplacementNamed(
+                          context,
+                          CustomerRoutes.orderTracking,
+                          arguments: order,
+                        ),
+                      ),
+                      const SizedBox(height: 9),
+                      TextButton(
+                        onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          CustomerRoutes.home,
+                          (_) => false,
+                        ),
+                        child: const Text('Back to home'),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            const Spacer(),
-            PrimaryAction(
-              label: 'Track order',
-              icon: Icons.location_on_rounded,
-              onTap: () => Navigator.pushReplacementNamed(
-                context,
-                CustomerRoutes.orderTracking,
-                arguments: order,
-              ),
-            ),
-            const SizedBox(height: 9),
-            TextButton(
-              onPressed: () => Navigator.pushNamedAndRemoveUntil(
-                context,
-                CustomerRoutes.home,
-                (_) => false,
-              ),
-              child: const Text('Back to home'),
-            ),
-          ],
+          ),
         ),
       ),
     ),
