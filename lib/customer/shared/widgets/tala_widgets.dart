@@ -177,10 +177,16 @@ class _TalaPrimaryFieldState extends State<TalaPrimaryField> {
   void initState() {
     super.initState();
     _focusNode = FocusNode(debugLabel: 'tala-field-${widget.label}');
+    _focusNode.addListener(_onFocusChanged);
+  }
+
+  void _onFocusChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    _focusNode.removeListener(_onFocusChanged);
     _focusNode.dispose();
     super.dispose();
   }
@@ -211,80 +217,79 @@ class _TalaPrimaryFieldState extends State<TalaPrimaryField> {
             ),
           ];
 
-    return AnimatedBuilder(
-      animation: _focusNode,
-      builder: (context, _) {
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          curve: Curves.easeOutCubic,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            border: focused || hasError ? activeBorder : baseBorder,
-            boxShadow: shadow,
+    final borderRadius = BorderRadius.circular(18);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOutCubic,
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        border: focused || hasError ? activeBorder : baseBorder,
+        boxShadow: shadow,
+      ),
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: TextFormField(
+          key: widget.key,
+          controller: widget.controller,
+          focusNode: _focusNode,
+          obscureText: widget.obscureText,
+          validator: widget.validator,
+          keyboardType: widget.keyboardType,
+          textInputAction: widget.textInputAction,
+          onFieldSubmitted: widget.onSubmitted,
+          autofocus: widget.autofocus,
+          style: TextStyle(
+            color: palette.text,
+            fontWeight: FontWeight.w500,
+            fontSize: 14,
           ),
-          child: TextFormField(
-            key: widget.key,
-            controller: widget.controller,
-            focusNode: _focusNode,
-            obscureText: widget.obscureText,
-            validator: widget.validator,
-            keyboardType: widget.keyboardType,
-            textInputAction: widget.textInputAction,
-            onFieldSubmitted: widget.onSubmitted,
-            autofocus: widget.autofocus,
-            style: TextStyle(
-              color: palette.text,
+          decoration: InputDecoration(
+            labelText: widget.label,
+            floatingLabelBehavior: FloatingLabelBehavior.auto,
+            floatingLabelStyle: TextStyle(
+              color: sky,
+              fontWeight: FontWeight.w600,
+              fontSize: 10,
+              letterSpacing: 0.5,
+            ),
+            labelStyle: TextStyle(
+              color: palette.quiet,
               fontWeight: FontWeight.w500,
-              fontSize: 14,
+              fontSize: 13,
             ),
-            decoration: InputDecoration(
-              labelText: widget.label,
-              floatingLabelBehavior: FloatingLabelBehavior.auto,
-              floatingLabelStyle: TextStyle(
-                color: sky,
-                fontWeight: FontWeight.w600,
-                fontSize: 10,
-                letterSpacing: 0.5,
-              ),
-              labelStyle: TextStyle(
-                color: palette.quiet,
-                fontWeight: FontWeight.w500,
-                fontSize: 13,
-              ),
-              errorText: widget.errorText,
-              contentPadding: const EdgeInsets.fromLTRB(16, 20, 14, 10),
-              prefixIcon: widget.prefixIcon == null
-                  ? null
-                  : Icon(
-                      widget.prefixIcon,
-                      size: 19,
-                      color: focused ? sky : palette.quiet,
+            errorText: widget.errorText,
+            contentPadding: const EdgeInsets.fromLTRB(16, 20, 14, 10),
+            prefixIcon: widget.prefixIcon == null
+                ? null
+                : Icon(
+                    widget.prefixIcon,
+                    size: 19,
+                    color: focused ? sky : palette.quiet,
+                  ),
+            suffixIcon:
+                widget.obscureText && widget.onToggleVisibility != null
+                ? IconButton(
+                    onPressed: widget.onToggleVisibility,
+                    tooltip: widget.obscureText ? 'Show password' : 'Hide',
+                    icon: Icon(
+                      widget.obscureText
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      size: 20,
+                      color: palette.quiet,
                     ),
-              suffixIcon:
-                  widget.obscureText && widget.onToggleVisibility != null
-                  ? IconButton(
-                      onPressed: widget.onToggleVisibility,
-                      tooltip: widget.obscureText ? 'Show password' : 'Hide',
-                      icon: Icon(
-                        widget.obscureText
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        size: 20,
-                        color: palette.quiet,
-                      ),
-                    )
-                  : null,
-              filled: true,
-              fillColor: palette.surface,
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              errorBorder: InputBorder.none,
-              focusedErrorBorder: InputBorder.none,
-            ),
+                  )
+                : null,
+            filled: true,
+            fillColor: palette.surface,
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
+            errorBorder: InputBorder.none,
+            focusedErrorBorder: InputBorder.none,
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }
