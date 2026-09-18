@@ -11,10 +11,28 @@ class OfferScreen extends StatefulWidget {
 class _OfferScreenState extends State<OfferScreen> {
   Timer? timer;
   late int seconds;
+  int? _handledExpiryForId;
 
-  RiderOffer? get offer =>
-      widget.offer ??
-      RiderDependencyScope.of(context).controller.offers.firstOrNull;
+  RiderOffer? get offer {
+    final controller = RiderDependencyScope.of(context).controller;
+    final requested = widget.offer;
+    if (requested != null) {
+      for (final candidate in controller.offers) {
+        if (candidate.id == requested.id) return candidate;
+      }
+    }
+    return controller.offers.firstOrNull;
+  }
+
+  static int _countdownWindow(RiderOffer offer) {
+    final expiresAt = offer.expiresAt;
+    final offeredAt = offer.offeredAt;
+    if (expiresAt != null && offeredAt != null) {
+      final window = expiresAt.difference(offeredAt).inSeconds;
+      if (window > 0) return window;
+    }
+    return 120;
+  }
 
   @override
   void initState() {
@@ -23,7 +41,13 @@ class _OfferScreenState extends State<OfferScreen> {
     timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!mounted) return;
       final current = offer;
-      setState(() => seconds = current?.secondsRemaining ?? 0);
+      final next = current?.secondsRemaining ?? 0;
+      final currentId = current?.id;
+      if (currentId != null && currentId != _handledExpiryForId && next == 0) {
+        _handledExpiryForId = currentId;
+        RiderDependencyScope.of(context).controller.reconcileOffers();
+      }
+      setState(() => seconds = next);
     });
   }
 
@@ -106,7 +130,9 @@ class _OfferScreenState extends State<OfferScreen> {
                 fit: StackFit.expand,
                 children: [
                   CircularProgressIndicator(
-                    value: seconds == 0 ? 0 : (seconds / 120).clamp(0, 1),
+                    value: seconds == 0
+                        ? 0
+                        : (seconds / _countdownWindow(value)).clamp(0.0, 1.0),
                     strokeWidth: 8,
                     color: expired ? riderPaletteOf(context).muted : blue,
                   ),

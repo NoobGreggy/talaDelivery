@@ -11,6 +11,12 @@ abstract class RiderRepository {
   Future<void> rejectOffer(int offerId);
   Future<List<RiderDelivery>> deliveries();
   Future<RiderDelivery> updateDelivery(int deliveryId, String action);
+  Future<void> updateLocation({
+    required double latitude,
+    required double longitude,
+  });
+  Future<List<RiderNotification>> notifications();
+  Future<void> markNotificationRead(int notificationId);
 }
 
 class ApiRiderRepository implements RiderRepository {
@@ -99,11 +105,24 @@ class ApiRiderRepository implements RiderRepository {
   }
 
   @override
-  Future<List<RiderDelivery>> deliveries() async =>
-      _riderPayloadList(await _api.get('rider/deliveries?per_page=100'))
-          .whereType<Map<String, dynamic>>()
-          .map(RiderDelivery.fromJson)
-          .toList(growable: false);
+  Future<List<RiderDelivery>> deliveries() async {
+    const perPage = 100;
+    var page = 1;
+    final all = <RiderDelivery>[];
+    while (true) {
+      final paged = _riderPayloadPaged(
+        await _api.get('rider/deliveries?per_page=$perPage&page=$page'),
+      );
+      all.addAll(
+        paged.items.whereType<Map<String, dynamic>>().map(
+          RiderDelivery.fromJson,
+        ),
+      );
+      if (page >= paged.lastPage) break;
+      page += 1;
+    }
+    return List<RiderDelivery>.unmodifiable(all);
+  }
 
   @override
   Future<RiderDelivery> updateDelivery(int deliveryId, String action) async =>
@@ -112,4 +131,27 @@ class ApiRiderRepository implements RiderRepository {
           await _api.post('rider/deliveries/$deliveryId/$action'),
         ),
       );
+
+  @override
+  Future<void> updateLocation({
+    required double latitude,
+    required double longitude,
+  }) async {
+    await _api.post(
+      'rider/location',
+      body: {'latitude': latitude, 'longitude': longitude},
+    );
+  }
+
+  @override
+  Future<List<RiderNotification>> notifications() async =>
+      _riderPayloadPaged(await _api.get('notifications?per_page=50')).items
+          .whereType<Map<String, dynamic>>()
+          .map(RiderNotification.fromJson)
+          .toList(growable: false);
+
+  @override
+  Future<void> markNotificationRead(int notificationId) async {
+    await _api.post('notifications/$notificationId/read');
+  }
 }

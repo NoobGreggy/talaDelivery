@@ -1,12 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:web_socket_channel/io.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 part 'core/config/rider_api_config.dart';
 part 'core/network/rider_api_client.dart';
+part 'core/realtime/rider_realtime_service.dart';
+part 'core/location/rider_location_service.dart';
 part 'core/di/rider_dependencies.dart';
 part 'data/rider_repository.dart';
 part 'logic/rider_app_controller.dart';
@@ -20,6 +27,7 @@ part 'features/dashboard/rider_dashboard_screen.dart';
 part 'features/offers/rider_offer_screen.dart';
 part 'features/deliveries/rider_delivery_screens.dart';
 part 'features/history/rider_history_screen.dart';
+part 'features/notifications/rider_notifications_screen.dart';
 part 'features/profile/rider_profile_screen.dart';
 
 Future<void> main() async {
@@ -49,7 +57,8 @@ class TalaDeliveryApp extends StatefulWidget {
   State<TalaDeliveryApp> createState() => _TalaDeliveryAppState();
 }
 
-class _TalaDeliveryAppState extends State<TalaDeliveryApp> {
+class _TalaDeliveryAppState extends State<TalaDeliveryApp>
+    with WidgetsBindingObserver {
   late final RiderRouteController routes;
   late final RiderAppDependencies dependencies;
   late final RiderThemeController themeController;
@@ -57,6 +66,7 @@ class _TalaDeliveryAppState extends State<TalaDeliveryApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     routes = RiderRouteController(widget.session ?? RiderSession());
     dependencies = widget.dependencies ?? RiderAppDependencies.transient();
     themeController =
@@ -64,8 +74,16 @@ class _TalaDeliveryAppState extends State<TalaDeliveryApp> {
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      dependencies.controller.handleAppResumed();
+    }
+  }
+
+  @override
   void dispose() {
-    if (widget.dependencies == null) dependencies.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    dependencies.dispose();
     if (widget.themeController == null) themeController.dispose();
     super.dispose();
   }

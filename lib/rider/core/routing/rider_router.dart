@@ -31,6 +31,7 @@ class RiderRoutes {
   static const deliveryComplete = '/deliveries/complete';
   static const history = '/history';
   static const profile = '/profile';
+  static const notifications = '/notifications';
   static const accessDenied = '/access-denied';
   static const notFound = '/not-found';
 
@@ -43,6 +44,7 @@ class RiderRoutes {
     deliveryComplete,
     history,
     profile,
+    notifications,
     accessDenied,
     notFound,
   };
@@ -202,6 +204,8 @@ class RiderRouteController {
         return DeliveryCompleteScreen(
           delivery: settings.arguments as RiderDelivery?,
         );
+      case RiderRoutes.notifications:
+        return const NotificationsScreen();
       case RiderRoutes.accessDenied:
         return const RiderRouteErrorPage(
           title: 'Rider access required',

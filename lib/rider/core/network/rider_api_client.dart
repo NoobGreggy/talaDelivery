@@ -22,6 +22,41 @@ class PreferencesRiderTokenStore implements RiderTokenStore {
   Future<void> clear() => _preferences.remove(_key);
 }
 
+class SecureRiderTokenStore implements RiderTokenStore {
+  SecureRiderTokenStore(this._storage);
+
+  static const _key = 'rider_auth_token';
+  final FlutterSecureStorage _storage;
+
+  /// Creates a store for platform secure storage, migrating any token that a
+  /// previous version left in SharedPreferences.
+  static Future<SecureRiderTokenStore> createAndMigrate({
+    required SharedPreferences legacy,
+  }) async {
+    final store = SecureRiderTokenStore(const FlutterSecureStorage());
+    await store._migrateFromLegacy(legacy);
+    return store;
+  }
+
+  Future<void> _migrateFromLegacy(SharedPreferences legacy) async {
+    if (await _storage.read(key: _key) != null) return;
+    final old = legacy.getString(_key);
+    if (old != null && old.isNotEmpty) {
+      await _storage.write(key: _key, value: old);
+      await legacy.remove(_key);
+    }
+  }
+
+  @override
+  Future<String?> read() => _storage.read(key: _key);
+
+  @override
+  Future<void> save(String token) => _storage.write(key: _key, value: token);
+
+  @override
+  Future<void> clear() => _storage.delete(key: _key);
+}
+
 class MemoryRiderTokenStore implements RiderTokenStore {
   String? token;
 

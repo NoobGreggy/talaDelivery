@@ -110,6 +110,18 @@ class _FakeRiderRepository implements RiderRepository {
   Future<RiderProfile> profile() async => currentProfile;
 
   @override
+  Future<void> updateLocation({
+    required double latitude,
+    required double longitude,
+  }) async {}
+
+  @override
+  Future<List<RiderNotification>> notifications() async => const [];
+
+  @override
+  Future<void> markNotificationRead(int notificationId) async {}
+
+  @override
   Future<RiderProfile> setOnline(bool online) async =>
       currentProfile = _profile(online: online);
 

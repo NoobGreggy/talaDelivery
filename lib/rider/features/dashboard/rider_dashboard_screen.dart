@@ -76,6 +76,18 @@ class DashboardScreen extends StatelessWidget {
                   const SizedBox.square(
                     dimension: 24,
                     child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                else
+                  IconButton(
+                    tooltip: 'Notifications',
+                    onPressed: () =>
+                        Navigator.of(context)
+                            .pushNamed(RiderRoutes.notifications),
+                    icon: Badge.count(
+                      count: controller.unreadNotificationCount,
+                      isLabelVisible: controller.unreadNotificationCount > 0,
+                      child: const Icon(Icons.notifications_outlined),
+                    ),
                   ),
               ],
             ),

@@ -57,4 +57,87 @@ void main() {
       ),
     );
   });
+
+  _paginationChecks();
+}
+
+Map<String, dynamic> _deliveryJson(int id) => {
+  'id': id,
+  'status': 'DELIVERED',
+  'pickup_address': 'A Street',
+  'delivery_address': 'B Street',
+  'distance_km': 1.5,
+  'delivery_fee': 60,
+  'created_at': '2026-01-01T10:00:00+00:00',
+};
+
+Future<RiderRepository> _repositoryFor(MockClient client) async {
+  final tokens = MemoryRiderTokenStore();
+  await tokens.save('test-token');
+  return ApiRiderRepository(
+    RiderApiClient(
+      client,
+      RiderApiConfig(
+        baseUrl: 'https://api.example.test/api/v1/',
+        apiKey: 'app-key',
+      ),
+      tokens,
+    ),
+    tokens,
+  );
+}
+
+http.Response _paginatedResponse(List<Map<String, dynamic>> items, int page) =>
+    http.Response(
+      jsonEncode({
+        'success': true,
+        'message': 'ok',
+        'data': {
+          'data': items,
+          'links': {'first': '?page=1', 'next': page < 2 ? '?page=2' : null},
+          'meta': {
+            'current_page': page,
+            'last_page': 2,
+            'per_page': 100,
+            'total': 150,
+          },
+        },
+      }),
+      200,
+    );
+
+void _paginationChecks() {
+  test('deliveries follow pagination until the last page', () async {
+    final pages = <int>[];
+    final repository = await _repositoryFor(
+      MockClient((request) async {
+        final page = int.parse(request.url.queryParameters['page'] ?? '1');
+        pages.add(page);
+        return _paginatedResponse([_deliveryJson(page)], page);
+      }),
+    );
+
+    final deliveries = await repository.deliveries();
+
+    expect(pages, [1, 2]);
+    expect(deliveries.map((delivery) => delivery.id), [1, 2]);
+  });
+
+  test('deliveries accept a plain collection from the server', () async {
+    final repository = await _repositoryFor(
+      MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'success': true,
+            'data': [_deliveryJson(7), _deliveryJson(8)],
+          }),
+          200,
+        ),
+      ),
+    );
+
+    final deliveries = await repository.deliveries();
+
+    expect(deliveries.map((delivery) => delivery.id), [7, 8]);
+  });
 }

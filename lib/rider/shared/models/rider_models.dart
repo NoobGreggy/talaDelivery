@@ -31,6 +31,31 @@ List<dynamic> _riderPayloadList(Map<String, dynamic> payload) {
   };
 }
 
+({List<dynamic> items, int lastPage, int total}) _riderPayloadPaged(
+  Map<String, dynamic> payload,
+) {
+  final data = payload['data'];
+  if (data is List<dynamic>) {
+    return (items: data, lastPage: 1, total: data.length);
+  }
+  if (data is! Map<String, dynamic>) {
+    throw const RiderApiException('The server paged list is invalid.');
+  }
+  final items = data['data'];
+  if (items is! List<dynamic>) {
+    throw const RiderApiException('The server paged list is invalid.');
+  }
+  final meta = data['meta'];
+  if (meta is! Map<String, dynamic>) {
+    return (items: items, lastPage: 0, total: 0);
+  }
+  return (
+    items: items,
+    lastPage: _riderInt(meta['last_page']),
+    total: _riderInt(meta['total']),
+  );
+}
+
 class RiderUser {
   const RiderUser({
     required this.id,
@@ -257,10 +282,12 @@ class RiderOffer {
     required this.status,
     required this.expiresAt,
     required this.delivery,
+    this.offeredAt,
   });
   final int id;
   final String status;
   final DateTime? expiresAt;
+  final DateTime? offeredAt;
   final RiderDelivery delivery;
 
   int get secondsRemaining {
@@ -278,6 +305,7 @@ class RiderOffer {
       id: _riderInt(json['id']),
       status: _riderString(json['status']) ?? 'PENDING',
       expiresAt: DateTime.tryParse(json['expires_at']?.toString() ?? ''),
+      offeredAt: DateTime.tryParse(json['offered_at']?.toString() ?? ''),
       delivery: RiderDelivery.fromJson(delivery),
     );
   }
@@ -286,8 +314,47 @@ class RiderOffer {
     'id': id,
     'status': status,
     'expires_at': expiresAt?.toIso8601String(),
+    'offered_at': offeredAt?.toIso8601String(),
     'delivery': delivery.toJson(),
   };
+}
+
+class RiderNotification {
+  const RiderNotification({
+    required this.id,
+    required this.title,
+    required this.message,
+    required this.isRead,
+    this.type,
+    this.createdAt,
+    this.readAt,
+    this.data = const {},
+  });
+
+  final int id;
+  final String? type;
+  final String title;
+  final String message;
+  final bool isRead;
+  final DateTime? createdAt;
+  final DateTime? readAt;
+  final Map<String, dynamic> data;
+
+  factory RiderNotification.fromJson(Map<String, dynamic> json) {
+    final id = _riderInt(json['id']);
+    if (id <= 0) throw const FormatException('Invalid notification response.');
+    final rawData = json['data'];
+    return RiderNotification(
+      id: id,
+      type: _riderString(json['type']),
+      title: _riderString(json['title']) ?? 'Notification',
+      message: _riderString(json['message']) ?? '',
+      isRead: json['is_read'] == true,
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
+      readAt: DateTime.tryParse(json['read_at']?.toString() ?? ''),
+      data: rawData is Map<String, dynamic> ? rawData : const {},
+    );
+  }
 }
 
 class RiderAuthResult {
