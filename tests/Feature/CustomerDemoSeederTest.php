@@ -47,11 +47,11 @@ class CustomerDemoSeederTest extends ApiTestCase
 
         $this->getJson('/api/v1/stores?per_page=50')
             ->assertOk()
-            ->assertJsonCount(3, 'data');
+            ->assertJsonCount(3, 'data.data');
 
         $this->getJson('/api/v1/products?per_page=50')
             ->assertOk()
-            ->assertJsonCount(18, 'data');
+            ->assertJsonCount(18, 'data.data');
     }
 
     public function test_can_run_repeatedly_without_creating_duplicates(): void

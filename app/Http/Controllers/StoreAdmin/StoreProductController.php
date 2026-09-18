@@ -5,6 +5,7 @@ namespace App\Http\Controllers\StoreAdmin;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use App\Rules\Base64Image;
 use App\Support\ApiResponse;
 use App\Support\StoreContext;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +22,7 @@ class StoreProductController extends Controller
             ->latest()
             ->paginate((int) $request->integer('per_page', 15));
 
-        return ApiResponse::success('Products retrieved.', ProductResource::collection($products));
+        return ApiResponse::paginated('Products retrieved.', ProductResource::collection($products));
     }
 
     public function store(Request $request): JsonResponse
@@ -35,7 +36,7 @@ class StoreProductController extends Controller
             'description' => ['nullable', 'string'],
             'sku' => ['nullable', 'string', 'max:255'],
             'price' => ['required', 'numeric', 'min:0'],
-            'image' => ['nullable', 'string', 'max:2048'],
+            'image' => ['nullable', 'string', new Base64Image(5)],
             'stock' => ['nullable', 'integer', 'min:0'],
             'is_available' => ['sometimes', 'boolean'],
         ]);
@@ -68,7 +69,7 @@ class StoreProductController extends Controller
             'description' => ['nullable', 'string'],
             'sku' => ['nullable', 'string', 'max:255'],
             'price' => ['sometimes', 'numeric', 'min:0'],
-            'image' => ['nullable', 'string', 'max:2048'],
+            'image' => ['nullable', 'string', new Base64Image(5)],
             'stock' => ['sometimes', 'integer', 'min:0'],
             'is_available' => ['sometimes', 'boolean'],
         ]);

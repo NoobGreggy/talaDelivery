@@ -8,6 +8,8 @@ use App\Enums\OrderStatus;
 use App\Enums\RiderStatus;
 use App\Enums\Role;
 use App\Enums\UserStatus;
+use App\Events\DeliveryOffered;
+use App\Events\OrderUpdated;
 use App\Jobs\ExpireDeliveryOffer;
 use App\Models\Delivery;
 use App\Models\DeliveryOffer;
@@ -64,6 +66,8 @@ class RiderMatchingService
         ]);
 
         ExpireDeliveryOffer::dispatch($offer)->delay(now()->addSeconds(30));
+
+        DeliveryOffered::dispatch($offer);
 
         $this->notifications->notify(
             $nearest,
@@ -137,6 +141,8 @@ class RiderMatchingService
                     'A rider has been assigned to your order.',
                     ['order_id' => $order->id, 'delivery_id' => $delivery->id],
                 );
+
+                OrderUpdated::dispatch($order);
             }
 
             return $delivery->fresh('order');

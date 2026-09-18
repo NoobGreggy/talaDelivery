@@ -6,6 +6,7 @@ use App\Enums\DeliveryStatus;
 use App\Enums\OrderStatus;
 use App\Enums\RiderStatus;
 use App\Enums\StoreStatus;
+use App\Events\OrderUpdated;
 use App\Jobs\MatchRider;
 use App\Models\Order;
 use App\Models\OrderItem;
@@ -124,6 +125,8 @@ class OrderService
 
         $this->notifyStoreNewOrder($order);
 
+        OrderUpdated::dispatch($order);
+
         return $order->load('store', 'items', 'delivery');
     }
 
@@ -170,6 +173,8 @@ class OrderService
 
         $this->notifyCustomer($order, 'Order confirmed', 'Your order has been confirmed by the store.');
 
+        OrderUpdated::dispatch($order);
+
         return $order->fresh();
     }
 
@@ -183,6 +188,8 @@ class OrderService
         ]);
 
         $this->notifyCustomer($order, 'Order preparing', 'The store is preparing your order.');
+
+        OrderUpdated::dispatch($order);
 
         return $order->fresh();
     }
@@ -205,6 +212,8 @@ class OrderService
         if ($order->delivery) {
             MatchRider::dispatch($order->delivery);
         }
+
+        OrderUpdated::dispatch($order);
 
         return $order->fresh();
     }
@@ -242,6 +251,8 @@ class OrderService
 
             $this->notifyStore($order, 'Order cancelled', 'Order '.$order->order_number.' was cancelled.');
             $this->notifyCustomer($order, 'Order cancelled', 'Your order has been cancelled.');
+
+            OrderUpdated::dispatch($order);
 
             return $order->fresh();
         });

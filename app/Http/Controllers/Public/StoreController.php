@@ -27,7 +27,7 @@ class StoreController extends Controller
             ->latest()
             ->paginate((int) $request->integer('per_page', 15));
 
-        return ApiResponse::success('Stores retrieved.', StoreResource::collection($stores));
+        return ApiResponse::paginated('Stores retrieved.', StoreResource::collection($stores));
     }
 
     public function show(Store $store): JsonResponse
@@ -53,6 +53,6 @@ class StoreController extends Controller
             ->latest()
             ->paginate((int) $request->integer('per_page', 15));
 
-        return ApiResponse::success('Products retrieved.', ProductResource::collection($products));
+        return ApiResponse::paginated('Products retrieved.', ProductResource::collection($products));
     }
 }

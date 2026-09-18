@@ -6,6 +6,7 @@ use App\Enums\DeliveryStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Enums\RiderStatus;
+use App\Events\OrderUpdated;
 use App\Models\Delivery;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +44,10 @@ class DeliveryService
                 'status' => OrderStatus::RiderAssigned,
             ]);
 
+            if ($locked->order) {
+                OrderUpdated::dispatch($locked->order);
+            }
+
             return $locked->fresh('order');
         });
     }
@@ -74,6 +79,10 @@ class DeliveryService
 
         $delivery->order?->update(['status' => OrderStatus::PickedUp]);
 
+        if ($delivery->order) {
+            OrderUpdated::dispatch($delivery->order);
+        }
+
         $this->notifyCustomer($delivery, 'Order picked up', 'Your order has been picked up by the rider.');
         $this->notifyStore($delivery, 'Order picked up', 'The order has been picked up.');
 
@@ -91,6 +100,10 @@ class DeliveryService
         ]);
 
         $delivery->order?->update(['status' => OrderStatus::OutForDelivery]);
+
+        if ($delivery->order) {
+            OrderUpdated::dispatch($delivery->order);
+        }
 
         $this->notifyCustomer($delivery, 'Out for delivery', 'Your order is on the way to you.');
 
@@ -118,6 +131,10 @@ class DeliveryService
             ]);
 
             $delivery->rider?->rider?->updateQuietly(['status' => RiderStatus::Online]);
+
+            if ($delivery->order) {
+                OrderUpdated::dispatch($delivery->order);
+            }
 
             $this->notifyCustomer($delivery, 'Order delivered', 'Your order has been delivered. Enjoy!');
 
@@ -150,6 +167,8 @@ class DeliveryService
 
                 $this->notifyStore($delivery, 'Order cancelled', 'The delivery for order '.$delivery->order->order_number.' was cancelled.');
                 $this->notifyCustomer($delivery, 'Order cancelled', 'Your order was cancelled.');
+
+                OrderUpdated::dispatch($delivery->order);
             }
 
             return $delivery->fresh('order');

@@ -2,12 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\Role;
+use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\StoreResource;
 use App\Models\Store;
+use App\Models\StoreUser;
+use App\Models\User;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class AdminStoreController extends Controller
@@ -22,7 +27,7 @@ class AdminStoreController extends Controller
             ->latest()
             ->paginate((int) $request->integer('per_page', 15));
 
-        return ApiResponse::success('Stores retrieved.', StoreResource::collection($stores));
+        return ApiResponse::paginated('Stores retrieved.', StoreResource::collection($stores));
     }
 
     public function store(Request $request): JsonResponse
@@ -38,14 +43,48 @@ class AdminStoreController extends Controller
             'opening_time' => ['nullable', 'date_format:H:i'],
             'closing_time' => ['nullable', 'date_format:H:i'],
             'status' => ['nullable', 'string', 'in:ACTIVE,INACTIVE,SUSPENDED'],
+            'merchant_name' => ['required', 'string', 'max:255'],
+            'merchant_email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'merchant_password' => ['required', 'string', 'min:8'],
+            'merchant_phone' => ['nullable', 'string', 'max:20'],
         ]);
 
-        $store = Store::create([
-            ...$validated,
-            'slug' => $this->uniqueSlug($validated['name']),
-        ]);
+        $store = DB::transaction(function () use ($validated): Store {
+            $created = Store::create([
+                'name' => $validated['name'],
+                'description' => $validated['description'] ?? null,
+                'phone' => $validated['phone'] ?? null,
+                'email' => $validated['email'] ?? null,
+                'address' => $validated['address'],
+                'latitude' => $validated['latitude'] ?? null,
+                'longitude' => $validated['longitude'] ?? null,
+                'opening_time' => $validated['opening_time'] ?? null,
+                'closing_time' => $validated['closing_time'] ?? null,
+                'status' => $validated['status'] ?? 'ACTIVE',
+                'slug' => $this->uniqueSlug($validated['name']),
+            ]);
 
-        return ApiResponse::success('Store created.', new StoreResource($store), 201);
+            $owner = User::query()->create([
+                'name' => $validated['merchant_name'],
+                'email' => $validated['merchant_email'],
+                'phone' => $validated['merchant_phone'] ?? null,
+                'password' => $validated['merchant_password'],
+                'role' => Role::StoreAdmin->value,
+                'status' => UserStatus::Active,
+            ]);
+
+            $owner->assignRole(Role::StoreAdmin->value);
+
+            StoreUser::query()->create([
+                'store_id' => $created->id,
+                'user_id' => $owner->id,
+                'role' => Role::StoreAdmin->value,
+            ]);
+
+            return $created;
+        });
+
+        return ApiResponse::success('Store and merchant account created.', new StoreResource($store), 201);
     }
 
     public function show(Store $store): JsonResponse

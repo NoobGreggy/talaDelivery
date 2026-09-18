@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\NotificationCreated;
 use App\Jobs\SendNotification;
 use App\Models\Notification;
 use App\Models\User;
@@ -22,5 +23,7 @@ class NotificationService
         ]);
 
         SendNotification::dispatch($notification);
+
+        NotificationCreated::dispatch($notification);
     }
 }

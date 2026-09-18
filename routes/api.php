@@ -106,7 +106,7 @@ Route::prefix('v1')->group(function (): void {
     /* ------------------------------------------------------------------ *
      *  Store admin — profile, categories, products, orders (Phase 4-5)
      * ------------------------------------------------------------------ */
-    Route::middleware(['auth:sanctum', 'role:store_admin', 'store.tenant'])->prefix('store')->group(function (): void {
+    Route::middleware(['auth:sanctum', 'role:store_admin,sanctum', 'store.tenant'])->prefix('store')->group(function (): void {
         Route::get('profile', [StoreProfileController::class, 'show']);
         Route::put('profile', [StoreProfileController::class, 'update']);
 
@@ -133,7 +133,7 @@ Route::prefix('v1')->group(function (): void {
     /* ------------------------------------------------------------------ *
      *  Admin — platform_admin (Phase 16)
      * ------------------------------------------------------------------ */
-    Route::middleware(['auth:sanctum', 'role:platform_admin'])->prefix('admin')->group(function (): void {
+    Route::middleware(['auth:sanctum', 'role:platform_admin,sanctum'])->prefix('admin')->group(function (): void {
         Route::get('dashboard', [DashboardController::class, 'index']);
 
         Route::get('orders', [AdminOrderController::class, 'index']);

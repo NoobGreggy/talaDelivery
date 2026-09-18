@@ -32,6 +32,6 @@ class AdminCustomerController extends Controller
             ->latest()
             ->paginate((int) $request->integer('per_page', 15));
 
-        return ApiResponse::success('Customers retrieved.', UserResource::collection($customers));
+        return ApiResponse::paginated('Customers retrieved.', UserResource::collection($customers));
     }
 }

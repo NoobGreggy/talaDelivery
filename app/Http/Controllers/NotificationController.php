@@ -16,7 +16,7 @@ class NotificationController extends Controller
             ->latest()
             ->paginate((int) $request->integer('per_page', 15));
 
-        return ApiResponse::success('Notifications retrieved.', NotificationResource::collection($notifications));
+        return ApiResponse::paginated('Notifications retrieved.', NotificationResource::collection($notifications));
     }
 
     public function show(Request $request, Notification $notification): JsonResponse

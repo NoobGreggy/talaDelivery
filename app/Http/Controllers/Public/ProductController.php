@@ -24,7 +24,7 @@ class ProductController extends Controller
             ->latest()
             ->paginate((int) $request->integer('per_page', 15));
 
-        return ApiResponse::success('Products retrieved.', ProductResource::collection($products));
+        return ApiResponse::paginated('Products retrieved.', ProductResource::collection($products));
     }
 
     public function show(Product $product): JsonResponse

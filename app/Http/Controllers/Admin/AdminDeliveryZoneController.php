@@ -21,7 +21,7 @@ class AdminDeliveryZoneController extends Controller
             ->latest()
             ->paginate((int) $request->integer('per_page', 15));
 
-        return ApiResponse::success('Delivery zones retrieved.', DeliveryZoneResource::collection($zones));
+        return ApiResponse::paginated('Delivery zones retrieved.', DeliveryZoneResource::collection($zones));
     }
 
     public function store(Request $request): JsonResponse

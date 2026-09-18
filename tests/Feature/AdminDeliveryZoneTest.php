@@ -40,7 +40,7 @@ class AdminDeliveryZoneTest extends ApiTestCase
         $this->withToken($adminToken)
             ->getJson('/api/v1/admin/delivery-zones')
             ->assertOk()
-            ->assertJsonPath('data.0.id', $zoneId);
+            ->assertJsonPath('data.data.0.id', $zoneId);
 
         $this->withToken($adminToken)
             ->getJson("/api/v1/admin/delivery-zones/{$zoneId}")

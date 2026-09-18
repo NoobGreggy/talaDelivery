@@ -23,7 +23,7 @@ class OrderController extends Controller
             ->latest()
             ->paginate((int) $request->integer('per_page', 15));
 
-        return ApiResponse::success('Orders retrieved.', OrderResource::collection($orders));
+        return ApiResponse::paginated('Orders retrieved.', OrderResource::collection($orders));
     }
 
     public function store(Request $request): JsonResponse

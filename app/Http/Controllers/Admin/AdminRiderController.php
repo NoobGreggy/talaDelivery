@@ -24,7 +24,7 @@ class AdminRiderController extends Controller
             ->latest()
             ->paginate((int) $request->integer('per_page', 15));
 
-        return ApiResponse::success('Riders retrieved.', RiderResource::collection($riders));
+        return ApiResponse::paginated('Riders retrieved.', RiderResource::collection($riders));
     }
 
     public function show(Rider $rider): JsonResponse

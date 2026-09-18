@@ -25,7 +25,7 @@ class AdminDeliveryController extends Controller
             ->latest()
             ->paginate((int) $request->integer('per_page', 15));
 
-        return ApiResponse::success('Deliveries retrieved.', DeliveryResource::collection($deliveries));
+        return ApiResponse::paginated('Deliveries retrieved.', DeliveryResource::collection($deliveries));
     }
 
     public function show(Delivery $delivery): JsonResponse

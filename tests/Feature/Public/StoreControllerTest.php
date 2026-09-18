@@ -22,7 +22,7 @@ class StoreControllerTest extends ApiTestCase
 
         $this->getJson('/api/v1/stores?search=careplus')
             ->assertOk()
-            ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.id', $activeStore->id);
+            ->assertJsonCount(1, 'data.data')
+            ->assertJsonPath('data.data.0.id', $activeStore->id);
     }
 }
