@@ -62,14 +62,17 @@ class RiderMatchingService
             return null;
         }
 
+        $offeredAt = now();
+        $expiresAt = $offeredAt->copy()->addMinutes(5);
+
         $offer = $delivery->offers()->create([
             'rider_id' => $nearest->id,
             'status' => DeliveryOfferStatus::Pending,
-            'offered_at' => now(),
-            'expires_at' => now()->addSeconds(30),
+            'offered_at' => $offeredAt,
+            'expires_at' => $expiresAt,
         ]);
 
-        ExpireDeliveryOffer::dispatch($offer)->delay(now()->addSeconds(30));
+        ExpireDeliveryOffer::dispatch($offer)->delay($expiresAt);
 
         DeliveryOffered::dispatch($offer);
 
@@ -77,7 +80,7 @@ class RiderMatchingService
             $nearest,
             'offer.new',
             'New delivery offer',
-            'You have a new delivery offer. You have 30 seconds to respond.',
+            'You have a new delivery offer. You have 5 minutes to respond.',
             ['delivery_id' => $delivery->id, 'offer_id' => $offer->id],
         );
 
@@ -97,7 +100,7 @@ class RiderMatchingService
                 throw new \DomainException('This offer is no longer available.');
             }
 
-            if ($lockedOffer->expires_at && now()->greaterThan($lockedOffer->expires_at)) {
+            if ($lockedOffer->expires_at && now()->greaterThanOrEqualTo($lockedOffer->expires_at)) {
                 $lockedOffer->update([
                     'status' => DeliveryOfferStatus::Expired,
                     'responded_at' => now(),
