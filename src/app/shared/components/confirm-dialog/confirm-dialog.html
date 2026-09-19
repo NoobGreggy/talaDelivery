@@ -1,0 +1,59 @@
+@if (open()) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center" (click)="cancel()">
+    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
+    <div
+      class="relative mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="flex items-start gap-4">
+        <div
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+          [class]="danger() ? 'bg-red-100' : 'bg-indigo-100'"
+        >
+          <svg
+            class="h-5 w-5"
+            [class]="danger() ? 'text-red-600' : 'text-indigo-600'"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+            />
+          </svg>
+        </div>
+        <div class="flex-1">
+          <h2 class="text-base font-semibold text-slate-900">{{ title() }}</h2>
+          @if (message()) {
+            <p class="mt-1 text-sm text-slate-500">{{ message() }}</p>
+          }
+        </div>
+      </div>
+      <div class="mt-6 flex justify-end gap-3">
+        <button
+          type="button"
+          class="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1"
+          (click)="cancel()"
+        >
+          {{ cancelLabel() }}
+        </button>
+        <button
+          type="button"
+          class="rounded-md px-4 py-2 text-sm font-medium text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1"
+          [class]="
+            danger()
+              ? 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
+              : 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500'
+          "
+          (click)="confirm()"
+        >
+          {{ confirmLabel() }}
+        </button>
+      </div>
+    </div>
+  </div>
+}

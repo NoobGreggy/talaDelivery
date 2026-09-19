@@ -1,0 +1,15 @@
+<div>
+  @if (label()) {
+    <label class="mb-1.5 block text-sm font-medium text-slate-700">{{ label() }}</label>
+  }
+  <select
+    class="block w-full rounded-lg border border-slate-300 bg-white py-2 px-3 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+    [value]="value()"
+    (change)="onSelect($event)"
+  >
+    <option value="" disabled>{{ placeholder() }}</option>
+    @for (option of options(); track option.value) {
+      <option [value]="option.value">{{ option.label }}</option>
+    }
+  </select>
+</div>
