@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Rider;
 
+use App\Enums\DeliveryOfferStatus;
+use App\Enums\DeliveryStatus;
+use App\Enums\OrderStatus;
 use App\Enums\RiderStatus;
 use App\Enums\Role;
 use App\Enums\UserStatus;
@@ -9,6 +12,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\DeliveryResource;
 use App\Http\Resources\RiderResource;
 use App\Http\Resources\UserResource;
+use App\Jobs\MatchRider;
+use App\Models\Delivery;
 use App\Models\Rider;
 use App\Models\User;
 use App\Support\ApiResponse;
@@ -87,6 +92,10 @@ class RiderController extends Controller
 
         $rider->update(['is_online' => true, 'status' => RiderStatus::Online]);
 
+        if ($rider->current_latitude !== null && $rider->current_longitude !== null) {
+            $this->retryUnmatchedDeliveries();
+        }
+
         return ApiResponse::success('You are now online.', new RiderResource($rider->fresh('user')));
     }
 
@@ -111,10 +120,15 @@ class RiderController extends Controller
         ]);
 
         $rider = $this->rider($request);
+        $hadLocation = $rider->current_latitude !== null && $rider->current_longitude !== null;
         $rider->update([
             'current_latitude' => $validated['latitude'],
             'current_longitude' => $validated['longitude'],
         ]);
+
+        if (! $hadLocation && $rider->status === RiderStatus::Online) {
+            $this->retryUnmatchedDeliveries();
+        }
 
         return ApiResponse::success('Location updated.', new RiderResource($rider->fresh('user')));
     }
@@ -137,5 +151,15 @@ class RiderController extends Controller
         abort_if($rider === null, 404, 'Rider profile not found.');
 
         return $rider;
+    }
+
+    private function retryUnmatchedDeliveries(): void
+    {
+        Delivery::query()
+            ->where('status', DeliveryStatus::Unassigned)
+            ->whereNull('rider_id')
+            ->whereHas('order', fn ($query) => $query->where('status', OrderStatus::ReadyForPickup))
+            ->whereDoesntHave('offers', fn ($query) => $query->where('status', DeliveryOfferStatus::Pending))
+            ->each(fn (Delivery $delivery) => MatchRider::dispatch($delivery));
     }
 }

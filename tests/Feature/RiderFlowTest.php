@@ -128,6 +128,79 @@ class RiderFlowTest extends ApiTestCase
         $this->assertSame(RiderStatus::Online, $rider->fresh()->status);
     }
 
+    public function test_rider_going_online_receives_an_offer_for_an_already_ready_order(): void
+    {
+        Queue::fake([ExpireDeliveryOffer::class]);
+
+        [$customerToken, $storeAdminToken] = $this->createParticipants();
+        $riderUser = User::factory()->create(['role' => Role::Rider->value]);
+        $riderUser->assignRole(Role::Rider->value);
+        $riderUser->rider()->create([
+            'vehicle_type' => 'MOTORCYCLE',
+            'status' => RiderStatus::Offline,
+            'is_online' => false,
+            'current_latitude' => 14.60,
+            'current_longitude' => 120.99,
+        ]);
+        $riderToken = $riderUser->createToken('auth-token')->plainTextToken;
+
+        $order = $this->withToken($customerToken)->postJson('/api/v1/orders', $this->orderPayload())
+            ->assertCreated()
+            ->json('data');
+        $storeHeaders = ['X-Store-Id' => (string) $this->store->id];
+        auth()->forgetGuards();
+        $this->withToken($storeAdminToken)->withHeaders($storeHeaders)
+            ->postJson("/api/v1/store/orders/{$order['id']}/confirm")->assertOk();
+        $this->withToken($storeAdminToken)->withHeaders($storeHeaders)
+            ->postJson("/api/v1/store/orders/{$order['id']}/ready")->assertOk();
+        $this->assertDatabaseMissing('delivery_offers', ['delivery_id' => $order['delivery']['id']]);
+
+        auth()->forgetGuards();
+        $this->withToken($riderToken)->postJson('/api/v1/rider/online')->assertOk();
+
+        $this->withToken($riderToken)->getJson('/api/v1/rider/offers')
+            ->assertOk()
+            ->assertJsonPath('data.0.delivery.id', $order['delivery']['id']);
+    }
+
+    public function test_first_location_report_matches_an_already_ready_order(): void
+    {
+        Queue::fake([ExpireDeliveryOffer::class]);
+
+        [$customerToken, $storeAdminToken] = $this->createParticipants();
+        $riderUser = User::factory()->create(['role' => Role::Rider->value]);
+        $riderUser->assignRole(Role::Rider->value);
+        $riderUser->rider()->create([
+            'vehicle_type' => 'MOTORCYCLE',
+            'status' => RiderStatus::Offline,
+            'is_online' => false,
+        ]);
+        $riderToken = $riderUser->createToken('auth-token')->plainTextToken;
+
+        $order = $this->withToken($customerToken)->postJson('/api/v1/orders', $this->orderPayload())
+            ->assertCreated()
+            ->json('data');
+        $storeHeaders = ['X-Store-Id' => (string) $this->store->id];
+        auth()->forgetGuards();
+        $this->withToken($storeAdminToken)->withHeaders($storeHeaders)
+            ->postJson("/api/v1/store/orders/{$order['id']}/confirm")->assertOk();
+        $this->withToken($storeAdminToken)->withHeaders($storeHeaders)
+            ->postJson("/api/v1/store/orders/{$order['id']}/ready")->assertOk();
+
+        auth()->forgetGuards();
+        $this->withToken($riderToken)->postJson('/api/v1/rider/online')->assertOk();
+        $this->assertDatabaseMissing('delivery_offers', ['delivery_id' => $order['delivery']['id']]);
+
+        $this->withToken($riderToken)->postJson('/api/v1/rider/location', [
+            'latitude' => 14.60,
+            'longitude' => 120.99,
+        ])->assertOk();
+
+        $this->withToken($riderToken)->getJson('/api/v1/rider/offers')
+            ->assertOk()
+            ->assertJsonPath('data.0.delivery.id', $order['delivery']['id']);
+    }
+
     public function test_admin_can_manually_assign_a_rider_to_a_delivery(): void
     {
         $admin = User::factory()->create(['role' => Role::PlatformAdmin->value]);
