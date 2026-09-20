@@ -1,4 +1,5 @@
-import { Component, inject, signal, DestroyRef, effect } from '@angular/core';
+import { Component, inject, signal, DestroyRef, effect, untracked } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DatePipe, CurrencyPipe } from '@angular/common';
 import { StoreOrderService } from '../../../core/services/store-order.service';
@@ -51,9 +52,8 @@ export class OrderDetailComponent {
 
     effect(() => {
       const update = this.echoService.orderUpdated$();
-      const current = this.order();
-      if (update && current && update.id === current.id) {
-        this.loadOrder(update.id);
+      if (update && update.id === Number(this.route.snapshot.paramMap.get('id'))) {
+        untracked(() => this.loadOrder(update.id));
       }
     });
   }
@@ -67,8 +67,8 @@ export class OrderDetailComponent {
         this.order.set(order);
         this.loading.set(false);
       },
-      error: () => {
-        this.error.set('We couldn\'t load this order.');
+      error: (response: HttpErrorResponse) => {
+        this.error.set(response.error?.message ?? 'We couldn\'t load this order.');
         this.loading.set(false);
       },
     });
