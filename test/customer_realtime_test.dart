@@ -275,6 +275,9 @@ void main() {
     await tester.pump();
     expect(orders.fetches, 1);
 
+    await tester.pump(const Duration(seconds: 45));
+    expect(orders.fetches, 1);
+
     orders.status = 'CONFIRMED';
     socket.emit(
       'order.updated',

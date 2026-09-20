@@ -175,7 +175,6 @@ class OrderTrackingPage extends StatefulWidget {
 
 class _OrderTrackingPageState extends State<OrderTrackingPage> {
   Future<CustomerOrder>? future;
-  Timer? timer;
   CustomerRealtimeController? realtime;
   int seenOrderVersion = 0;
 
@@ -194,18 +193,11 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     future ??= widget.order == null
         ? CustomerDependencyScope.of(context).orderRepository.get(id)
         : Future.value(widget.order);
-    timer ??= Timer.periodic(const Duration(seconds: 15), (_) {
-      final state = WidgetsBinding.instance.lifecycleState;
-      if (mounted && (state == null || state == AppLifecycleState.resumed)) {
-        reload();
-      }
-    });
   }
 
   @override
   void dispose() {
     realtime?.removeListener(onOrderEvent);
-    timer?.cancel();
     super.dispose();
   }
 
