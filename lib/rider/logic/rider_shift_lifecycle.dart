@@ -91,15 +91,12 @@ extension _RiderShiftLifecycle on RiderAppController {
     _offerPollTimer = null;
   }
 
-  /// Bounded fallback: only polls when the socket is not delivering offers.
+  /// Reconcile occasionally even with a connected socket: events published
+  /// while the queue or app was unavailable cannot be replayed by Reverb.
   Future<void> _pollForOffers() async {
-    final realtime = _realtime;
     if (_disposed || user == null) return;
-    if (realtime != null && realtime.state == RiderRealtimeState.connected) {
-      return;
-    }
     if (!(profile?.isOnline ?? false)) return;
     if (activeDelivery != null) return;
-    unawaited(reconcileOffers());
+    await reconcileOffers();
   }
 }

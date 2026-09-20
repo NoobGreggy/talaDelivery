@@ -1,6 +1,6 @@
 part of '../../app.dart';
 
-/// Lifecycle state of the Reverb/Pusher websocket connection.
+/// Connection state; `connected` means the private user channel subscribed.
 enum RiderRealtimeState { idle, connecting, connected }
 
 /// A single authenticated event pushed from the server.
@@ -168,6 +168,8 @@ class RiderRealtimeService extends ChangeNotifier {
 
   @override
   void dispose() {
+    _running = false;
+    _userId = null;
     _reconnectTimer?.cancel();
     _subscription?.cancel();
     _socket?.close();
@@ -200,7 +202,9 @@ class RiderRealtimeService extends ChangeNotifier {
 
   Future<void> reconnect() async {
     if (!_running) return;
-    if (_socketId != null && _socket != null) {
+    if (_state == RiderRealtimeState.connected &&
+        _socketId != null &&
+        _socket != null) {
       // Socket is alive; re-subscribe after a missed wake-up is unnecessary,
       // but the app may have missed events while paused. Ask the listener to
       // resync via a synthetic event.
@@ -217,6 +221,7 @@ class RiderRealtimeService extends ChangeNotifier {
     if (!_running) return;
     _setState(RiderRealtimeState.connecting);
     await _teardownSocket();
+    if (!_running) return;
     try {
       final socket = _opener(config.handshakeUri());
       _socket = socket;
@@ -224,6 +229,7 @@ class RiderRealtimeService extends ChangeNotifier {
         (message) => _handleMessage(message),
         onError: (Object error, StackTrace stack) => _scheduleReconnect(),
         onDone: () {
+          if (!_running) return;
           _socket = null;
           _socketId = null;
           _events.add(const RiderRealtimeEvent('realtime.disconnected'));
@@ -236,48 +242,71 @@ class RiderRealtimeService extends ChangeNotifier {
   }
 
   void _handleMessage(Object? raw) {
-    if (raw is! Map<String, dynamic>) return;
-    final event = raw['event'];
+    if (!_running) return;
+    final message = _decodeObject(raw);
+    if (message == null) {
+      _log('Ignored an invalid WebSocket frame.');
+      return;
+    }
+    final event = message['event'];
     if (event is! String) return;
-    final channel = raw['channel'] as String?;
-    final data = _decodeData(raw['data']);
+    final channel = message['channel'];
+    final data = _decodeData(message['data']);
     switch (event) {
       case 'pusher:connection_established':
         _socketId = data['socket_id'] is String
             ? data['socket_id'] as String
             : null;
-        if (_socketId != null) _subscribeToUserChannel();
+        if (_socketId != null) {
+          _log('WebSocket connected; authorizing rider channel.');
+          unawaited(_subscribeToUserChannel());
+        }
         break;
+      case 'pusher:ping':
+        _socket?.send({'event': 'pusher:pong', 'data': <String, dynamic>{}});
+        break;
+      case 'pusher_internal:subscription_succeeded':
       case 'pusher:subscribe_succeeded':
+        if (channel != 'private-user.$_userId' || _socketId == null) return;
         _reconnectAttempts = 0;
         _setState(RiderRealtimeState.connected);
+        _log('Subscribed to rider channel.');
         _events.add(
-          RiderRealtimeEvent('realtime.connected', {'channel': channel ?? ''}),
+          RiderRealtimeEvent('realtime.connected', {'channel': channel}),
         );
         break;
       case 'pusher_internal:subscription_error':
-        // V3+ of Reverb replies with an error event when auth is rejected.
-        _events.add(RiderRealtimeEvent('realtime.subscription_error', {}));
+      case 'pusher:subscription_error':
+        _log('Rider channel subscription failed.');
+        _events.add(const RiderRealtimeEvent('realtime.subscription_error'));
+        _scheduleReconnect();
         break;
       case 'pusher:error':
+        _log('Reverb reported a WebSocket error.');
         _events.add(const RiderRealtimeEvent('realtime.error'));
+        _scheduleReconnect();
         break;
       default:
-        if (channel != null) _events.add(RiderRealtimeEvent(event, data));
+        if (_state != RiderRealtimeState.connected ||
+            channel != 'private-user.$_userId') {
+          return;
+        }
+        if (event == 'delivery.offered') _log('Delivery offer event received.');
+        _events.add(RiderRealtimeEvent(event, data));
+    }
+  }
+
+  Map<String, dynamic>? _decodeObject(Object? raw) {
+    try {
+      final decoded = raw is String ? jsonDecode(raw) : raw;
+      return decoded is Map ? Map<String, dynamic>.from(decoded) : null;
+    } catch (_) {
+      return null;
     }
   }
 
   Map<String, dynamic> _decodeData(Object? raw) {
-    if (raw is Map<String, dynamic>) return raw;
-    if (raw is String && raw.isNotEmpty) {
-      try {
-        final decoded = jsonDecode(raw);
-        if (decoded is Map<String, dynamic>) return decoded;
-      } on FormatException {
-        // Fall through to the empty payload.
-      }
-    }
-    return const <String, dynamic>{};
+    return _decodeObject(raw) ?? const <String, dynamic>{};
   }
 
   Future<void> _subscribeToUserChannel() async {
@@ -286,17 +315,29 @@ class RiderRealtimeService extends ChangeNotifier {
     final socket = _socket;
     if (userId == null || socketId == null || socket == null) return;
     final channelName = 'private-user.$userId';
-    final auth = await authenticator.authenticateChannel(
-      channelName: channelName,
-      socketId: socketId,
-    );
-    socket.send({
-      'event': 'pusher:subscribe',
-      'data': {
-        'channel': channelName,
-        if (auth.auth != null) 'auth': auth.auth,
-      },
-    });
+    try {
+      final auth = await authenticator.authenticateChannel(
+        channelName: channelName,
+        socketId: socketId,
+      );
+      if (!_running || _socket != socket || _socketId != socketId) return;
+      final authorization = auth.auth;
+      if (authorization == null || authorization.isEmpty) {
+        _log('Rider channel authorization failed.');
+        _events.add(const RiderRealtimeEvent('realtime.subscription_error'));
+        _scheduleReconnect();
+        return;
+      }
+      socket.send({
+        'event': 'pusher:subscribe',
+        'data': {'channel': channelName, 'auth': authorization},
+      });
+    } catch (_) {
+      if (!_running || _socket != socket) return;
+      _log('Rider channel authorization request failed.');
+      _events.add(const RiderRealtimeEvent('realtime.subscription_error'));
+      _scheduleReconnect();
+    }
   }
 
   void _scheduleReconnect() {
@@ -327,5 +368,9 @@ class RiderRealtimeService extends ChangeNotifier {
     if (_state == value) return;
     _state = value;
     notifyListeners();
+  }
+
+  void _log(String message) {
+    if (kDebugMode) debugPrint('Rider realtime: $message');
   }
 }
