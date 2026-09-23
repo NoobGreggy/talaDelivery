@@ -54,7 +54,7 @@ export class ZoneListComponent {
 
   protected readonly form = this.fb.group({
     name: ['', Validators.required],
-    city: [''],
+    city: ['', Validators.required],
     province: [''],
     base_fee: [0, [Validators.required, Validators.min(0)]],
     included_km: [0, [Validators.required, Validators.min(0)]],

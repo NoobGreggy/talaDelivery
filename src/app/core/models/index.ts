@@ -68,8 +68,11 @@ export interface Delivery {
   customer?: Customer | null;
   rider?: Rider | null;
   status: DeliveryStatus;
-  distance: number;
+  distance_km: number;
   delivery_fee: number;
+  rider_commission: number;
+  commission_type?: 'PERCENTAGE' | 'FIXED' | null;
+  commission_value?: number | null;
   pickup_address: string;
   delivery_address: string;
   timeline: DeliveryEvent[];
@@ -134,6 +137,17 @@ export interface DeliveryZone {
   included_km: number;
   extra_fee_per_km: number;
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+}
+
+export interface PlatformSettings {
+  rider_commission_type: 'PERCENTAGE' | 'FIXED';
+  rider_commission_value: number;
+  earnings_week_type: 'ROLLING_SEVEN_DAYS' | 'CALENDAR_WEEK';
+  week_starts_on: number;
+  settlement_timezone: string;
+  settlement_day_starts_at: string;
+  distance_method: 'STRAIGHT_LINE';
+  updated_at?: string;
 }
 
 export interface DashboardData {

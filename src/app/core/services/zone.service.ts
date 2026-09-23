@@ -53,7 +53,7 @@ export class ZoneService {
   }
 
   private getZones(filters: ZoneFilters): Observable<PaginatedResponse<DeliveryZone>> {
-    const params: Record<string, string> = {};
+    const params: Record<string, string> = { per_page: '1000' };
     if (filters.status) params['status'] = filters.status;
     if (filters.search) params['search'] = filters.search;
     return this.api.get<PaginatedResponse<DeliveryZone>>('/admin/delivery-zones', params);
