@@ -31,7 +31,7 @@ class AdminRiderController extends Controller
     {
         $rider->load('user', 'currentDelivery')
             ->loadCount(['deliveries as completed_deliveries' => fn ($query) => $query->where('status', DeliveryStatus::Delivered)])
-            ->loadSum(['deliveries as total_earnings' => fn ($query) => $query->where('status', DeliveryStatus::Delivered)], 'delivery_fee');
+            ->loadSum(['deliveries as total_earnings' => fn ($query) => $query->where('status', DeliveryStatus::Delivered)], 'rider_commission');
 
         return ApiResponse::success('Rider retrieved.', new RiderResource($rider));
     }

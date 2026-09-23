@@ -18,6 +18,9 @@ class DeliveryOfferResource extends JsonResource
             'status' => $this->status?->value,
             'offered_at' => $this->offered_at,
             'expires_at' => $this->expires_at,
+            'duration_seconds' => $this->offered_at && $this->expires_at
+                ? $this->offered_at->diffInSeconds($this->expires_at)
+                : null,
             'responded_at' => $this->responded_at,
             'created_at' => $this->created_at,
             'delivery' => new DeliveryResource($this->whenLoaded('delivery')),

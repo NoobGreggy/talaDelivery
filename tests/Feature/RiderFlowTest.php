@@ -8,6 +8,7 @@ use App\Jobs\ExpireDeliveryOffer;
 use App\Models\Category;
 use App\Models\Delivery;
 use App\Models\DeliveryZone;
+use App\Models\PlatformSetting;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\StoreUser;
@@ -31,6 +32,10 @@ class RiderFlowTest extends ApiTestCase
         DeliveryZone::factory()->create([
             'city' => 'Manila',
             'province' => 'Metro Manila',
+        ]);
+        PlatformSetting::factory()->create([
+            'rider_commission_type' => 'PERCENTAGE',
+            'rider_commission_value' => 20,
         ]);
 
         $this->store = Store::factory()->create([
@@ -118,7 +123,8 @@ class RiderFlowTest extends ApiTestCase
 
         $this->postRider($riderToken, "/api/v1/rider/deliveries/{$deliveryId}/complete")
             ->assertOk()
-            ->assertJsonPath('data.status', 'DELIVERED');
+            ->assertJsonPath('data.status', 'DELIVERED')
+            ->assertJsonPath('data.rider_commission', '9.80');
         $this->assertDatabaseHas('orders', [
             'id' => $order['id'],
             'status' => 'DELIVERED',
@@ -126,6 +132,16 @@ class RiderFlowTest extends ApiTestCase
         ]);
 
         $this->assertSame(RiderStatus::Online, $rider->fresh()->status);
+
+        $this->withToken($riderToken)->getJson('/api/v1/rider/profile')
+            ->assertOk()
+            ->assertJsonPath('data.completed_deliveries', 1)
+            ->assertJsonPath('data.total_earnings', 9.8);
+
+        $this->withToken($riderToken)->getJson('/api/v1/rider/earnings-summary')
+            ->assertOk()
+            ->assertJsonPath('data.periods.today.completed_deliveries', 1)
+            ->assertJsonPath('data.periods.today.earnings', 9.8);
     }
 
     public function test_rider_going_online_receives_an_offer_for_an_already_ready_order(): void

@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['order_id', 'store_id', 'rider_id', 'status', 'pickup_address', 'pickup_latitude', 'pickup_longitude', 'delivery_address', 'delivery_latitude', 'delivery_longitude', 'distance_km', 'delivery_fee', 'cancelled_by', 'cancellation_reason', 'assigned_at', 'accepted_at', 'picked_up_at', 'started_at', 'delivered_at', 'cancelled_at'])]
+#[Fillable(['order_id', 'store_id', 'rider_id', 'status', 'pickup_address', 'pickup_latitude', 'pickup_longitude', 'delivery_address', 'delivery_latitude', 'delivery_longitude', 'distance_km', 'delivery_fee', 'rider_commission', 'commission_type', 'commission_value', 'cancelled_by', 'cancellation_reason', 'assigned_at', 'accepted_at', 'picked_up_at', 'started_at', 'delivered_at', 'cancelled_at'])]
 class Delivery extends Model
 {
     /** @use HasFactory<DeliveryFactory> */
@@ -31,6 +31,8 @@ class Delivery extends Model
             'delivery_longitude' => 'decimal:7',
             'distance_km' => 'decimal:2',
             'delivery_fee' => 'decimal:2',
+            'rider_commission' => 'decimal:2',
+            'commission_value' => 'decimal:2',
             'assigned_at' => 'datetime',
             'accepted_at' => 'datetime',
             'picked_up_at' => 'datetime',

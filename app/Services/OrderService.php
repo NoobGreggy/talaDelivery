@@ -20,6 +20,7 @@ class OrderService
 {
     public function __construct(
         public PricingService $pricing,
+        public RiderCommissionService $commissions,
         public NotificationService $notifications,
     ) {}
 
@@ -62,19 +63,20 @@ class OrderService
         }
 
         $priceBreakdown = $this->pricing->calculate(
-            (float) $store->latitude,
-            (float) $store->longitude,
-            (float) ($data['delivery_latitude'] ?? null),
-            (float) ($data['delivery_longitude'] ?? null),
+            $store->latitude !== null ? (float) $store->latitude : null,
+            $store->longitude !== null ? (float) $store->longitude : null,
+            isset($data['delivery_latitude']) ? (float) $data['delivery_latitude'] : null,
+            isset($data['delivery_longitude']) ? (float) $data['delivery_longitude'] : null,
             $data['city'] ?? null,
             $data['province'] ?? null,
         );
 
         $discount = (float) ($data['discount'] ?? 0);
         $deliveryFee = $priceBreakdown['delivery_fee'];
+        $commission = $this->commissions->calculate($deliveryFee);
         $total = $subtotal + $deliveryFee - $discount;
 
-        $order = DB::transaction(function () use ($data, $customer, $store, $lineItems, $subtotal, $deliveryFee, $discount, $total, $priceBreakdown) {
+        $order = DB::transaction(function () use ($data, $customer, $store, $lineItems, $subtotal, $deliveryFee, $discount, $total, $priceBreakdown, $commission) {
             $order = Order::query()->create([
                 'order_number' => $this->generateOrderNumber(),
                 'customer_id' => $customer->id,
@@ -118,6 +120,9 @@ class OrderService
                 'delivery_longitude' => $data['delivery_longitude'] ?? null,
                 'distance_km' => $priceBreakdown['distance_km'],
                 'delivery_fee' => $deliveryFee,
+                'rider_commission' => $commission['amount'],
+                'commission_type' => $commission['type'],
+                'commission_value' => $commission['value'],
             ]);
 
             return $order;

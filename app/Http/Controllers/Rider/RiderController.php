@@ -16,12 +16,15 @@ use App\Jobs\MatchRider;
 use App\Models\Delivery;
 use App\Models\Rider;
 use App\Models\User;
+use App\Services\RiderEarningsService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class RiderController extends Controller
 {
+    public function __construct(public RiderEarningsService $earnings) {}
+
     public function register(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -71,7 +74,7 @@ class RiderController extends Controller
             return ApiResponse::error('Rider profile not found.', null, 404);
         }
 
-        return ApiResponse::success('Rider profile retrieved.', new RiderResource($rider->load('user')));
+        return ApiResponse::success('Rider profile retrieved.', new RiderResource($this->profileData($rider)));
     }
 
     public function online(Request $request): JsonResponse
@@ -96,7 +99,7 @@ class RiderController extends Controller
             $this->retryUnmatchedDeliveries();
         }
 
-        return ApiResponse::success('You are now online.', new RiderResource($rider->fresh('user')));
+        return ApiResponse::success('You are now online.', new RiderResource($this->profileData($rider->fresh())));
     }
 
     public function offline(Request $request): JsonResponse
@@ -109,7 +112,7 @@ class RiderController extends Controller
 
         $rider->update(['is_online' => false, 'status' => RiderStatus::Offline]);
 
-        return ApiResponse::success('You are now offline.', new RiderResource($rider->fresh('user')));
+        return ApiResponse::success('You are now offline.', new RiderResource($this->profileData($rider->fresh())));
     }
 
     public function location(Request $request): JsonResponse
@@ -130,7 +133,7 @@ class RiderController extends Controller
             $this->retryUnmatchedDeliveries();
         }
 
-        return ApiResponse::success('Location updated.', new RiderResource($rider->fresh('user')));
+        return ApiResponse::success('Location updated.', new RiderResource($this->profileData($rider->fresh())));
     }
 
     public function deliveries(Request $request): JsonResponse
@@ -142,6 +145,21 @@ class RiderController extends Controller
             ->paginate((int) $request->integer('per_page', 15));
 
         return ApiResponse::paginated('Deliveries retrieved.', DeliveryResource::collection($deliveries));
+    }
+
+    public function earningsSummary(Request $request): JsonResponse
+    {
+        return ApiResponse::success(
+            'Rider earnings summary retrieved.',
+            $this->earnings->summary($request->user()),
+        );
+    }
+
+    private function profileData(Rider $rider): Rider
+    {
+        return $rider->load(['user', 'currentDelivery'])
+            ->loadCount(['deliveries as completed_deliveries' => fn ($query) => $query->where('status', DeliveryStatus::Delivered)])
+            ->loadSum(['deliveries as total_earnings' => fn ($query) => $query->where('status', DeliveryStatus::Delivered)], 'rider_commission');
     }
 
     private function rider(Request $request): Rider

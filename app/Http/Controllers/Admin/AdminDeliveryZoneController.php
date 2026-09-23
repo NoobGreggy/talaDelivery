@@ -8,6 +8,8 @@ use App\Models\DeliveryZone;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class AdminDeliveryZoneController extends Controller
 {
@@ -26,15 +28,17 @@ class AdminDeliveryZoneController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $this->normalizeLocation($request);
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'city' => ['nullable', 'string', 'max:255'],
+            'city' => ['required', 'string', 'max:255'],
             'province' => ['nullable', 'string', 'max:255'],
             'base_fee' => ['required', 'numeric', 'min:0'],
             'included_km' => ['required', 'numeric', 'min:0'],
             'extra_fee_per_km' => ['required', 'numeric', 'min:0'],
             'status' => ['nullable', 'string', 'in:ACTIVE,INACTIVE,SUSPENDED'],
         ]);
+        $this->assertActiveCityIsUnique($validated);
 
         $zone = DeliveryZone::create($validated);
 
@@ -48,6 +52,7 @@ class AdminDeliveryZoneController extends Controller
 
     public function update(Request $request, DeliveryZone $deliveryZone): JsonResponse
     {
+        $this->normalizeLocation($request);
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'city' => ['nullable', 'string', 'max:255'],
@@ -57,6 +62,7 @@ class AdminDeliveryZoneController extends Controller
             'extra_fee_per_km' => ['sometimes', 'numeric', 'min:0'],
             'status' => ['sometimes', 'string', 'in:ACTIVE,INACTIVE,SUSPENDED'],
         ]);
+        $this->assertActiveCityIsUnique($validated, $deliveryZone);
 
         $deliveryZone->update($validated);
 
@@ -68,5 +74,41 @@ class AdminDeliveryZoneController extends Controller
         $deliveryZone->delete();
 
         return ApiResponse::success('Delivery zone deleted.');
+    }
+
+    private function normalizeLocation(Request $request): void
+    {
+        if ($request->has('city')) {
+            $request->merge(['city' => Str::squish($request->string('city')->toString())]);
+        }
+
+        if ($request->has('province')) {
+            $request->merge(['province' => Str::squish($request->string('province')->toString())]);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     */
+    private function assertActiveCityIsUnique(array $validated, ?DeliveryZone $current = null): void
+    {
+        $status = $validated['status'] ?? $current?->status?->value ?? 'ACTIVE';
+        $city = $validated['city'] ?? $current?->city;
+
+        if ($status !== 'ACTIVE' || $city === null || $city === '') {
+            return;
+        }
+
+        $duplicate = DeliveryZone::query()
+            ->where('status', 'ACTIVE')
+            ->whereRaw('LOWER(TRIM(city)) = ?', [Str::lower($city)])
+            ->when($current !== null, fn ($query) => $query->whereKeyNot($current->id))
+            ->exists();
+
+        if ($duplicate) {
+            throw ValidationException::withMessages([
+                'city' => ['Only one active delivery zone is allowed per city.'],
+            ]);
+        }
     }
 }

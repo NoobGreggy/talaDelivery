@@ -3,11 +3,12 @@
 namespace App\Services;
 
 use App\Models\DeliveryZone;
+use Illuminate\Support\Str;
 
 class PricingService
 {
     /**
-     * @return array{delivery_fee: float, distance_km: float, zone: DeliveryZone|null}
+     * @return array{delivery_fee: float, distance_km: float, zone: DeliveryZone}
      */
     public function calculate(
         ?float $pickupLat,
@@ -17,6 +18,10 @@ class PricingService
         ?string $city = null,
         ?string $province = null,
     ): array {
+        if ($pickupLat === null || $pickupLng === null || $deliveryLat === null || $deliveryLng === null) {
+            throw new \DomainException('A valid pickup and delivery location is required to place an order.');
+        }
+
         $zone = $this->resolveZone($city, $province);
         $distanceKm = $this->distanceKm($pickupLat, $pickupLng, $deliveryLat, $deliveryLng);
 
@@ -36,24 +41,22 @@ class PricingService
 
     public function resolveZone(?string $city = null, ?string $province = null): DeliveryZone
     {
-        $zone = DeliveryZone::where('status', 'ACTIVE');
-
-        if ($city !== null) {
-            $zone = $zone->where('city', $city);
+        $normalizedCity = Str::of($city ?? '')->squish()->lower()->toString();
+        if ($normalizedCity === '') {
+            throw new \DomainException('A city is required to calculate the delivery fee.');
         }
 
-        $matched = $zone->first();
+        $matched = DeliveryZone::query()
+            ->where('status', 'ACTIVE')
+            ->whereRaw('LOWER(TRIM(city)) = ?', [$normalizedCity])
+            ->orderBy('id')
+            ->first();
 
-        if ($matched) {
-            return $matched;
+        if (! $matched) {
+            throw new \DomainException('Delivery is not available in the selected city.');
         }
 
-        return DeliveryZone::where('status', 'ACTIVE')->first()
-            ?? new DeliveryZone([
-                'base_fee' => 49,
-                'included_km' => 5,
-                'extra_fee_per_km' => 10,
-            ]);
+        return $matched;
     }
 
     public function distanceKm(?float $fromLat, ?float $fromLng, ?float $toLat, ?float $toLng): float

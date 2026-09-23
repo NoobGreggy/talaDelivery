@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\Role;
 use App\Models\DeliveryZone;
 use App\Models\User;
+use App\Services\PricingService;
 use Database\Seeders\RolePermissionSeeder;
 
 class AdminDeliveryZoneTest extends ApiTestCase
@@ -72,6 +73,7 @@ class AdminDeliveryZoneTest extends ApiTestCase
         $this->withToken($adminToken)
             ->postJson('/api/v1/admin/delivery-zones', [
                 'name' => 'Bulacan Zone',
+                'city' => 'Malolos',
                 'province' => 'Bulacan',
                 'base_fee' => 80,
                 'included_km' => 10,
@@ -84,6 +86,37 @@ class AdminDeliveryZoneTest extends ApiTestCase
         $this->assertSame('80.00', (string) $zone->base_fee);
         $this->assertSame('10.00', (string) $zone->included_km);
         $this->assertSame('20.00', (string) $zone->extra_fee_per_km);
+
+        $pricing = app(PricingService::class)->calculate(
+            14.8433,
+            120.8114,
+            14.8433,
+            120.8114,
+            '  MALOLOS ',
+            'Bulacan',
+        );
+
+        $this->assertSame($zone->id, $pricing['zone']->id);
+        $this->assertSame(80.0, $pricing['delivery_fee']);
+    }
+
+    public function test_admin_cannot_activate_two_zones_for_the_same_city(): void
+    {
+        DeliveryZone::factory()->create(['city' => 'Cabanatuan City', 'status' => 'ACTIVE']);
+        $admin = User::factory()->create(['role' => Role::PlatformAdmin->value]);
+        $admin->assignRole(Role::PlatformAdmin->value);
+
+        $this->withToken($admin->createToken('auth-token')->plainTextToken)
+            ->postJson('/api/v1/admin/delivery-zones', [
+                'name' => 'Duplicate City Zone',
+                'city' => '  cabanatuan   city ',
+                'province' => 'Nueva Ecija',
+                'base_fee' => 50,
+                'included_km' => 5,
+                'extra_fee_per_km' => 10,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('city');
     }
 
     public function test_non_admin_cannot_manage_delivery_zones(): void

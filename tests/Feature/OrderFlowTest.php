@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\Role;
 use App\Models\Category;
 use App\Models\DeliveryZone;
+use App\Models\PlatformSetting;
 use App\Models\Product;
 use App\Models\Store;
 use App\Models\StoreUser;
@@ -23,6 +24,10 @@ class OrderFlowTest extends ApiTestCase
         $this->zone = DeliveryZone::factory()->create([
             'city' => 'Manila',
             'province' => 'Metro Manila',
+        ]);
+        PlatformSetting::factory()->create([
+            'rider_commission_type' => 'PERCENTAGE',
+            'rider_commission_value' => 20,
         ]);
 
         $this->store = Store::factory()->create([
@@ -61,6 +66,7 @@ class OrderFlowTest extends ApiTestCase
             ->assertJsonPath('data.delivery.status', 'UNASSIGNED')
             ->assertJsonPath('data.subtotal', '200.00')
             ->assertJsonPath('data.delivery_fee', '49.00')
+            ->assertJsonPath('data.delivery.rider_commission', '9.80')
             ->assertJsonPath('data.total', '249.00');
 
         $this->assertDatabaseHas('orders', ['order_number' => $response->json('data.order_number')]);
@@ -104,6 +110,56 @@ class OrderFlowTest extends ApiTestCase
         $this->actingAsCustomer()->postJson("/api/v1/orders/{$order['id']}/cancel")
             ->assertUnprocessable()
             ->assertJsonPath('message', 'Only pending orders can be cancelled.');
+    }
+
+    public function test_order_without_coordinates_returns_422_and_is_not_created(): void
+    {
+        $payload = $this->orderPayload();
+        unset($payload['delivery_latitude'], $payload['delivery_longitude']);
+
+        $this->actingAsCustomer()->postJson('/api/v1/orders', $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['delivery_latitude', 'delivery_longitude']);
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_order_for_an_unconfigured_city_returns_422_and_is_not_created(): void
+    {
+        $payload = $this->orderPayload();
+        $payload['city'] = 'Baguio City';
+
+        $this->actingAsCustomer()->postJson('/api/v1/orders', $payload)
+            ->assertUnprocessable()
+            ->assertJsonPath('message', 'Delivery is not available in the selected city.');
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_commission_setting_changes_affect_new_orders_without_repricing_existing_deliveries(): void
+    {
+        $firstDelivery = $this->actingAsCustomer()
+            ->postJson('/api/v1/orders', $this->orderPayload())
+            ->assertCreated()
+            ->assertJsonPath('data.delivery.rider_commission', '9.80')
+            ->json('data.delivery');
+
+        PlatformSetting::current()->update([
+            'rider_commission_type' => 'FIXED',
+            'rider_commission_value' => 15,
+        ]);
+
+        $this->actingAsCustomer()
+            ->postJson('/api/v1/orders', $this->orderPayload())
+            ->assertCreated()
+            ->assertJsonPath('data.delivery.rider_commission', '15.00');
+
+        $this->assertDatabaseHas('deliveries', [
+            'id' => $firstDelivery['id'],
+            'rider_commission' => 9.8,
+            'commission_type' => 'PERCENTAGE',
+            'commission_value' => 20,
+        ]);
     }
 
     public function test_customer_can_track_their_order(): void

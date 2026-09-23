@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AdminCustomerController;
 use App\Http\Controllers\Admin\AdminDeliveryController;
 use App\Http\Controllers\Admin\AdminDeliveryZoneController;
 use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\AdminPlatformSettingController;
 use App\Http\Controllers\Admin\AdminRiderController;
 use App\Http\Controllers\Admin\AdminStoreController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -94,6 +95,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('offline', [RiderController::class, 'offline']);
         Route::post('location', [RiderController::class, 'location']);
         Route::get('deliveries', [RiderController::class, 'deliveries']);
+        Route::get('earnings-summary', [RiderController::class, 'earningsSummary']);
         Route::get('offers', [RiderOfferController::class, 'index']);
         Route::post('offers/{offer}/accept', [RiderOfferController::class, 'accept']);
         Route::post('offers/{offer}/reject', [RiderOfferController::class, 'reject']);
@@ -135,6 +137,9 @@ Route::prefix('v1')->group(function (): void {
      * ------------------------------------------------------------------ */
     Route::middleware(['auth:sanctum', 'role:platform_admin,sanctum'])->prefix('admin')->group(function (): void {
         Route::get('dashboard', [DashboardController::class, 'index']);
+
+        Route::get('settings', [AdminPlatformSettingController::class, 'show']);
+        Route::put('settings', [AdminPlatformSettingController::class, 'update']);
 
         Route::get('orders', [AdminOrderController::class, 'index']);
         Route::get('orders/{order}', [AdminOrderController::class, 'show']);
