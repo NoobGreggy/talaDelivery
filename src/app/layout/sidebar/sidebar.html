@@ -1,0 +1,97 @@
+<aside
+  class="flex h-full flex-col border-r border-slate-200 bg-white transition-all duration-300"
+  [class.w-64]="!collapsed()"
+  [class.w-16]="collapsed()">
+
+  <!-- Brand -->
+  <div class="flex h-16 items-center border-b border-slate-200 px-4">
+    @if (!collapsed()) {
+      <span class="text-lg font-bold text-sky-600">TalaDelivery</span>
+    } @else {
+      <span class="mx-auto text-lg font-bold text-sky-600">TD</span>
+    }
+  </div>
+
+  <!-- Navigation -->
+  <nav class="flex-1 overflow-y-auto px-2 py-4">
+    @for (group of visibleGroups(); track group.label) {
+      <div class="mb-4">
+        @if (!collapsed()) {
+          <p class="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+            {{ group.label }}
+          </p>
+        } @else {
+          <div class="mx-auto mb-1 h-px w-8 bg-slate-200"></div>
+        }
+
+        @for (item of group.items; track item.route) {
+          <a
+            [routerLink]="item.route"
+            routerLinkActive="bg-sky-50 text-sky-600"
+            [routerLinkActiveOptions]="{ exact: item.route === '/dashboard' }"
+            class="mb-0.5 flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-150 text-slate-600 hover:bg-slate-50"
+            [class.justify-center]="collapsed()"
+            [class.px-3]="!collapsed()"
+            [title]="collapsed() ? item.label : ''">
+            <svg
+              class="h-5 w-5 flex-shrink-0"
+              [class.mr-3]="!collapsed()"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="item.icon" />
+            </svg>
+            @if (!collapsed()) {
+              <span>{{ item.label }}</span>
+            }
+          </a>
+        }
+      </div>
+    }
+  </nav>
+
+  <!-- Bottom Section -->
+  <div class="border-t border-slate-200 px-2 py-3">
+    @for (item of bottomItems; track item.route) {
+      <a
+        [routerLink]="item.route"
+        routerLinkActive="bg-sky-50 text-sky-600"
+        class="flex items-center rounded-lg px-3 py-2.5 text-sm font-medium text-slate-600 transition-colors duration-150 hover:bg-slate-50"
+        [class.justify-center]="collapsed()">
+        <svg
+          class="h-5 w-5 flex-shrink-0"
+          [class.mr-3]="!collapsed()"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" [attr.d]="item.icon" />
+        </svg>
+        @if (!collapsed()) {
+          <span>{{ item.label }}</span>
+        }
+      </a>
+    }
+
+    <!-- Collapse Toggle -->
+    <button
+      (click)="toggleCollapse.emit()"
+      class="mt-1 hidden w-full items-center justify-center rounded-lg px-3 py-2.5 text-sm font-medium text-slate-500 transition-colors duration-150 hover:bg-slate-50 hover:text-slate-700 lg:flex"
+      [class.justify-center]="collapsed()">
+      <svg
+        class="h-5 w-5 flex-shrink-0 transition-transform duration-300"
+        [class.mr-3]="!collapsed()"
+        [class.rotate-180]="collapsed()"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+      </svg>
+      @if (!collapsed()) {
+        <span>Collapse</span>
+      }
+    </button>
+  </div>
+</aside>

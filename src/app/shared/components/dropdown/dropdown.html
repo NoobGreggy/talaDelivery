@@ -1,0 +1,29 @@
+<div class="relative inline-block text-left">
+  <div (click)="toggle()">
+    <ng-content></ng-content>
+  </div>
+
+  @if (isOpen()) {
+    <div
+      class="absolute right-0 z-50 mt-2 w-48 origin-top-right rounded-lg border border-slate-200 bg-white py-1 shadow-lg focus:outline-none"
+    >
+      @for (item of items(); track item.label) {
+        <button
+          type="button"
+          class="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition-colors"
+          [class]="
+            item.danger
+              ? 'text-red-600 hover:bg-red-50'
+              : 'text-slate-700 hover:bg-slate-100'
+          "
+          (click)="selectItem(item.label)"
+        >
+          @if (item.icon) {
+            <span class="text-slate-400">{{ item.icon }}</span>
+          }
+          {{ item.label }}
+        </button>
+      }
+    </div>
+  }
+</div>

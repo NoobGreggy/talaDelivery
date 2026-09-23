@@ -1,0 +1,99 @@
+<div class="space-y-6">
+  <div>
+    <h1 class="text-2xl font-semibold text-slate-900">Settings</h1>
+    <p class="mt-1 text-sm text-slate-500">Manage platform configuration and preferences.</p>
+  </div>
+
+  <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <!-- General -->
+    <div class="space-y-6 lg:col-span-2">
+      <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">General</h3>
+        <div class="space-y-4">
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-700">Platform Name</label>
+            <input
+              type="text"
+              value="TalaDelivery"
+              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-700">Support Phone</label>
+            <input
+              type="text"
+              placeholder="+63 900 000 0000"
+              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none" />
+          </div>
+          <div>
+            <label class="mb-1 block text-sm font-medium text-slate-700">Support Email</label>
+            <input
+              type="email"
+              placeholder="support@taladelivery.ph"
+              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Delivery -->
+      <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">Delivery</h3>
+        <p class="mb-4 text-sm text-slate-500">
+          Delivery fees and included distances are configured per zone under Zones &amp; Pricing.
+        </p>
+        <a href="/zones" class="text-sm font-medium text-sky-600 hover:text-sky-700">
+          Configure delivery zones
+        </a>
+      </div>
+    </div>
+
+    <!-- Side column -->
+    <div class="space-y-6">
+      <!-- Notifications -->
+      <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
+          Notifications
+        </h3>
+        <div class="space-y-3">
+          <label class="flex items-center justify-between gap-3 text-sm text-slate-700">
+            <span>New order alerts</span>
+            <input type="checkbox" checked class="h-4 w-4 rounded border-slate-300 text-sky-600" />
+          </label>
+          <label class="flex items-center justify-between gap-3 text-sm text-slate-700">
+            <span>Delivery updates</span>
+            <input type="checkbox" checked class="h-4 w-4 rounded border-slate-300 text-sky-600" />
+          </label>
+          <label class="flex items-center justify-between gap-3 text-sm text-slate-700">
+            <span>Rider events</span>
+            <input type="checkbox" class="h-4 w-4 rounded border-slate-300 text-sky-600" />
+          </label>
+        </div>
+      </div>
+
+      <!-- Account -->
+      <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">Account</h3>
+        <dl class="space-y-3 text-sm">
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Role</dt>
+            <dd class="font-medium text-slate-900">Platform Admin</dd>
+          </div>
+          <div class="flex justify-between">
+            <dt class="text-slate-500">Session</dt>
+            <dd class="font-medium text-slate-900">Signed in</dd>
+          </div>
+        </dl>
+        <div class="mt-4">
+          <app-button variant="secondary" size="md" (clicked)="save()">
+            Update Settings
+          </app-button>
+        </div>
+      </div>
+
+      @if (saved()) {
+        <p class="rounded-md bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+          Settings saved.
+        </p>
+      }
+    </div>
+  </div>
+</div>

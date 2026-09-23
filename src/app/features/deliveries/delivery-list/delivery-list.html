@@ -1,0 +1,127 @@
+<div class="space-y-4">
+  <!-- Header -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">Deliveries</h1>
+      <p class="mt-1 text-sm text-slate-500">Monitor and manage active deliveries.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <app-search-input
+        placeholder="Search deliveries..."
+        (valueChange)="onSearch($event)" />
+      <button
+        (click)="refresh()"
+        aria-label="Refresh deliveries"
+        class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="flex gap-1 border-b border-slate-200">
+    @for (tab of tabs; track tab.value) {
+      <button
+        (click)="setTab(tab.value)"
+        class="border-b-2 px-4 py-2.5 text-sm font-medium transition-colors"
+        [class.border-sky-500]="activeTab() === tab.value"
+        [class.text-sky-600]="activeTab() === tab.value"
+        [class.border-transparent]="activeTab() !== tab.value"
+        [class.text-slate-500]="activeTab() !== tab.value"
+        [class.hover:text-slate-700]="activeTab() !== tab.value">
+        {{ tab.label }}
+      </button>
+    }
+  </div>
+
+  <!-- Error state -->
+  @if (error()) {
+    <div class="flex items-center justify-center py-16">
+      <app-error-state
+        [message]="'Something went wrong'"
+        [description]="error() ?? ''"
+        (retried)="refresh()" />
+    </div>
+  }
+
+  <!-- Table -->
+  @if (!error()) {
+    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="min-w-[720px] w-full divide-y divide-slate-200">
+        <thead class="bg-slate-50">
+          <tr>
+            @for (col of columns; track col.key) {
+              <th
+                scope="col"
+                class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                {{ col.label }}
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          @if (loading()) {
+            @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+              <tr>
+                @for (col of columns; track col.key) {
+                  <td class="px-4 py-4">
+                    <div class="h-4 w-full animate-pulse rounded bg-slate-200"></div>
+                  </td>
+                }
+              </tr>
+            }
+          } @else if (filteredDeliveries().length === 0) {
+            <tr>
+              <td [attr.colspan]="columns.length" class="px-4 py-12">
+                <app-empty-state
+                  message="No deliveries found"
+                  description="No deliveries match the current filters." />
+              </td>
+            </tr>
+          } @else {
+            @for (delivery of filteredDeliveries(); track delivery.id) {
+              <tr
+                class="cursor-pointer transition-colors hover:bg-sky-50/50"
+                [class.bg-sky-50]="selectedDeliveryId() === delivery.id"
+                (click)="selectDelivery(delivery.id)">
+                <td class="px-4 py-3.5">
+                  <span class="font-semibold text-sky-600">{{ delivery.delivery_number }}</span>
+                </td>
+                <td class="px-4 py-3.5 text-sm text-slate-700">{{ delivery.store?.name }}</td>
+                <td class="px-4 py-3.5 text-sm text-slate-700">
+                  @if (delivery.rider) {
+                    {{ delivery.rider.name }}
+                  } @else {
+                    <span class="italic text-slate-400">Finding rider</span>
+                  }
+                </td>
+                <td class="px-4 py-3.5">
+                  <app-status-badge [status]="delivery.status" />
+                </td>
+                <td class="px-4 py-3.5 text-sm text-slate-500">
+                  {{ delivery.created_at | date: 'MMM d, h:mm a' }}
+                </td>
+                <td class="px-4 py-3.5" (click)="$event.stopPropagation()">
+                  <app-dropdown
+                    [items]="deliveryMenu(delivery)"
+                    (itemClick)="handleMenuAction($event, delivery)" />
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (lastPage() > 1) {
+      <div class="flex justify-center pt-4">
+        <app-pagination
+          [currentPage]="currentPage()"
+          [totalPages]="lastPage()"
+          (pageChange)="goToPage($event)" />
+      </div>
+    }
+  }
+</div>

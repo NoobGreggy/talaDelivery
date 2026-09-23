@@ -1,0 +1,26 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+aside {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+aside::-webkit-scrollbar {
+  width: 4px;
+}
+
+aside::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+aside::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 2px;
+}
+
+a.routerLinkActive {
+  font-weight: 600;
+}

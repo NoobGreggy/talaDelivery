@@ -1,0 +1,134 @@
+<div class="space-y-4">
+  <!-- Header -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">Orders</h1>
+      <p class="mt-1 text-sm text-slate-500">Track customer orders across TalaDelivery.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <app-search-input
+        placeholder="Search orders..."
+        (valueChange)="onSearch($event)" />
+      <button
+        (click)="refresh()"
+        aria-label="Refresh orders"
+        class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Status filter pills -->
+  <div class="flex flex-wrap gap-2">
+    @for (f of [
+      { value: 'all', label: 'All' },
+      { value: 'PENDING', label: 'Pending' },
+      { value: 'CONFIRMED', label: 'Confirmed' },
+      { value: 'PREPARING', label: 'Preparing' },
+      { value: 'READY_FOR_PICKUP', label: 'Ready for pickup' },
+      { value: 'RIDER_ASSIGNED', label: 'Rider assigned' },
+      { value: 'PICKED_UP', label: 'Picked up' },
+      { value: 'OUT_FOR_DELIVERY', label: 'Out for delivery' },
+      { value: 'DELIVERED', label: 'Delivered' },
+      { value: 'CANCELLED', label: 'Cancelled' }
+    ]; track f.value) {
+      <button
+        (click)="setStatusFilter(f.value)"
+        class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+        [class.bg-sky-600]="statusFilter() === f.value"
+        [class.text-white]="statusFilter() === f.value"
+        [class.bg-slate-100]="statusFilter() !== f.value"
+        [class.text-slate-600]="statusFilter() !== f.value"
+        [class.hover:bg-slate-200]="statusFilter() !== f.value">
+        {{ f.label }}
+      </button>
+    }
+  </div>
+
+  <!-- Error -->
+  @if (error()) {
+    <div class="flex items-center justify-center py-16">
+      <app-error-state
+        [message]="'Something went wrong'"
+        [description]="error() ?? ''"
+        (retried)="refresh()" />
+    </div>
+  }
+
+  <!-- Table -->
+  @if (!error()) {
+    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="min-w-[820px] w-full divide-y divide-slate-200">
+        <thead class="bg-slate-50">
+          <tr>
+            @for (col of columns; track col.key) {
+              <th
+                scope="col"
+                class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                {{ col.label }}
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          @if (loading()) {
+            @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+              <tr>
+                @for (col of columns; track col.key) {
+                  <td class="px-4 py-4">
+                    <div class="h-4 w-full animate-pulse rounded bg-slate-200"></div>
+                  </td>
+                }
+              </tr>
+            }
+          } @else if (filteredOrders().length === 0) {
+            <tr>
+              <td [attr.colspan]="columns.length" class="px-4 py-12">
+                <app-empty-state
+                  message="No orders found"
+                  description="No orders match the current filters." />
+              </td>
+            </tr>
+          } @else {
+            @for (order of filteredOrders(); track order.id) {
+              <tr
+                class="cursor-pointer transition-colors hover:bg-sky-50/50"
+                (click)="openOrder(order.id)">
+                <td class="px-4 py-3.5">
+                  <span class="font-semibold text-sky-600">{{ order.order_number }}</span>
+                </td>
+                <td class="px-4 py-3.5 text-sm text-slate-700">
+                  {{ order.customer?.name ?? '—' }}
+                </td>
+                <td class="px-4 py-3.5 text-sm text-slate-700">
+                  {{ order.store?.name ?? '—' }}
+                </td>
+                <td class="px-4 py-3.5 text-sm font-medium text-slate-900">
+                  {{ order.total | currency: 'PHP' : 'symbol' }}
+                </td>
+                <td class="px-4 py-3.5 text-sm text-slate-600">{{ order.payment_method }}</td>
+                <td class="px-4 py-3.5">
+                  <app-status-badge [status]="order.status" />
+                </td>
+                <td class="px-4 py-3.5 text-sm text-slate-500">
+                  {{ order.created_at | date: 'MMM d, h:mm a' }}
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+
+    @if (lastPage() > 1) {
+      <div class="flex justify-center pt-4">
+        <app-pagination
+          [currentPage]="currentPage()"
+          [totalPages]="lastPage()"
+          (pageChange)="goToPage($event)" />
+      </div>
+    }
+  }
+</div>

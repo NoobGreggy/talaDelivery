@@ -1,0 +1,15 @@
+<div
+  class="relative inline-flex items-center justify-center rounded-full shrink-0 font-medium"
+  [class]="sizeClasses() + ' ' + bgColor()"
+>
+  @if (src()) {
+    <img
+      [src]="src()"
+      [alt]="name()"
+      class="absolute inset-0 h-full w-full rounded-full object-cover"
+    />
+    <span class="sr-only">{{ name() }}</span>
+  } @else {
+    {{ initials() }}
+  }
+</div>

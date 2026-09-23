@@ -1,0 +1,198 @@
+<div class="space-y-4">
+  <!-- Header -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">Riders</h1>
+      <p class="mt-1 text-sm text-slate-500">Manage rider availability and active deliveries.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <app-search-input
+        placeholder="Search riders..."
+        (valueChange)="onSearch($event)" />
+      <button
+        (click)="refresh()"
+        aria-label="Refresh riders"
+        class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
+      <p class="text-xs font-medium text-amber-700">Pending</p>
+      <p class="mt-1 text-2xl font-semibold text-amber-900">{{ counts().pending }}</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <p class="text-xs font-medium text-emerald-600">Online</p>
+      <p class="mt-1 text-2xl font-semibold text-slate-900">{{ counts().online }}</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <p class="text-xs font-medium text-sky-600">Busy</p>
+      <p class="mt-1 text-2xl font-semibold text-slate-900">{{ counts().busy }}</p>
+    </div>
+    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
+      <p class="text-xs font-medium text-red-600">Suspended</p>
+      <p class="mt-1 text-2xl font-semibold text-slate-900">{{ counts().suspended }}</p>
+    </div>
+  </div>
+
+  <!-- Status filter -->
+  <div class="flex flex-wrap gap-2">
+    @for (f of statusFilters; track f.value) {
+      <button
+        (click)="setStatusFilter(f.value)"
+        class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+        [class.bg-sky-600]="statusFilter() === f.value"
+        [class.text-white]="statusFilter() === f.value"
+        [class.bg-slate-100]="statusFilter() !== f.value"
+        [class.text-slate-600]="statusFilter() !== f.value"
+        [class.hover:bg-slate-200]="statusFilter() !== f.value">
+        {{ f.label }}
+      </button>
+    }
+  </div>
+
+  <!-- Pending approval banner -->
+  @if (counts().pending > 0) {
+    <div class="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+      <p class="text-sm text-amber-800">
+        {{ counts().pending }} rider{{ counts().pending === 1 ? '' : 's' }} pending verification. Review their details and approve or reject.
+      </p>
+      <button
+        (click)="setStatusFilter('PENDING')"
+        class="ml-auto shrink-0 text-sm font-semibold text-amber-800 underline underline-offset-2 hover:text-amber-900">
+        Review now
+      </button>
+    </div>
+  }
+
+  <!-- Error -->
+  @if (error()) {
+    <div class="flex items-center justify-center py-16">
+      <app-error-state
+        [message]="'Something went wrong'"
+        [description]="error() ?? ''"
+        (retried)="refresh()" />
+    </div>
+  }
+
+  <!-- Table -->
+  @if (!error()) {
+    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="min-w-[720px] w-full divide-y divide-slate-200">
+        <thead class="bg-slate-50">
+          <tr>
+            @for (col of columns; track col.key) {
+              <th
+                scope="col"
+                class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                {{ col.label }}
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          @if (loading()) {
+            @for (row of [1, 2, 3, 4, 5, 6]; track row) {
+              <tr>
+                @for (col of columns; track col.key) {
+                  <td class="px-4 py-4">
+                    <div class="h-4 w-full animate-pulse rounded bg-slate-200"></div>
+                  </td>
+                }
+              </tr>
+            }
+          } @else if (filteredRiders().length === 0) {
+            <tr>
+              <td [attr.colspan]="columns.length" class="px-4 py-12">
+                <app-empty-state
+                  message="No riders found"
+                  description="No riders match the current filters." />
+              </td>
+            </tr>
+          } @else {
+            @for (rider of filteredRiders(); track rider.id) {
+              <tr
+                class="cursor-pointer transition-colors hover:bg-sky-50/50"
+                (click)="openRider(rider.id)">
+                <td class="px-4 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <app-avatar [name]="rider.name" size="sm" />
+                    <div>
+                      <p class="text-sm font-medium text-slate-900">{{ rider.name }}</p>
+                      <p class="text-xs text-slate-400">{{ rider.plate_number }}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-4 py-3.5 text-sm text-slate-600">{{ rider.phone }}</td>
+                <td class="px-4 py-3.5 text-sm text-slate-600">{{ rider.vehicle }}</td>
+                <td class="px-4 py-3.5">
+                  <app-status-badge [status]="rider.status" />
+                </td>
+                <td class="px-4 py-3.5 text-sm">
+                  @if (rider.current_delivery) {
+                    <span class="font-medium text-sky-600">{{ rider.current_delivery.delivery_number }}</span>
+                  } @else {
+                    <span class="text-slate-400">—</span>
+                  }
+                </td>
+                <td class="px-4 py-3.5" (click)="$event.stopPropagation()">
+                  <app-dropdown
+                    [items]="riderMenu(rider)"
+                    (itemClick)="handleMenuAction($event, rider)" />
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Suspend confirm -->
+  <app-confirm-dialog
+    title="Suspend rider?"
+    [message]="suspendTarget() ? suspendTarget()!.name + ' will no longer receive delivery assignments.' : ''"
+    confirmLabel="Suspend Rider"
+    cancelLabel="Cancel"
+    [danger]="true"
+    [open]="!!suspendTarget()"
+    (confirmed)="confirmSuspend()"
+    (cancelled)="suspendTarget.set(null)" />
+
+  <!-- Reject modal -->
+  <app-modal
+    title="Reject rider application?"
+    [open]="!!rejectTarget()"
+    (closed)="rejectTarget.set(null)">
+    @if (rejectTarget()) {
+      <p class="text-sm text-slate-600">
+        Rejecting <span class="font-semibold text-slate-900">{{ rejectTarget()!.name }}</span>. The rider will be notified with the reason below.
+      </p>
+      <div class="mt-4">
+        <label class="mb-1 block text-sm font-medium text-slate-700">Reason</label>
+        <input
+          [formControl]="rejectReason"
+          type="text"
+          placeholder="e.g. Missing valid driver's license"
+          class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none" />
+        <div class="mt-4 flex justify-end gap-2">
+          <app-button variant="secondary" size="md" (clicked)="rejectTarget.set(null)">
+            Cancel
+          </app-button>
+          <app-button
+            variant="danger"
+            size="md"
+            [loading]="rejecting()"
+            (clicked)="confirmReject()">
+            Reject Rider
+          </app-button>
+        </div>
+      </div>
+    }
+  </app-modal>
+</div>
