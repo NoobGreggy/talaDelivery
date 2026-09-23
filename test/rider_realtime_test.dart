@@ -442,6 +442,24 @@ class _EventControllerRepository implements RiderRepository {
   Future<RiderProfile> profile() async => _profile;
 
   @override
+  Future<RiderEarningsSummary> earningsSummary() async {
+    final now = DateTime.now();
+    final period = RiderEarningsPeriod(
+      start: now.subtract(const Duration(days: 7)),
+      end: now,
+      completedDeliveries: 0,
+      earnings: 0,
+    );
+    return RiderEarningsSummary(
+      timezone: 'Asia/Manila',
+      weekType: 'ROLLING_SEVEN_DAYS',
+      today: period,
+      week: period,
+      month: period,
+    );
+  }
+
+  @override
   Future<RiderProfile> setOnline(bool online) async => _profile = RiderProfile(
     id: _profile.id,
     user: _profile.user,

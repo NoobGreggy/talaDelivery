@@ -10,6 +10,7 @@ abstract class RiderRepository {
   Future<RiderOffer> acceptOffer(int offerId);
   Future<void> rejectOffer(int offerId);
   Future<List<RiderDelivery>> deliveries();
+  Future<RiderEarningsSummary> earningsSummary();
   Future<RiderDelivery> updateDelivery(int deliveryId, String action);
   Future<void> updateLocation({
     required double latitude,
@@ -123,6 +124,12 @@ class ApiRiderRepository implements RiderRepository {
     }
     return List<RiderDelivery>.unmodifiable(all);
   }
+
+  @override
+  Future<RiderEarningsSummary> earningsSummary() async =>
+      RiderEarningsSummary.fromJson(
+        _riderPayloadMap(await _api.get('rider/earnings-summary')),
+      );
 
   @override
   Future<RiderDelivery> updateDelivery(int deliveryId, String action) async =>

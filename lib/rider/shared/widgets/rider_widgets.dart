@@ -248,14 +248,14 @@ class DeliveryRow extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 Text(
-                  '${delivery.displayNumber} • ${riderDate(delivery.createdAt)}',
+                  '${delivery.displayNumber} • ${riderDate(delivery.deliveredAt ?? delivery.createdAt)}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
             ),
           ),
           Text(
-            riderMoney(delivery.deliveryFee),
+            riderMoney(delivery.riderCommission),
             style: Theme.of(context).textTheme.titleMedium,
           ),
         ],

@@ -282,7 +282,7 @@ class DeliveryCompleteScreen extends StatelessWidget {
                   children: [
                     _CompletionStat(
                       label: 'EARNED',
-                      value: riderMoney(value?.deliveryFee ?? 0),
+                      value: riderMoney(value?.riderCommission ?? 0),
                     ),
                     const SizedBox(height: 42, child: VerticalDivider()),
                     _CompletionStat(

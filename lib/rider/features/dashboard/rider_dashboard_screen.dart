@@ -48,18 +48,13 @@ class DashboardScreen extends StatelessWidget {
       );
     }
     final completed = controller.completedDeliveries;
-    final today = DateTime.now();
-    final todayDeliveries = completed.where((delivery) {
-      final date = delivery.createdAt?.toLocal();
-      return date != null &&
-          date.year == today.year &&
-          date.month == today.month &&
-          date.day == today.day;
-    }).toList();
-    final todayEarnings = todayDeliveries.fold<double>(
-      0,
-      (sum, delivery) => sum + delivery.deliveryFee,
-    );
+    final todayPeriod = controller.earningsSummary?.today;
+    final todayDeliveries = completed
+        .where(
+          (delivery) => todayPeriod?.includes(delivery.deliveredAt) ?? false,
+        )
+        .toList();
+    final todayEarnings = todayPeriod?.earnings ?? 0;
     return SafeArea(
       bottom: false,
       child: RefreshIndicator(

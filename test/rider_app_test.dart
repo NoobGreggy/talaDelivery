@@ -43,7 +43,7 @@ void main() {
 
     await tester.tap(find.text('1 delivery offer'));
     await tester.pumpAndSettle();
-    expect(find.text('₱69 estimated earnings'), findsOneWidget);
+    expect(find.text('₱13.80 estimated commission'), findsOneWidget);
     expect(find.text('API Mini Mart'), findsOneWidget);
   });
 }
@@ -73,6 +73,7 @@ class _FakeRiderRepository implements RiderRepository {
     deliveryAddress: '2 Customer Street',
     distanceKm: 7.1,
     deliveryFee: 69,
+    riderCommission: 13.8,
     createdAt: DateTime.now(),
     store: const RiderStore(id: 2, name: 'API Mini Mart'),
     order: const RiderOrder(
@@ -108,6 +109,24 @@ class _FakeRiderRepository implements RiderRepository {
 
   @override
   Future<RiderProfile> profile() async => currentProfile;
+
+  @override
+  Future<RiderEarningsSummary> earningsSummary() async {
+    final now = DateTime.now();
+    final period = RiderEarningsPeriod(
+      start: now.subtract(const Duration(days: 7)),
+      end: now,
+      completedDeliveries: 0,
+      earnings: 0,
+    );
+    return RiderEarningsSummary(
+      timezone: 'Asia/Manila',
+      weekType: 'ROLLING_SEVEN_DAYS',
+      today: period,
+      week: period,
+      month: period,
+    );
+  }
 
   @override
   Future<void> updateLocation({

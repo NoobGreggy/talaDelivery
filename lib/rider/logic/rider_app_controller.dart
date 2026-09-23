@@ -8,6 +8,7 @@ class RiderAppController extends ChangeNotifier {
   RiderProfile? profile;
   List<RiderOffer> offers = const [];
   List<RiderDelivery> deliveries = const [];
+  RiderEarningsSummary? earningsSummary;
   List<RiderNotification> notifications = const [];
   RiderDelivery? activeDelivery;
   bool isLoading = false;
@@ -210,6 +211,7 @@ class RiderAppController extends ChangeNotifier {
       profile = null;
       offers = const [];
       deliveries = const [];
+      earningsSummary = null;
       notifications = const [];
       activeDelivery = null;
       errorMessage = null;
@@ -252,7 +254,12 @@ class RiderAppController extends ChangeNotifier {
   }
 
   Future<void> _reloadDeliveries() async {
-    deliveries = await _repository.deliveries();
+    final results = await Future.wait<Object>([
+      _repository.deliveries(),
+      _repository.earningsSummary(),
+    ]);
+    deliveries = results[0] as List<RiderDelivery>;
+    earningsSummary = results[1] as RiderEarningsSummary;
     activeDelivery = profile?.currentDelivery;
     activeDelivery ??= deliveries.where((item) => item.isActive).firstOrNull;
   }

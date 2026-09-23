@@ -156,6 +156,8 @@ class RiderDelivery {
     required this.distanceKm,
     required this.deliveryFee,
     required this.createdAt,
+    this.riderCommission = 0,
+    this.deliveredAt,
     this.store,
     this.order,
   });
@@ -166,7 +168,9 @@ class RiderDelivery {
   final String deliveryAddress;
   final double distanceKm;
   final double deliveryFee;
+  final double riderCommission;
   final DateTime? createdAt;
+  final DateTime? deliveredAt;
   final RiderStore? store;
   final RiderOrder? order;
 
@@ -191,9 +195,9 @@ class RiderDelivery {
       deliveryAddress: _riderString(json['delivery_address']) ?? '',
       distanceKm: _riderDouble(json['distance_km']),
       deliveryFee: _riderDouble(json['delivery_fee']),
-      createdAt: DateTime.tryParse(
-        (json['delivered_at'] ?? json['created_at'])?.toString() ?? '',
-      ),
+      riderCommission: _riderDouble(json['rider_commission']),
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
+      deliveredAt: DateTime.tryParse(json['delivered_at']?.toString() ?? ''),
       store: store is Map<String, dynamic> ? RiderStore.fromJson(store) : null,
       order: order is Map<String, dynamic> ? RiderOrder.fromJson(order) : null,
     );
@@ -206,10 +210,88 @@ class RiderDelivery {
     'delivery_address': deliveryAddress,
     'distance_km': distanceKm,
     'delivery_fee': deliveryFee,
+    'rider_commission': riderCommission,
     'created_at': createdAt?.toIso8601String(),
+    'delivered_at': deliveredAt?.toIso8601String(),
     'store': store?.toJson(),
     'order': order?.toJson(),
   };
+}
+
+class RiderEarningsPeriod {
+  const RiderEarningsPeriod({
+    required this.start,
+    required this.end,
+    required this.completedDeliveries,
+    required this.earnings,
+  });
+
+  final DateTime start;
+  final DateTime end;
+  final int completedDeliveries;
+  final double earnings;
+
+  bool includes(DateTime? value) {
+    if (value == null) return false;
+    return !value.isBefore(start) && !value.isAfter(end);
+  }
+
+  factory RiderEarningsPeriod.fromJson(Map<String, dynamic> json) {
+    final start = DateTime.tryParse(json['start']?.toString() ?? '');
+    final end = DateTime.tryParse(json['end']?.toString() ?? '');
+    if (start == null || end == null) {
+      throw const FormatException('Invalid rider earnings period.');
+    }
+    return RiderEarningsPeriod(
+      start: start,
+      end: end,
+      completedDeliveries: _riderInt(json['completed_deliveries']),
+      earnings: _riderDouble(json['earnings']),
+    );
+  }
+}
+
+class RiderEarningsSummary {
+  const RiderEarningsSummary({
+    required this.timezone,
+    required this.weekType,
+    required this.today,
+    required this.week,
+    required this.month,
+  });
+
+  final String timezone;
+  final String weekType;
+  final RiderEarningsPeriod today;
+  final RiderEarningsPeriod week;
+  final RiderEarningsPeriod month;
+
+  RiderEarningsPeriod period(int filter) => switch (filter) {
+    0 => today,
+    1 => week,
+    _ => month,
+  };
+
+  factory RiderEarningsSummary.fromJson(Map<String, dynamic> json) {
+    final periods = json['periods'];
+    if (periods is! Map<String, dynamic>) {
+      throw const FormatException('Invalid rider earnings summary.');
+    }
+    Map<String, dynamic> period(String key) {
+      final value = periods[key];
+      if (value is Map<String, dynamic>) return value;
+      throw const FormatException('Invalid rider earnings summary.');
+    }
+
+    return RiderEarningsSummary(
+      timezone: _riderString(json['timezone']) ?? 'UTC',
+      weekType:
+          _riderString(json['earnings_week_type']) ?? 'ROLLING_SEVEN_DAYS',
+      today: RiderEarningsPeriod.fromJson(period('today')),
+      week: RiderEarningsPeriod.fromJson(period('week')),
+      month: RiderEarningsPeriod.fromJson(period('month')),
+    );
+  }
 }
 
 class RiderProfile {
@@ -283,11 +365,13 @@ class RiderOffer {
     required this.expiresAt,
     required this.delivery,
     this.offeredAt,
+    this.durationSeconds,
   });
   final int id;
   final String status;
   final DateTime? expiresAt;
   final DateTime? offeredAt;
+  final int? durationSeconds;
   final RiderDelivery delivery;
 
   int get secondsRemaining {
@@ -306,6 +390,9 @@ class RiderOffer {
       status: _riderString(json['status']) ?? 'PENDING',
       expiresAt: DateTime.tryParse(json['expires_at']?.toString() ?? ''),
       offeredAt: DateTime.tryParse(json['offered_at']?.toString() ?? ''),
+      durationSeconds: _riderInt(json['duration_seconds']) > 0
+          ? _riderInt(json['duration_seconds'])
+          : null,
       delivery: RiderDelivery.fromJson(delivery),
     );
   }
@@ -315,6 +402,7 @@ class RiderOffer {
     'status': status,
     'expires_at': expiresAt?.toIso8601String(),
     'offered_at': offeredAt?.toIso8601String(),
+    'duration_seconds': durationSeconds,
     'delivery': delivery.toJson(),
   };
 }

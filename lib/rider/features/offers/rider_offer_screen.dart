@@ -31,7 +31,7 @@ class _OfferScreenState extends State<OfferScreen> {
       final window = expiresAt.difference(offeredAt).inSeconds;
       if (window > 0) return window;
     }
-    return 120;
+    return offer.durationSeconds ?? math.max(offer.secondsRemaining, 1);
   }
 
   @override
@@ -148,13 +148,13 @@ class _OfferScreenState extends State<OfferScreen> {
           ),
           const SizedBox(height: 22),
           Text(
-            '${riderMoney(delivery.deliveryFee)} estimated earnings',
+            '${riderMoney(delivery.riderCommission)} estimated commission',
             style: Theme.of(context).textTheme.headlineMedium,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 6),
           Text(
-            '${delivery.distanceKm.toStringAsFixed(1)} km total',
+            '${delivery.distanceKm.toStringAsFixed(1)} km delivery distance',
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 22),
