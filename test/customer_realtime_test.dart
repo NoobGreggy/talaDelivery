@@ -224,6 +224,79 @@ void main() {
     },
   );
 
+  test(
+    'delivery channel publishes newer rider locations without order reload',
+    () async {
+      final tokenStore = MemoryCustomerTokenStore();
+      await tokenStore.save('customer-token');
+      final socket = _FakeSocket();
+      final authorizedChannels = <String>[];
+      final client = MockClient((request) async {
+        authorizedChannels.add(request.bodyFields['channel_name']!);
+        return http.Response(jsonEncode({'auth': 'public-key:signature'}), 200);
+      });
+      final realtime = CustomerRealtimeController(
+        config: CustomerRealtimeConfig(
+          socketUrl: 'ws://localhost:8080',
+          appKey: 'public-key',
+          authUri: Uri.parse('https://api.test/broadcasting/auth'),
+        ),
+        tokenStore: tokenStore,
+        authClient: client,
+        socketFactory: (_) => socket,
+      );
+
+      await realtime.start(7);
+      socket.emit(
+        'pusher:connection_established',
+        data: {'socket_id': '123.456'},
+      );
+      await Future<void>.delayed(Duration.zero);
+      realtime.watchDelivery(12);
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        authorizedChannels,
+        containsAll(['private-user.7', 'private-delivery.12']),
+      );
+
+      socket.emit(
+        'pusher_internal:subscription_succeeded',
+        channel: 'private-delivery.12',
+      );
+      socket.emit(
+        'rider.location.updated',
+        channel: 'private-delivery.12',
+        data: {
+          'delivery_id': 12,
+          'rider_id': 9,
+          'latitude': 14.5995,
+          'longitude': 120.9842,
+          'sequence': 20,
+          'recorded_at': '2026-09-24T10:20:30Z',
+        },
+      );
+      final acceptedVersion = realtime.locationVersion;
+      expect(realtime.lastRiderLocation?.latitude, 14.5995);
+
+      socket.emit(
+        'rider.location.updated',
+        channel: 'private-delivery.12',
+        data: {
+          'delivery_id': 12,
+          'latitude': 1,
+          'longitude': 1,
+          'sequence': 19,
+        },
+      );
+      expect(realtime.locationVersion, acceptedVersion);
+      expect(realtime.lastRiderLocation?.latitude, 14.5995);
+
+      realtime.dispose();
+      client.close();
+      await socket.incoming.close();
+    },
+  );
+
   testWidgets('order tracking refetches the order on its broadcast', (
     tester,
   ) async {

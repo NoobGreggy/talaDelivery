@@ -25,6 +25,8 @@ class _AddressSetupPageState extends State<AddressSetupPage> {
   final notesController = TextEditingController();
   CustomerAddressViewModel? viewModel;
   bool initialized = false;
+  CustomerMapPoint? selectedPoint;
+  String? mapError;
 
   @override
   void didChangeDependencies() {
@@ -45,6 +47,12 @@ class _AddressSetupPageState extends State<AddressSetupPage> {
     provinceController.text = existing?.province ?? '';
     postalController.text = existing?.postalCode ?? '';
     notesController.text = existing?.notes ?? '';
+    if (existing?.latitude != null && existing?.longitude != null) {
+      selectedPoint = CustomerMapPoint(
+        existing!.latitude!,
+        existing.longitude!,
+      );
+    }
   }
 
   @override
@@ -64,6 +72,12 @@ class _AddressSetupPageState extends State<AddressSetupPage> {
 
   Future<void> submit() async {
     if (!(formKey.currentState?.validate() ?? false)) return;
+    if (selectedPoint == null) {
+      setState(() {
+        mapError = 'Tap the map to select the exact delivery location.';
+      });
+      return;
+    }
     final request = CustomerAddressRequest(
       label: labelController.text,
       recipientName: recipientController.text,
@@ -73,6 +87,8 @@ class _AddressSetupPageState extends State<AddressSetupPage> {
       city: cityController.text,
       province: provinceController.text,
       postalCode: postalController.text,
+      latitude: selectedPoint!.latitude,
+      longitude: selectedPoint!.longitude,
       notes: notesController.text,
       isDefault: widget.firstRun || widget.address?.isDefault == true,
     );
@@ -167,6 +183,27 @@ class _AddressSetupPageState extends State<AddressSetupPage> {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
+                      CustomerAddressMapPicker(
+                        selectedPoint: selectedPoint,
+                        surfaceBuilder: CustomerDependencyScope.of(context)
+                            .addressMapSurfaceBuilder,
+                        onChanged: (point) => setState(() {
+                          selectedPoint = point;
+                          mapError = null;
+                        }),
+                      ),
+                      if (mapError != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          mapError!,
+                          key: const Key('address-map-error'),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
                       TextFormField(
                         key: const Key('address-label'),
                         controller: labelController,

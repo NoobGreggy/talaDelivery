@@ -162,6 +162,36 @@ void main() {
     expect(find.text('City is required.'), findsOneWidget);
     expect(find.text('Province is required.'), findsOneWidget);
     expect(addresses.createCalls, 0);
+
+    await tester.enterText(
+      find.byKey(const Key('address-recipient')),
+      'Test Customer',
+    );
+    await tester.enterText(
+      find.byKey(const Key('address-phone')),
+      '09171234567',
+    );
+    await tester.enterText(
+      find.byKey(const Key('address-line')),
+      '123 Example Street',
+    );
+    await tester.enterText(
+      find.byKey(const Key('address-city')),
+      'Cabanatuan City',
+    );
+    await tester.enterText(
+      find.byKey(const Key('address-province')),
+      'Nueva Ecija',
+    );
+    await tester.ensureVisible(find.text('Save delivery address'));
+    await tester.tap(find.text('Save delivery address'));
+    await tester.pump();
+
+    expect(
+      find.text('Tap the map to select the exact delivery location.'),
+      findsOneWidget,
+    );
+    expect(addresses.createCalls, 0);
   });
 
   testWidgets('registration prefills address contact details', (
@@ -243,11 +273,17 @@ void main() {
       find.byKey(const Key('address-province')),
       'Nueva Ecija',
     );
+    tester
+        .widget<CustomerAddressMapPicker>(find.byType(CustomerAddressMapPicker))
+        .onChanged(const CustomerMapPoint(15.4865, 120.9734));
+    await tester.pump();
     await tester.tap(find.text('Save delivery address'));
     await tester.pumpAndSettle();
 
     expect(addresses.createCalls, 1);
     expect(addresses.addresses.single.recipientName, 'Maria Santos');
     expect(addresses.addresses.single.phone, '09171234567');
+    expect(addresses.addresses.single.latitude, 15.4865);
+    expect(addresses.addresses.single.longitude, 120.9734);
   });
 }

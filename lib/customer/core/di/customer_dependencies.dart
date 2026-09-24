@@ -10,6 +10,7 @@ class CustomerAppDependencies {
     this.cartController, [
     this._ownedClient,
     CustomerRealtimeController? realtime,
+    this.addressMapSurfaceBuilder,
   ]) : realtime = realtime ?? CustomerRealtimeController();
 
   factory CustomerAppDependencies.live({CustomerApiConfig? config}) {
@@ -40,6 +41,7 @@ class CustomerAppDependencies {
   final CustomerNotificationRepository notificationRepository;
   final CustomerCartController cartController;
   final CustomerRealtimeController realtime;
+  final CustomerAddressMapSurfaceBuilder? addressMapSurfaceBuilder;
   final http.Client? _ownedClient;
 
   void dispose() {

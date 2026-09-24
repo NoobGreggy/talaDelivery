@@ -77,6 +77,8 @@ class StoreData {
     this.phone,
     this.email,
     this.address,
+    this.latitude,
+    this.longitude,
     this.openingTime,
     this.closingTime,
     this.categories = const [],
@@ -90,6 +92,8 @@ class StoreData {
   final String? phone;
   final String? email;
   final String? address;
+  final double? latitude;
+  final double? longitude;
   final String? openingTime;
   final String? closingTime;
   final List<CategoryData> categories;
@@ -113,6 +117,10 @@ class StoreData {
       phone: _jsonString(json['phone']),
       email: _jsonString(json['email']),
       address: _jsonString(json['address']),
+      latitude: json['latitude'] == null ? null : _jsonDouble(json['latitude']),
+      longitude: json['longitude'] == null
+          ? null
+          : _jsonDouble(json['longitude']),
       openingTime: _jsonString(json['opening_time']),
       closingTime: _jsonString(json['closing_time']),
       categories: (json['categories'] as List<dynamic>? ?? const [])

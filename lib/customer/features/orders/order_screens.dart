@@ -162,6 +162,14 @@ Color colorForOrder(CustomerOrder order) => order.isCancelled
     ? warning
     : sky;
 
+String _trackingAge(DateTime recordedAt) {
+  final age = DateTime.now().difference(recordedAt.toLocal());
+  if (age.inSeconds < 10) return 'just now';
+  if (age.inMinutes < 1) return '${age.inSeconds} seconds ago';
+  if (age.inHours < 1) return '${age.inMinutes} minutes ago';
+  return '${age.inHours} hours ago';
+}
+
 class OrderTrackingPage extends StatefulWidget {
   const OrderTrackingPage({super.key, this.order, this.orderId})
     : assert(order != null || orderId != null);
@@ -177,6 +185,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
   Future<CustomerOrder>? future;
   CustomerRealtimeController? realtime;
   int seenOrderVersion = 0;
+  int seenLocationVersion = 0;
 
   int get id => widget.order?.id ?? widget.orderId!;
 
@@ -185,31 +194,48 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     super.didChangeDependencies();
     final nextRealtime = CustomerDependencyScope.of(context).realtime;
     if (realtime != nextRealtime) {
-      realtime?.removeListener(onOrderEvent);
+      realtime?.removeListener(onRealtimeEvent);
       realtime = nextRealtime;
       seenOrderVersion = nextRealtime.orderVersion;
-      nextRealtime.addListener(onOrderEvent);
+      seenLocationVersion = nextRealtime.locationVersion;
+      nextRealtime.addListener(onRealtimeEvent);
     }
-    future ??= widget.order == null
-        ? CustomerDependencyScope.of(context).orderRepository.get(id)
-        : Future.value(widget.order);
+    future ??= loadOrder();
   }
 
   @override
   void dispose() {
-    realtime?.removeListener(onOrderEvent);
+    realtime?.removeListener(onRealtimeEvent);
+    realtime?.watchDelivery(null);
     super.dispose();
   }
 
-  void onOrderEvent() {
+  Future<CustomerOrder> loadOrder() async {
+    final order = await CustomerDependencyScope.of(context).orderRepository
+        .get(id);
+    if (mounted) {
+      final delivery = order.delivery;
+      realtime?.watchDelivery(
+        delivery?.isTrackable == true ? delivery!.id : null,
+      );
+      seenLocationVersion = realtime?.locationVersion ?? seenLocationVersion;
+    }
+    return order;
+  }
+
+  void onRealtimeEvent() {
     final source = realtime!;
+    if (source.locationVersion != seenLocationVersion) {
+      seenLocationVersion = source.locationVersion;
+      if (mounted) setState(() {});
+    }
     if (source.orderVersion == seenOrderVersion) return;
     seenOrderVersion = source.orderVersion;
     if (source.lastOrderId == null || source.lastOrderId == id) reload();
   }
 
   void reload() => setState(() {
-    future = CustomerDependencyScope.of(context).orderRepository.get(id);
+    future = loadOrder();
   });
 
   Future<void> cancel(CustomerOrder order) async {
@@ -256,6 +282,11 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
         }
         final order = snapshot.data!;
         final stage = stageForStatus(order.status);
+        final delivery = order.delivery;
+        final pushedLocation = realtime?.lastRiderLocation;
+        final liveLocation = pushedLocation?.deliveryId == delivery?.id
+            ? pushedLocation
+            : delivery?.riderLocation;
         const timeline = [
           OrderStage.placed,
           OrderStage.confirmed,
@@ -276,6 +307,25 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
             children: [
               TrackingHero(stage: stage),
+              if (delivery != null) ...[
+                const SizedBox(height: 14),
+                CustomerDeliveryMap(
+                  delivery: delivery,
+                  liveRiderLocation: liveLocation,
+                ),
+                if (delivery.isTrackable) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    liveLocation?.recordedAt == null
+                        ? 'Waiting for the rider’s live location…'
+                        : 'Rider location updated ${_trackingAge(liveLocation!.recordedAt!)}',
+                    style: TextStyle(
+                      color: appPaletteOf(context).quiet,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ],
               const SizedBox(height: 14),
               InfoCard(
                 child: Column(
@@ -315,8 +365,8 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
               ),
               const SizedBox(height: 14),
               const InfoBanner(
-                icon: Icons.sync_rounded,
-                text: 'Order status refreshes automatically from Laravel.',
+                icon: Icons.location_searching_rounded,
+                text: 'Order status and rider location update automatically from Laravel.',
               ),
               if (order.isPending) ...[
                 const SizedBox(height: 14),

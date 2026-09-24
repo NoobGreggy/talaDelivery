@@ -76,17 +76,45 @@ class CustomerRealtimeController extends ChangeNotifier {
   bool _foreground = true;
   bool _disposed = false;
   bool _subscribed = false;
+  String? _socketId;
+  int? _deliveryId;
   DateTime _lastActivity = DateTime.now();
   final Set<String> _seenOrderEvents = {};
   final Set<int> _seenNotificationIds = {};
+  final Set<String> _subscribedChannels = {};
 
   int orderVersion = 0;
   int notificationVersion = 0;
+  int locationVersion = 0;
   int? lastOrderId;
+  CustomerRiderLocation? lastRiderLocation;
 
   bool get enabled =>
       _config?.enabled == true && _tokenStore != null && _authClient != null;
   bool get isSubscribed => _subscribed;
+  bool get isDeliverySubscribed =>
+      _deliveryChannelName != null &&
+      _subscribedChannels.contains(_deliveryChannelName);
+
+  void watchDelivery(int? deliveryId) {
+    if (_deliveryId == deliveryId) return;
+    final previous = _deliveryChannelName;
+    _deliveryId = deliveryId;
+    lastRiderLocation = null;
+    locationVersion++;
+    if (previous != null && _socket != null) {
+      _send('pusher:unsubscribe', {'channel': previous});
+      _subscribedChannels.remove(previous);
+    }
+    final socketId = _socketId;
+    final socket = _socket;
+    if (deliveryId != null && socketId != null && socket != null) {
+      unawaited(
+        _authorizeChannel(_deliveryChannelName!, socketId, _generation, socket),
+      );
+    }
+    notifyListeners();
+  }
 
   Future<void> start(int userId) async {
     stop();
@@ -120,12 +148,14 @@ class CustomerRealtimeController extends ChangeNotifier {
   void stop() {
     _generation++;
     _userId = null;
+    _deliveryId = null;
     _token = null;
     _retry = 0;
     _reconnectTimer?.cancel();
     _closeSocket();
     _seenOrderEvents.clear();
     _seenNotificationIds.clear();
+    lastRiderLocation = null;
   }
 
   bool _current(int generation) =>
@@ -184,7 +214,17 @@ class CustomerRealtimeController extends ChangeNotifier {
       final data = _frameData(message['data']);
       final socketId = data?['socket_id'];
       if (socketId is String && socketId.isNotEmpty) {
-        await _authorize(socketId, generation, source);
+        _socketId = socketId;
+        await _authorizeChannel(_channelName!, socketId, generation, source);
+        final deliveryChannel = _deliveryChannelName;
+        if (deliveryChannel != null && _current(generation)) {
+          await _authorizeChannel(
+            deliveryChannel,
+            socketId,
+            generation,
+            source,
+          );
+        }
       }
       return;
     }
@@ -198,7 +238,9 @@ class CustomerRealtimeController extends ChangeNotifier {
     }
     if (event == 'pusher_internal:subscription_succeeded' ||
         event == 'pusher:subscription_succeeded') {
-      if (message['channel'] == _channelName) {
+      final channel = message['channel'];
+      if (channel is String) _subscribedChannels.add(channel);
+      if (channel == _channelName) {
         _subscribed = true;
         _retry = 0;
         _startHeartbeat(generation);
@@ -210,9 +252,30 @@ class CustomerRealtimeController extends ChangeNotifier {
       }
       return;
     }
-    if (!_subscribed || message['channel'] != _channelName) return;
     final data = _frameData(message['data']);
     if (data == null) return;
+    if (event == 'rider.location.updated' &&
+        message['channel'] == _deliveryChannelName &&
+        _subscribedChannels.contains(_deliveryChannelName)) {
+      final location = CustomerRiderLocation.fromJson(data);
+      if (location.deliveryId != _deliveryId || !location.hasCoordinates) {
+        return;
+      }
+      final current = lastRiderLocation;
+      if (current != null &&
+          ((location.sequence > 0 && location.sequence <= current.sequence) ||
+              (location.sequence == 0 &&
+                  location.recordedAt != null &&
+                  current.recordedAt != null &&
+                  !location.recordedAt!.isAfter(current.recordedAt!)))) {
+        return;
+      }
+      lastRiderLocation = location;
+      locationVersion++;
+      notifyListeners();
+      return;
+    }
+    if (!_subscribed || message['channel'] != _channelName) return;
     if (event == 'order.updated') {
       final id = _jsonInt(data['id']);
       if (id <= 0) return;
@@ -230,6 +293,8 @@ class CustomerRealtimeController extends ChangeNotifier {
   }
 
   String? get _channelName => _userId == null ? null : 'private-user.$_userId';
+  String? get _deliveryChannelName =>
+      _deliveryId == null ? null : 'private-delivery.$_deliveryId';
 
   Map<String, dynamic>? _frameData(Object? value) {
     if (value is Map<String, dynamic>) return value;
@@ -248,14 +313,14 @@ class CustomerRealtimeController extends ChangeNotifier {
     return true;
   }
 
-  Future<void> _authorize(
+  Future<void> _authorizeChannel(
+    String channel,
     String socketId,
     int generation,
     WebSocketChannel source,
   ) async {
-    final channel = _channelName;
     final token = _token;
-    if (channel == null || token == null) return;
+    if (token == null) return;
     try {
       final response = await _authClient!
           .post(
@@ -268,10 +333,12 @@ class CustomerRealtimeController extends ChangeNotifier {
           )
           .timeout(const Duration(seconds: 8));
       if (!_current(generation) || !_foreground || _socket != source) return;
-      if (response.statusCode == 401 || response.statusCode == 403) {
+      if (response.statusCode == 401 ||
+          (response.statusCode == 403 && channel == _channelName)) {
         stop();
         return;
       }
+      if (response.statusCode == 403) return;
       if (response.statusCode != 200) {
         _disconnected(generation);
         return;
@@ -323,6 +390,8 @@ class CustomerRealtimeController extends ChangeNotifier {
 
   void _closeSocket() {
     _subscribed = false;
+    _socketId = null;
+    _subscribedChannels.clear();
     _heartbeatTimer?.cancel();
     _subscription?.cancel();
     _subscription = null;

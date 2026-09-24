@@ -5,13 +5,16 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'core/config/customer_api_config.dart';
+import 'core/config/customer_map_config.dart';
 import 'features/auth/logic/auth_validators.dart';
 import 'shared/theme/theme.dart';
 
 export 'core/config/customer_api_config.dart';
+export 'core/config/customer_map_config.dart';
 export 'features/auth/logic/auth_validators.dart';
 export 'shared/theme/theme.dart';
 
@@ -19,6 +22,7 @@ part 'core/di/customer_dependencies.dart';
 part 'core/network/customer_api_client.dart';
 part 'core/realtime/customer_realtime.dart';
 part 'shared/models/catalog_models.dart';
+part 'shared/models/geo_models.dart';
 part 'shared/widgets/ui_widgets.dart';
 part 'shared/widgets/catalog_widgets.dart';
 part 'shared/widgets/feedback_widgets.dart';
@@ -38,10 +42,12 @@ part 'features/checkout/checkout_screen.dart';
 part 'features/orders/order_screens.dart';
 part 'features/orders/data/order_models.dart';
 part 'features/orders/data/order_repository.dart';
+part 'features/orders/widgets/customer_delivery_map.dart';
 part 'features/addresses/data/address_models.dart';
 part 'features/addresses/data/address_repository.dart';
 part 'features/addresses/view_models/address_view_model.dart';
 part 'features/addresses/address_screens.dart';
+part 'features/addresses/widgets/customer_address_map_picker.dart';
 part 'features/profile/profile_screen.dart';
 part 'features/profile/edit_profile_screen.dart';
 part 'features/profile/view_models/customer_profile_view_model.dart';

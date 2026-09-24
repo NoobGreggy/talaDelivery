@@ -1,5 +1,124 @@
 part of '../../../app.dart';
 
+class CustomerRiderLocation {
+  const CustomerRiderLocation({
+    required this.deliveryId,
+    this.riderId,
+    this.latitude,
+    this.longitude,
+    this.recordedAt,
+    this.sequence = 0,
+    this.accuracy,
+    this.heading,
+    this.speed,
+  });
+
+  final int deliveryId;
+  final int? riderId;
+  final double? latitude;
+  final double? longitude;
+  final DateTime? recordedAt;
+  final int sequence;
+  final double? accuracy;
+  final double? heading;
+  final double? speed;
+
+  bool get hasCoordinates => latitude != null && longitude != null;
+
+  factory CustomerRiderLocation.fromJson(
+    Map<String, dynamic> json, {
+    int? deliveryId,
+  }) => CustomerRiderLocation(
+    deliveryId: deliveryId ?? _jsonInt(json['delivery_id']),
+    riderId: json['rider_id'] == null ? null : _jsonInt(json['rider_id']),
+    latitude: json['latitude'] == null ? null : _jsonDouble(json['latitude']),
+    longitude: json['longitude'] == null
+        ? null
+        : _jsonDouble(json['longitude']),
+    recordedAt: DateTime.tryParse(json['recorded_at']?.toString() ?? ''),
+    sequence: _jsonInt(json['sequence']),
+    accuracy: json['accuracy_m'] == null
+        ? null
+        : _jsonDouble(json['accuracy_m']),
+    heading: json['heading_deg'] == null
+        ? null
+        : _jsonDouble(json['heading_deg']),
+    speed: json['speed_mps'] == null ? null : _jsonDouble(json['speed_mps']),
+  );
+
+  Map<String, dynamic> toJson() => {
+    'delivery_id': deliveryId,
+    'rider_id': riderId,
+    'latitude': latitude,
+    'longitude': longitude,
+    'recorded_at': recordedAt?.toIso8601String(),
+    'sequence': sequence,
+    'accuracy_m': accuracy,
+    'heading_deg': heading,
+    'speed_mps': speed,
+  };
+}
+
+class CustomerDelivery {
+  const CustomerDelivery({
+    required this.id,
+    required this.status,
+    this.pickupLatitude,
+    this.pickupLongitude,
+    this.deliveryLatitude,
+    this.deliveryLongitude,
+    this.riderLocation,
+  });
+
+  final int id;
+  final String status;
+  final double? pickupLatitude;
+  final double? pickupLongitude;
+  final double? deliveryLatitude;
+  final double? deliveryLongitude;
+  final CustomerRiderLocation? riderLocation;
+
+  CustomerMapPoint? get pickupPoint =>
+      pickupLatitude == null || pickupLongitude == null
+      ? null
+      : CustomerMapPoint(pickupLatitude!, pickupLongitude!);
+  CustomerMapPoint? get deliveryPoint =>
+      deliveryLatitude == null || deliveryLongitude == null
+      ? null
+      : CustomerMapPoint(deliveryLatitude!, deliveryLongitude!);
+  bool get isTrackable => const {
+    'ASSIGNED',
+    'ACCEPTED',
+    'PICKED_UP',
+    'IN_TRANSIT',
+  }.contains(status);
+
+  factory CustomerDelivery.fromJson(Map<String, dynamic> json) {
+    final id = _jsonInt(json['id']);
+    if (id <= 0) throw const FormatException('Invalid delivery response.');
+    final location = json['rider_location'];
+    return CustomerDelivery(
+      id: id,
+      status: _jsonString(json['status']) ?? 'UNASSIGNED',
+      pickupLatitude: json['pickup_latitude'] == null
+          ? null
+          : _jsonDouble(json['pickup_latitude']),
+      pickupLongitude: json['pickup_longitude'] == null
+          ? null
+          : _jsonDouble(json['pickup_longitude']),
+      deliveryLatitude: json['delivery_latitude'] == null
+          ? null
+          : _jsonDouble(json['delivery_latitude']),
+      deliveryLongitude: json['delivery_longitude'] == null
+          ? null
+          : _jsonDouble(json['delivery_longitude']),
+      riderLocation: location is Map<String, dynamic>
+          ? CustomerRiderLocation.fromJson(location, deliveryId: id)
+          : null,
+    );
+  }
+}
+
 class CustomerOrderItem {
   const CustomerOrderItem({
     required this.id,
@@ -47,6 +166,7 @@ class CustomerOrder {
     this.customerPhone,
     this.notes,
     this.store,
+    this.delivery,
     this.items = const [],
   });
 
@@ -65,6 +185,7 @@ class CustomerOrder {
   final String? notes;
   final DateTime? createdAt;
   final StoreData? store;
+  final CustomerDelivery? delivery;
   final List<CustomerOrderItem> items;
 
   bool get isCancelled => status == 'CANCELLED';
@@ -78,6 +199,7 @@ class CustomerOrder {
       throw const FormatException('Invalid order response.');
     }
     final storeJson = json['store'];
+    final deliveryJson = json['delivery'];
     return CustomerOrder(
       id: id,
       orderNumber: number,
@@ -95,6 +217,9 @@ class CustomerOrder {
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
       store: storeJson is Map<String, dynamic>
           ? StoreData.fromJson(storeJson)
+          : null,
+      delivery: deliveryJson is Map<String, dynamic>
+          ? CustomerDelivery.fromJson(deliveryJson)
           : null,
       items: (json['items'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()

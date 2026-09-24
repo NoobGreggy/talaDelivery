@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:tala_delivery_customer/main.dart';
 
 class FakeCustomerAuthRepository implements CustomerAuthRepository {
@@ -257,4 +258,11 @@ CustomerAppDependencies fakeCustomerDependencies({
   FakeCustomerOrderRepository(),
   FakeCustomerNotificationRepository(),
   CustomerCartController(),
+  null,
+  null,
+  (center, selectedPoint, onSelect) => ColoredBox(
+    key: const Key('address-map-test-surface'),
+    color: Colors.black12,
+    child: const SizedBox.expand(),
+  ),
 );

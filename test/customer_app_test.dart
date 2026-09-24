@@ -51,6 +51,10 @@ void main() {
       find.byKey(const Key('address-province')),
       'Nueva Ecija',
     );
+    tester
+        .widget<CustomerAddressMapPicker>(find.byType(CustomerAddressMapPicker))
+        .onChanged(const CustomerMapPoint(15.4865, 120.9734));
+    await tester.pump();
     await tester.tap(find.text('Save delivery address'));
     await tester.pumpAndSettle();
     expect(find.text('Available stores'), findsOneWidget);
