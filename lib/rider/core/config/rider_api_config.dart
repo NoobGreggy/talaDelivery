@@ -7,18 +7,24 @@ class RiderApiConfig {
   }) : baseUri = Uri.parse(_withTrailingSlash(baseUrl)),
        socketUri = Uri.parse(socketUrl ?? 'ws://127.0.0.1:6001');
 
-  factory RiderApiConfig.fromEnvironment() => RiderApiConfig(
-    baseUrl: const String.fromEnvironment(
-      'TALA_API_BASE_URL',
-      defaultValue: 'http://127.0.0.1:8000/api/v1/',
-    ),
-    apiKey: const String.fromEnvironment('TALA_API_KEY'),
-    socketUrl: const String.fromEnvironment(
+  factory RiderApiConfig.fromEnvironment() {
+    const socketUrl = String.fromEnvironment('TALA_REVERB_WS_URL');
+    const legacySocketUrl = String.fromEnvironment(
       'TALA_SOCKET_URL',
       defaultValue: 'ws://127.0.0.1:6001',
-    ),
-    reverbKey: const String.fromEnvironment('TALA_REVERB_KEY'),
-  );
+    );
+    const reverbKey = String.fromEnvironment('TALA_REVERB_APP_KEY');
+    const legacyReverbKey = String.fromEnvironment('TALA_REVERB_KEY');
+    return RiderApiConfig(
+      baseUrl: const String.fromEnvironment(
+        'TALA_API_BASE_URL',
+        defaultValue: 'http://127.0.0.1:8000/api/v1/',
+      ),
+      apiKey: const String.fromEnvironment('TALA_API_KEY'),
+      socketUrl: socketUrl.isEmpty ? legacySocketUrl : socketUrl,
+      reverbKey: reverbKey.isEmpty ? legacyReverbKey : reverbKey,
+    );
+  }
 
   final Uri baseUri;
   final String apiKey;

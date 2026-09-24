@@ -133,4 +133,31 @@ void main() {
     await Future<void>.delayed(const Duration(milliseconds: 30));
     expect(posts, later);
   });
+
+  test('active delivery uses tracked location callback', () async {
+    final source = _FakeLocationSource(
+      position: RiderLatLng(
+        14.5,
+        121,
+        accuracy: 7,
+        recordedAt: DateTime.utc(2026, 9, 24),
+      ),
+    );
+    var idlePosts = 0;
+    RiderLatLng? tracked;
+    int? trackedDeliveryId;
+    final service = RiderLocationService(
+      source: source,
+      postLocation: (_) async => idlePosts += 1,
+      postTrackedLocation: (position, deliveryId) async {
+        tracked = position;
+        trackedDeliveryId = deliveryId;
+      },
+    )..setActiveDelivery(42);
+
+    expect(await service.reportOnce(), RiderLocationReport.posted);
+    expect(idlePosts, 0);
+    expect(trackedDeliveryId, 42);
+    expect(tracked?.accuracy, 7);
+  });
 }

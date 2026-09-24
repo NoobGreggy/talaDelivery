@@ -34,6 +34,10 @@ void main() {
       'distance_km': '3.4',
       'delivery_fee': '59.00',
       'rider_commission': '11.80',
+      'pickup_latitude': '14.6000000',
+      'pickup_longitude': '120.9800000',
+      'delivery_latitude': '14.6100000',
+      'delivery_longitude': '120.9900000',
       'created_at': '2026-09-23T01:00:00Z',
       'delivered_at': '2026-09-23T02:00:00Z',
       'store': {'id': 2, 'name': 'Live Store'},
@@ -49,6 +53,9 @@ void main() {
     expect(delivery.store?.name, 'Live Store');
     expect(delivery.order?.total, 399);
     expect(delivery.riderCommission, 11.8);
+    expect(delivery.pickupLatitude, 14.6);
+    expect(delivery.deliveryLongitude, 120.99);
+    expect(delivery.toJson()['pickup_longitude'], 120.98);
     expect(delivery.createdAt, DateTime.utc(2026, 9, 23, 1));
     expect(delivery.deliveredAt, DateTime.utc(2026, 9, 23, 2));
   });

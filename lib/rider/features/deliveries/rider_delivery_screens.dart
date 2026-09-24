@@ -138,6 +138,8 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                RiderDeliveryMap(delivery: value),
+                const SizedBox(height: 16),
                 RouteCard(delivery: value),
                 const SizedBox(height: 16),
                 Container(

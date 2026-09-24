@@ -46,8 +46,8 @@ extension _RiderShiftLifecycle on RiderAppController {
   void _startLocation() {
     final location = _location;
     if (location == null) return;
-    location.start();
     unawaited(_handleLocationReport(location.reportOnce()));
+    location.start(reportImmediately: false);
   }
 
   Future<void> _handleLocationReport(Future<RiderLocationReport> report) async {

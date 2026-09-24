@@ -46,6 +46,8 @@ class RiderAppDependencies {
         latitude: position.latitude,
         longitude: position.longitude,
       ),
+      postTrackedLocation: (position, deliveryId) => repository
+          .updateTrackedLocation(deliveryId: deliveryId, position: position),
     );
     final controller = RiderAppController(repository)
       ..attachRealtime(realtime)

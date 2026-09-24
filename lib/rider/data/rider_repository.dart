@@ -150,6 +150,26 @@ class ApiRiderRepository implements RiderRepository {
     );
   }
 
+  Future<void> updateTrackedLocation({
+    required int deliveryId,
+    required RiderLatLng position,
+  }) async {
+    await _api.post(
+      'rider/location',
+      body: {
+        'delivery_id': deliveryId,
+        'latitude': position.latitude,
+        'longitude': position.longitude,
+        'accuracy_m': position.accuracy,
+        'heading_deg': position.heading,
+        'speed_mps': position.speed,
+        'recorded_at': (position.recordedAt ?? DateTime.now())
+            .toUtc()
+            .toIso8601String(),
+      },
+    );
+  }
+
   @override
   Future<List<RiderNotification>> notifications() async =>
       _riderPayloadPaged(await _api.get('notifications?per_page=50')).items

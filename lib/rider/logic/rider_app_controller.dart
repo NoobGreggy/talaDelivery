@@ -262,6 +262,7 @@ class RiderAppController extends ChangeNotifier {
     earningsSummary = results[1] as RiderEarningsSummary;
     activeDelivery = profile?.currentDelivery;
     activeDelivery ??= deliveries.where((item) => item.isActive).firstOrNull;
+    _location?.setActiveDelivery(activeDelivery?.id);
   }
 
   Future<void> _reloadNotifications() async {

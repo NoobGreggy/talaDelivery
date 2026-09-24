@@ -7,14 +7,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
+import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'core/config/rider_api_config.dart';
+import 'core/config/rider_map_config.dart';
 import 'shared/theme/theme.dart';
 
 export 'core/config/rider_api_config.dart';
+export 'core/config/rider_map_config.dart';
 export 'shared/models/delivery_stage.dart';
 export 'shared/theme/theme.dart';
 
@@ -32,6 +35,7 @@ part 'features/auth/rider_auth_screens.dart';
 part 'features/dashboard/rider_dashboard_screen.dart';
 part 'features/offers/rider_offer_screen.dart';
 part 'features/deliveries/rider_delivery_screens.dart';
+part 'features/deliveries/widgets/rider_delivery_map.dart';
 part 'features/history/rider_history_screen.dart';
 part 'features/notifications/rider_notifications_screen.dart';
 part 'features/profile/rider_profile_screen.dart';

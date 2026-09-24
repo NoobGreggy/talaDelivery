@@ -157,6 +157,10 @@ class RiderDelivery {
     required this.deliveryFee,
     required this.createdAt,
     this.riderCommission = 0,
+    this.pickupLatitude,
+    this.pickupLongitude,
+    this.deliveryLatitude,
+    this.deliveryLongitude,
     this.deliveredAt,
     this.store,
     this.order,
@@ -169,6 +173,10 @@ class RiderDelivery {
   final double distanceKm;
   final double deliveryFee;
   final double riderCommission;
+  final double? pickupLatitude;
+  final double? pickupLongitude;
+  final double? deliveryLatitude;
+  final double? deliveryLongitude;
   final DateTime? createdAt;
   final DateTime? deliveredAt;
   final RiderStore? store;
@@ -196,6 +204,18 @@ class RiderDelivery {
       distanceKm: _riderDouble(json['distance_km']),
       deliveryFee: _riderDouble(json['delivery_fee']),
       riderCommission: _riderDouble(json['rider_commission']),
+      pickupLatitude: json['pickup_latitude'] == null
+          ? null
+          : _riderDouble(json['pickup_latitude']),
+      pickupLongitude: json['pickup_longitude'] == null
+          ? null
+          : _riderDouble(json['pickup_longitude']),
+      deliveryLatitude: json['delivery_latitude'] == null
+          ? null
+          : _riderDouble(json['delivery_latitude']),
+      deliveryLongitude: json['delivery_longitude'] == null
+          ? null
+          : _riderDouble(json['delivery_longitude']),
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
       deliveredAt: DateTime.tryParse(json['delivered_at']?.toString() ?? ''),
       store: store is Map<String, dynamic> ? RiderStore.fromJson(store) : null,
@@ -211,6 +231,10 @@ class RiderDelivery {
     'distance_km': distanceKm,
     'delivery_fee': deliveryFee,
     'rider_commission': riderCommission,
+    'pickup_latitude': pickupLatitude,
+    'pickup_longitude': pickupLongitude,
+    'delivery_latitude': deliveryLatitude,
+    'delivery_longitude': deliveryLongitude,
     'created_at': createdAt?.toIso8601String(),
     'delivered_at': deliveredAt?.toIso8601String(),
     'store': store?.toJson(),

@@ -1,6 +1,7 @@
 {
   "TALA_API_BASE_URL": "http://127.0.0.1:8000/api/v1/",
   "TALA_API_KEY": "replace-with-laravel-app-api-key",
-  "TALA_SOCKET_URL": "ws://127.0.0.1:6001",
-  "TALA_REVERB_KEY": "replace-with-laravel-reverb-app-key"
+  "TALA_REVERB_WS_URL": "ws://127.0.0.1:6001",
+  "TALA_REVERB_APP_KEY": "replace-with-laravel-reverb-app-key",
+  "TALA_MAP_STYLE_URL": "https://tiles.openfreemap.org/styles/liberty"
 }
