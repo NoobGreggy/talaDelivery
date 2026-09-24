@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\DeliveryZone;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class PricingService
@@ -46,9 +47,17 @@ class PricingService
             throw new \DomainException('A city is required to calculate the delivery fee.');
         }
 
+        $baseCity = Str::endsWith($normalizedCity, ' city')
+            ? Str::beforeLast($normalizedCity, ' city')
+            : $normalizedCity;
+        $acceptedCityNames = array_values(array_unique([
+            $baseCity,
+            $baseCity.' city',
+        ]));
+
         $matched = DeliveryZone::query()
             ->where('status', 'ACTIVE')
-            ->whereRaw('LOWER(TRIM(city)) = ?', [$normalizedCity])
+            ->whereIn(DB::raw('LOWER(TRIM(city))'), $acceptedCityNames)
             ->orderBy('id')
             ->first();
 

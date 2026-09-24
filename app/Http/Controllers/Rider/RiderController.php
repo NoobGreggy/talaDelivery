@@ -8,6 +8,7 @@ use App\Enums\OrderStatus;
 use App\Enums\RiderStatus;
 use App\Enums\Role;
 use App\Enums\UserStatus;
+use App\Events\RiderLocationUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\DeliveryResource;
 use App\Http\Resources\RiderResource;
@@ -20,6 +21,8 @@ use App\Services\RiderEarningsService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class RiderController extends Controller
 {
@@ -120,20 +123,60 @@ class RiderController extends Controller
         $validated = $request->validate([
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'delivery_id' => ['nullable', 'integer', 'exists:deliveries,id'],
+            'accuracy_m' => ['nullable', 'numeric', 'min:0', 'max:1000'],
+            'heading_deg' => ['nullable', 'numeric', 'between:0,360'],
+            'speed_mps' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'recorded_at' => ['nullable', 'date'],
         ]);
 
         $rider = $this->rider($request);
+        $activeDelivery = $rider->currentDelivery()->first();
+
+        if (isset($validated['delivery_id']) && $activeDelivery?->id !== $validated['delivery_id']) {
+            return ApiResponse::error('This rider is not assigned to the selected delivery.', null, 422);
+        }
+
+        $recordedAt = isset($validated['recorded_at'])
+            ? Carbon::parse($validated['recorded_at'])
+            : now();
+
+        if ($recordedAt->isBefore(now()->subMinutes(2)) || $recordedAt->isAfter(now()->addSeconds(30))) {
+            return ApiResponse::error('The rider location timestamp is stale or invalid.', null, 422);
+        }
+
         $hadLocation = $rider->current_latitude !== null && $rider->current_longitude !== null;
         $rider->update([
             'current_latitude' => $validated['latitude'],
             'current_longitude' => $validated['longitude'],
+            'current_location_updated_at' => $recordedAt,
         ]);
+
+        $rider = $rider->fresh();
+
+        if ($activeDelivery !== null) {
+            try {
+                RiderLocationUpdated::dispatch(
+                    $activeDelivery,
+                    $rider,
+                    isset($validated['accuracy_m']) ? (float) $validated['accuracy_m'] : null,
+                    isset($validated['heading_deg']) ? (float) $validated['heading_deg'] : null,
+                    isset($validated['speed_mps']) ? (float) $validated['speed_mps'] : null,
+                );
+            } catch (\Throwable $exception) {
+                Log::warning('Rider location was saved but could not be broadcast.', [
+                    'delivery_id' => $activeDelivery->id,
+                    'rider_id' => $activeDelivery->rider_id,
+                    'exception' => $exception::class,
+                ]);
+            }
+        }
 
         if (! $hadLocation && $rider->status === RiderStatus::Online) {
             $this->retryUnmatchedDeliveries();
         }
 
-        return ApiResponse::success('Location updated.', new RiderResource($this->profileData($rider->fresh())));
+        return ApiResponse::success('Location updated.', new RiderResource($this->profileData($rider)));
     }
 
     public function deliveries(Request $request): JsonResponse

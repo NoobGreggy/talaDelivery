@@ -9,6 +9,29 @@ use Database\Seeders\RolePermissionSeeder;
 
 class PlatformSettingTest extends ApiTestCase
 {
+    public function test_first_platform_settings_read_returns_the_default_values(): void
+    {
+        $this->seed(RolePermissionSeeder::class);
+        $admin = User::factory()->create(['role' => Role::PlatformAdmin->value]);
+        $admin->assignRole(Role::PlatformAdmin->value);
+
+        $this->withToken($admin->createToken('auth-token')->plainTextToken)
+            ->getJson('/api/v1/admin/settings')
+            ->assertOk()
+            ->assertJsonPath('data.rider_commission_type', 'PERCENTAGE')
+            ->assertJsonPath('data.rider_commission_value', '0.00')
+            ->assertJsonPath('data.earnings_week_type', 'ROLLING_SEVEN_DAYS')
+            ->assertJsonPath('data.settlement_timezone', 'Asia/Manila')
+            ->assertJsonPath('data.settlement_day_starts_at', '00:00:00')
+            ->assertJsonPath('data.distance_method', 'STRAIGHT_LINE');
+
+        $this->assertDatabaseHas('platform_settings', [
+            'key' => 'platform',
+            'settlement_timezone' => 'Asia/Manila',
+            'settlement_day_starts_at' => '00:00:00',
+        ]);
+    }
+
     public function test_platform_admin_can_update_dynamic_rider_calculation_settings(): void
     {
         $this->seed(RolePermissionSeeder::class);

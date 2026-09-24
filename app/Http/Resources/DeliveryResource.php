@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\DeliveryStatus;
 use App\Models\Delivery;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -11,12 +12,27 @@ class DeliveryResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $isTrackable = in_array($this->status, [
+            DeliveryStatus::Assigned,
+            DeliveryStatus::Accepted,
+            DeliveryStatus::PickedUp,
+            DeliveryStatus::InTransit,
+        ], true);
+        $riderProfile = $isTrackable && $this->relationLoaded('rider') && $this->rider?->relationLoaded('rider')
+            ? $this->rider->rider
+            : null;
+
         return [
             'id' => $this->id,
             'order_id' => $this->order_id,
             'store_id' => $this->store_id,
             'status' => $this->status?->value,
             'rider' => new UserResource($this->whenLoaded('rider')),
+            'rider_location' => $riderProfile === null ? null : [
+                'latitude' => $riderProfile->current_latitude,
+                'longitude' => $riderProfile->current_longitude,
+                'recorded_at' => $riderProfile->current_location_updated_at,
+            ],
             'pickup_address' => $this->pickup_address,
             'pickup_latitude' => $this->pickup_latitude,
             'pickup_longitude' => $this->pickup_longitude,

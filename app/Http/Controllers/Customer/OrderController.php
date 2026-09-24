@@ -58,7 +58,7 @@ class OrderController extends Controller
     {
         $this->authorizeOrder($request, $order);
 
-        $order->load(['store', 'items', 'delivery.rider', 'delivery.offers']);
+        $order->load(['store', 'items', 'delivery.rider.rider', 'delivery.offers']);
 
         return ApiResponse::success('Order retrieved.', new OrderResource($order));
     }

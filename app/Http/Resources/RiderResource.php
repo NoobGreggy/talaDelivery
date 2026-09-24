@@ -22,6 +22,7 @@ class RiderResource extends JsonResource
             'status' => $this->status?->value,
             'current_latitude' => $this->current_latitude,
             'current_longitude' => $this->current_longitude,
+            'current_location_updated_at' => $this->current_location_updated_at,
             'completed_deliveries' => (int) ($this->completed_deliveries ?? 0),
             'total_earnings' => $this->total_earnings ?? 0,
             'created_at' => $this->created_at,

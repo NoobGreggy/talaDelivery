@@ -136,6 +136,19 @@ class OrderFlowTest extends ApiTestCase
         $this->assertDatabaseCount('orders', 0);
     }
 
+    public function test_city_name_without_city_suffix_uses_the_configured_zone(): void
+    {
+        $this->zone->update(['city' => 'Manila City']);
+        $payload = $this->orderPayload();
+        $payload['city'] = 'Manila';
+
+        $this->actingAsCustomer()->postJson('/api/v1/orders', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.delivery_fee', '49.00');
+
+        $this->assertDatabaseCount('orders', 1);
+    }
+
     public function test_commission_setting_changes_affect_new_orders_without_repricing_existing_deliveries(): void
     {
         $firstDelivery = $this->actingAsCustomer()

@@ -13,6 +13,21 @@ class PlatformSetting extends Model
     /** @use HasFactory<PlatformSettingFactory> */
     use HasFactory;
 
+    /**
+     * Keep database defaults available on the model returned by firstOrCreate().
+     *
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'rider_commission_type' => 'PERCENTAGE',
+        'rider_commission_value' => 0,
+        'earnings_week_type' => 'ROLLING_SEVEN_DAYS',
+        'week_starts_on' => 1,
+        'settlement_timezone' => 'Asia/Manila',
+        'settlement_day_starts_at' => '00:00:00',
+        'distance_method' => 'STRAIGHT_LINE',
+    ];
+
     public static function current(): self
     {
         return self::query()->firstOrCreate(['key' => 'platform']);
