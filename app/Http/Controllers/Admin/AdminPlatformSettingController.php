@@ -30,7 +30,7 @@ class AdminPlatformSettingController extends Controller
             'week_starts_on' => ['required', 'integer', 'between:0,6'],
             'settlement_timezone' => ['required', 'string', Rule::in(DateTimeZone::listIdentifiers())],
             'settlement_day_starts_at' => ['required', 'date_format:H:i'],
-            'distance_method' => ['required', Rule::in(['STRAIGHT_LINE'])],
+            'distance_method' => ['required', Rule::in(['STRAIGHT_LINE', 'ROAD_ROUTE'])],
         ]);
 
         if ($validated['rider_commission_type'] === 'PERCENTAGE' && (float) $validated['rider_commission_value'] > 100) {

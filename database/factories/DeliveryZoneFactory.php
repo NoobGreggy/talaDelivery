@@ -23,7 +23,10 @@ class DeliveryZoneFactory extends Factory
             'province' => fake()->state(),
             'base_fee' => 49,
             'included_km' => 5,
+            'maximum_delivery_km' => null,
             'extra_fee_per_km' => 10,
+            'maximum_delivery_fee' => null,
+            'distance_rounding_km' => 0.10,
             'status' => 'ACTIVE',
         ];
     }

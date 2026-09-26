@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AdminCustomerController;
 use App\Http\Controllers\Admin\AdminDeliveryController;
 use App\Http\Controllers\Admin\AdminDeliveryZoneController;
+use App\Http\Controllers\Admin\AdminDeliveryZonePricingPreviewController;
 use App\Http\Controllers\Admin\AdminOrderController;
 use App\Http\Controllers\Admin\AdminPlatformSettingController;
 use App\Http\Controllers\Admin\AdminRiderController;
@@ -153,6 +154,7 @@ Route::prefix('v1')->group(function (): void {
 
         Route::get('delivery-zones', [AdminDeliveryZoneController::class, 'index']);
         Route::post('delivery-zones', [AdminDeliveryZoneController::class, 'store']);
+        Route::post('delivery-zones/preview', AdminDeliveryZonePricingPreviewController::class);
         Route::get('delivery-zones/{deliveryZone}', [AdminDeliveryZoneController::class, 'show']);
         Route::put('delivery-zones/{deliveryZone}', [AdminDeliveryZoneController::class, 'update']);
         Route::delete('delivery-zones/{deliveryZone}', [AdminDeliveryZoneController::class, 'destroy']);

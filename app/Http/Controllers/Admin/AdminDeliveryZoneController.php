@@ -3,112 +3,67 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreDeliveryZoneRequest;
+use App\Http\Requests\Admin\UpdateDeliveryZoneRequest;
 use App\Http\Resources\DeliveryZoneResource;
 use App\Models\DeliveryZone;
+use App\Services\DeliveryZoneManager;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 
 class AdminDeliveryZoneController extends Controller
 {
+    public function __construct(private DeliveryZoneManager $zones) {}
+
     public function index(Request $request): JsonResponse
     {
         $zones = DeliveryZone::query()
+            ->with('updatedBy:id,name')
+            ->withCount('revisions')
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
             ->when($request->filled('search'), function ($query) use ($request): void {
-                $query->where('name', 'like', '%'.$request->string('search').'%');
+                $search = '%'.$request->string('search')->toString().'%';
+                $query->where(fn ($nested) => $nested
+                    ->where('name', 'like', $search)
+                    ->orWhere('city', 'like', $search)
+                    ->orWhere('province', 'like', $search));
             })
-            ->latest()
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->paginate((int) $request->integer('per_page', 15));
 
         return ApiResponse::paginated('Delivery zones retrieved.', DeliveryZoneResource::collection($zones));
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreDeliveryZoneRequest $request): JsonResponse
     {
-        $this->normalizeLocation($request);
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:255'],
-            'province' => ['nullable', 'string', 'max:255'],
-            'base_fee' => ['required', 'numeric', 'min:0'],
-            'included_km' => ['required', 'numeric', 'min:0'],
-            'extra_fee_per_km' => ['required', 'numeric', 'min:0'],
-            'status' => ['nullable', 'string', 'in:ACTIVE,INACTIVE,SUSPENDED'],
-        ]);
-        $this->assertActiveCityIsUnique($validated);
-
-        $zone = DeliveryZone::create($validated);
+        $zone = $this->zones->create($request->validated(), $request->user());
 
         return ApiResponse::success('Delivery zone created.', new DeliveryZoneResource($zone), 201);
     }
 
     public function show(DeliveryZone $deliveryZone): JsonResponse
     {
+        $deliveryZone->load([
+            'updatedBy:id,name',
+            'revisions' => fn ($query) => $query->with('user:id,name')->latest()->limit(20),
+        ])->loadCount('revisions');
+
         return ApiResponse::success('Delivery zone retrieved.', new DeliveryZoneResource($deliveryZone));
     }
 
-    public function update(Request $request, DeliveryZone $deliveryZone): JsonResponse
+    public function update(UpdateDeliveryZoneRequest $request, DeliveryZone $deliveryZone): JsonResponse
     {
-        $this->normalizeLocation($request);
-        $validated = $request->validate([
-            'name' => ['sometimes', 'string', 'max:255'],
-            'city' => ['nullable', 'string', 'max:255'],
-            'province' => ['nullable', 'string', 'max:255'],
-            'base_fee' => ['sometimes', 'numeric', 'min:0'],
-            'included_km' => ['sometimes', 'numeric', 'min:0'],
-            'extra_fee_per_km' => ['sometimes', 'numeric', 'min:0'],
-            'status' => ['sometimes', 'string', 'in:ACTIVE,INACTIVE,SUSPENDED'],
-        ]);
-        $this->assertActiveCityIsUnique($validated, $deliveryZone);
+        $zone = $this->zones->update($deliveryZone, $request->validated(), $request->user());
 
-        $deliveryZone->update($validated);
-
-        return ApiResponse::success('Delivery zone updated.', new DeliveryZoneResource($deliveryZone->fresh()));
+        return ApiResponse::success('Delivery zone updated.', new DeliveryZoneResource($zone));
     }
 
-    public function destroy(DeliveryZone $deliveryZone): JsonResponse
+    public function destroy(Request $request, DeliveryZone $deliveryZone): JsonResponse
     {
-        $deliveryZone->delete();
+        $zone = $this->zones->archive($deliveryZone, $request->user());
 
-        return ApiResponse::success('Delivery zone deleted.');
-    }
-
-    private function normalizeLocation(Request $request): void
-    {
-        if ($request->has('city')) {
-            $request->merge(['city' => Str::squish($request->string('city')->toString())]);
-        }
-
-        if ($request->has('province')) {
-            $request->merge(['province' => Str::squish($request->string('province')->toString())]);
-        }
-    }
-
-    /**
-     * @param  array<string, mixed>  $validated
-     */
-    private function assertActiveCityIsUnique(array $validated, ?DeliveryZone $current = null): void
-    {
-        $status = $validated['status'] ?? $current?->status?->value ?? 'ACTIVE';
-        $city = $validated['city'] ?? $current?->city;
-
-        if ($status !== 'ACTIVE' || $city === null || $city === '') {
-            return;
-        }
-
-        $duplicate = DeliveryZone::query()
-            ->where('status', 'ACTIVE')
-            ->whereRaw('LOWER(TRIM(city)) = ?', [Str::lower($city)])
-            ->when($current !== null, fn ($query) => $query->whereKeyNot($current->id))
-            ->exists();
-
-        if ($duplicate) {
-            throw ValidationException::withMessages([
-                'city' => ['Only one active delivery zone is allowed per city.'],
-            ]);
-        }
+        return ApiResponse::success('Delivery zone archived.', new DeliveryZoneResource($zone));
     }
 }

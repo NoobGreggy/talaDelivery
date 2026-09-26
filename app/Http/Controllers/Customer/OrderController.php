@@ -39,7 +39,7 @@ class OrderController extends Controller
             'delivery_latitude' => ['required', 'numeric', 'between:-90,90'],
             'delivery_longitude' => ['required', 'numeric', 'between:-180,180'],
             'city' => ['required', 'string', 'max:255'],
-            'province' => ['nullable', 'string', 'max:255'],
+            'province' => ['required', 'string', 'max:255'],
             'payment_method' => ['nullable', 'string', 'in:COD,GCASH,MAYA,CARD'],
             'discount' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],

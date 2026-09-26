@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'routing' => [
+        'base_url' => env('ROUTING_BASE_URL'),
+        'connect_timeout' => env('ROUTING_CONNECT_TIMEOUT', 2),
+        'timeout' => env('ROUTING_TIMEOUT', 5),
+    ],
+
 ];
