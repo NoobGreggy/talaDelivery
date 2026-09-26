@@ -205,6 +205,38 @@ class AdminDeliveryZoneTest extends ApiTestCase
             ->assertJsonPath('data.reason', 'The delivery pin is outside this zone boundary.');
     }
 
+    public function test_admin_can_create_a_province_wide_multipolygon_zone_without_a_city(): void
+    {
+        $admin = User::factory()->create(['role' => Role::PlatformAdmin->value]);
+        $admin->assignRole(Role::PlatformAdmin->value);
+        $boundary = [
+            'type' => 'MultiPolygon',
+            'coordinates' => [
+                [[[120.80, 15.40], [121.10, 15.40], [121.10, 15.60], [120.80, 15.40]]],
+                [[[121.20, 15.70], [121.30, 15.70], [121.30, 15.80], [121.20, 15.70]]],
+            ],
+        ];
+        $payload = $this->zonePayload('Nueva Ecija Province', $boundary);
+        unset($payload['city']);
+
+        $response = $this->withToken($admin->createToken('auth-token')->plainTextToken)
+            ->postJson('/api/v1/admin/delivery-zones', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.city', null)
+            ->assertJsonPath('data.boundary_geojson.type', 'MultiPolygon');
+
+        $pricing = app(PricingService::class)->calculate(
+            15.75,
+            121.25,
+            15.75,
+            121.25,
+            'Any City',
+            'Nueva Ecija',
+        );
+
+        $this->assertSame($response->json('data.id'), $pricing['zone']->id);
+    }
+
     public function test_non_admin_cannot_manage_delivery_zones(): void
     {
         $customer = User::factory()->create(['role' => Role::Customer->value]);

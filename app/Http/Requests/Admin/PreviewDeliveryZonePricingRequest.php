@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Admin;
 
-use App\Rules\ValidGeoJsonPolygon;
+use App\Rules\ValidGeoJsonBoundary;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -26,7 +26,7 @@ class PreviewDeliveryZonePricingRequest extends FormRequest
     {
         return [
             'zone' => ['required', 'array'],
-            'zone.boundary_geojson' => ['nullable', 'array', new ValidGeoJsonPolygon],
+            'zone.boundary_geojson' => ['nullable', 'array', new ValidGeoJsonBoundary],
             'zone.base_fee' => ['required', 'numeric', 'min:0'],
             'zone.included_km' => ['required', 'numeric', 'min:0'],
             'zone.maximum_delivery_km' => ['nullable', 'numeric', 'gt:0'],

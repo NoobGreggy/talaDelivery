@@ -41,4 +41,12 @@ return [
         'timeout' => env('ROUTING_TIMEOUT', 5),
     ],
 
+    'geocoding' => [
+        'base_url' => env('GEOCODING_BASE_URL', 'https://nominatim.openstreetmap.org'),
+        'user_agent' => env('GEOCODING_USER_AGENT', 'TalaDelivery/1.0 (admin boundary search)'),
+        'connect_timeout' => env('GEOCODING_CONNECT_TIMEOUT', 3),
+        'timeout' => env('GEOCODING_TIMEOUT', 15),
+        'cache_days' => env('GEOCODING_CACHE_DAYS', 30),
+    ],
+
 ];

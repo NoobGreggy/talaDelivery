@@ -41,5 +41,7 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute(60)->by($request->ip());
         });
+
+        RateLimiter::for('geocoding', fn (): Limit => Limit::perSecond(1)->by('place-boundary-provider'));
     }
 }

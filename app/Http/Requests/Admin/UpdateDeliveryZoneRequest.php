@@ -4,7 +4,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Enums\DeliveryZoneStatus;
 use App\Models\DeliveryZone;
-use App\Rules\ValidGeoJsonPolygon;
+use App\Rules\ValidGeoJsonBoundary;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -36,9 +36,9 @@ class UpdateDeliveryZoneRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'string', 'max:255'],
-            'city' => ['sometimes', 'string', 'max:255'],
+            'city' => ['sometimes', 'nullable', 'string', 'max:255'],
             'province' => ['sometimes', 'string', 'max:255'],
-            'boundary_geojson' => ['sometimes', 'nullable', 'array', new ValidGeoJsonPolygon],
+            'boundary_geojson' => ['sometimes', 'nullable', 'array', new ValidGeoJsonBoundary],
             'base_fee' => ['sometimes', 'numeric', 'min:0'],
             'included_km' => ['sometimes', 'numeric', 'min:0'],
             'maximum_delivery_km' => ['sometimes', 'nullable', 'numeric', 'gt:0'],

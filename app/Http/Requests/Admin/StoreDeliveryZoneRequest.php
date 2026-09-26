@@ -3,7 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\DeliveryZoneStatus;
-use App\Rules\ValidGeoJsonPolygon;
+use App\Rules\ValidGeoJsonBoundary;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -37,9 +37,9 @@ class StoreDeliveryZoneRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'city' => ['required', 'string', 'max:255'],
+            'city' => [Rule::requiredIf(fn (): bool => ! $this->filled('boundary_geojson')), 'nullable', 'string', 'max:255'],
             'province' => ['required', 'string', 'max:255'],
-            'boundary_geojson' => ['nullable', 'array', new ValidGeoJsonPolygon],
+            'boundary_geojson' => ['nullable', 'array', new ValidGeoJsonBoundary],
             'base_fee' => ['required', 'numeric', 'min:0'],
             'included_km' => ['required', 'numeric', 'min:0'],
             'maximum_delivery_km' => ['nullable', 'numeric', 'gt:0'],

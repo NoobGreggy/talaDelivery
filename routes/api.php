@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminDeliveryController;
 use App\Http\Controllers\Admin\AdminDeliveryZoneController;
 use App\Http\Controllers\Admin\AdminDeliveryZonePricingPreviewController;
 use App\Http\Controllers\Admin\AdminOrderController;
+use App\Http\Controllers\Admin\AdminPlaceBoundaryController;
 use App\Http\Controllers\Admin\AdminPlatformSettingController;
 use App\Http\Controllers\Admin\AdminRiderController;
 use App\Http\Controllers\Admin\AdminStoreController;
@@ -153,6 +154,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('customers', [AdminCustomerController::class, 'index']);
 
         Route::get('delivery-zones', [AdminDeliveryZoneController::class, 'index']);
+        Route::get('place-boundaries', AdminPlaceBoundaryController::class)->middleware('throttle:geocoding');
         Route::post('delivery-zones', [AdminDeliveryZoneController::class, 'store']);
         Route::post('delivery-zones/preview', AdminDeliveryZonePricingPreviewController::class);
         Route::get('delivery-zones/{deliveryZone}', [AdminDeliveryZoneController::class, 'show']);
