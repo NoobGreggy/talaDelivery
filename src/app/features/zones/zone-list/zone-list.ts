@@ -5,7 +5,8 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   DeliveryZone,
   DeliveryZoneStatus,
-  GeoJsonPolygon,
+  GeoJsonBoundary,
+  PlaceBoundaryResult,
   ZonePricingPreview,
 } from '../../../core/models';
 import { StoreService } from '../../../core/services/store.service';
@@ -52,7 +53,12 @@ export class ZoneListComponent {
   protected readonly formModalOpen = signal(false);
   protected readonly editingZone = signal<DeliveryZone | null>(null);
   protected readonly archiveTarget = signal<DeliveryZone | null>(null);
-  protected readonly boundary = signal<GeoJsonPolygon | null>(null);
+  protected readonly boundary = signal<GeoJsonBoundary | null>(null);
+  protected readonly boundaryQuery = signal('');
+  protected readonly boundarySearchType = signal<'city' | 'province'>('city');
+  protected readonly boundaryResults = signal<PlaceBoundaryResult[]>([]);
+  protected readonly boundarySearching = signal(false);
+  protected readonly boundarySearchError = signal<string | null>(null);
   protected readonly acting = signal(false);
   protected readonly formError = signal<string | null>(null);
   protected readonly previewing = signal(false);
@@ -90,7 +96,7 @@ export class ZoneListComponent {
 
   protected readonly form = this.fb.group({
     name: ['', Validators.required],
-    city: ['', Validators.required],
+    city: [''],
     province: ['', Validators.required],
     status: ['DRAFT' as DeliveryZoneStatus, Validators.required],
     base_fee: [49, [Validators.required, Validators.min(0)]],
@@ -135,6 +141,7 @@ export class ZoneListComponent {
   protected openCreate(): void {
     this.editingZone.set(null);
     this.boundary.set(null);
+    this.resetBoundarySearch();
     this.formError.set(null);
     this.preview.set(null);
     this.form.reset({
@@ -171,11 +178,78 @@ export class ZoneListComponent {
     this.editingZone.set(null);
     this.formError.set(null);
     this.preview.set(null);
+    this.resetBoundarySearch();
   }
 
-  protected boundaryChanged(boundary: GeoJsonPolygon | null): void {
+  protected boundaryChanged(boundary: GeoJsonBoundary | null): void {
     this.boundary.set(boundary);
     this.preview.set(null);
+  }
+
+  protected setBoundaryQuery(value: string): void {
+    this.boundaryQuery.set(value);
+    this.boundarySearchError.set(null);
+  }
+
+  protected setBoundarySearchType(type: 'city' | 'province'): void {
+    this.boundarySearchType.set(type);
+    this.boundaryResults.set([]);
+    this.boundarySearchError.set(null);
+  }
+
+  protected searchEnteredLocation(type: 'city' | 'province'): void {
+    const city = this.form.controls.city.value?.trim();
+    const province = this.form.controls.province.value?.trim();
+    const query =
+      type === 'city'
+        ? [city, province, 'Philippines'].filter(Boolean).join(', ')
+        : [province, 'Philippines'].filter(Boolean).join(', ');
+    if ((type === 'city' && !city) || (type === 'province' && !province)) return;
+
+    this.boundarySearchType.set(type);
+    this.boundaryQuery.set(query);
+    this.searchBoundaries(true);
+  }
+
+  protected searchBoundaries(selectSingleResult = false): void {
+    const query = this.boundaryQuery().trim();
+    if (query.length < 2 || this.boundarySearching()) return;
+
+    this.boundarySearching.set(true);
+    this.boundarySearchError.set(null);
+    this.boundaryResults.set([]);
+    this.zoneService.searchBoundaries(query, this.boundarySearchType()).subscribe({
+      next: (results) => {
+        this.boundarySearching.set(false);
+        if (selectSingleResult && results.length === 1) {
+          this.selectBoundary(results[0]);
+
+          return;
+        }
+        this.boundaryResults.set(results);
+        if (results.length === 0) {
+          this.boundarySearchError.set(
+            'No city or province boundary was found. Try a more specific name.',
+          );
+        }
+      },
+      error: (error: HttpErrorResponse) => {
+        this.boundarySearching.set(false);
+        this.boundarySearchError.set(this.apiError(error, 'Unable to search boundaries.'));
+      },
+    });
+  }
+
+  protected selectBoundary(result: PlaceBoundaryResult): void {
+    this.boundary.set(result.geometry);
+    this.boundaryResults.set([]);
+    this.boundarySearchError.set(null);
+    this.preview.set(null);
+    this.form.patchValue({
+      name: this.form.controls.name.value?.trim() || `${result.name} Zone`,
+      city: result.city ?? this.form.controls.city.value,
+      province: result.province ?? this.form.controls.province.value,
+    });
   }
 
   protected save(): void {
@@ -269,17 +343,18 @@ export class ZoneListComponent {
   }
 
   protected zoneLocation(zone: DeliveryZone): string {
-    return `${zone.city}, ${zone.province}`;
+    return [zone.city, zone.province].filter(Boolean).join(', ');
   }
 
   private populateEditForm(zone: DeliveryZone): void {
     this.editingZone.set(zone);
     this.boundary.set(zone.boundary_geojson ?? null);
+    this.resetBoundarySearch();
     this.formError.set(null);
     this.preview.set(null);
     this.form.setValue({
       name: zone.name,
-      city: zone.city,
+      city: zone.city ?? '',
       province: zone.province,
       status: zone.status,
       base_fee: Number(zone.base_fee),
@@ -299,7 +374,7 @@ export class ZoneListComponent {
     const raw = this.form.getRawValue();
     return {
       name: raw.name ?? '',
-      city: raw.city ?? '',
+      city: raw.city?.trim() || null,
       province: raw.province ?? '',
       status: raw.status ?? 'DRAFT',
       boundary_geojson: this.boundary(),
@@ -318,5 +393,13 @@ export class ZoneListComponent {
     const errors = error.error?.errors as Record<string, string[]> | undefined;
     const first = errors ? Object.values(errors).flat()[0] : undefined;
     return first ?? error.error?.message ?? fallback;
+  }
+
+  private resetBoundarySearch(): void {
+    this.boundaryQuery.set('');
+    this.boundarySearchType.set('city');
+    this.boundaryResults.set([]);
+    this.boundarySearching.set(false);
+    this.boundarySearchError.set(null);
   }
 }

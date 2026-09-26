@@ -1,17 +1,56 @@
-<div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
-  <div #mapContainer class="zone-map"></div>
+<div class="overflow-hidden rounded-lg border border-slate-300 bg-white">
+  <div class="relative">
+    <div #mapContainer class="zone-map" aria-label="Delivery zone coverage map"></div>
+    @if (drawingMode) {
+      <div
+        class="pointer-events-none absolute top-3 left-3 flex items-center gap-2 rounded-md border border-blue-300 bg-white/95 px-3 py-2 text-xs font-semibold text-blue-900 shadow"
+      >
+        <span class="h-3 w-3 animate-pulse rounded-full bg-blue-600"></span>
+        Drawing coverage — click the map
+      </div>
+    } @else if (boundary) {
+      <div
+        class="pointer-events-none absolute top-3 left-3 flex items-center gap-2 rounded-md border border-sky-300 bg-white/95 px-3 py-2 text-xs font-semibold text-sky-900 shadow"
+      >
+        <span class="h-3 w-3 rounded-sm border-2 border-blue-800 bg-blue-500/50"></span>
+        Blue area is covered
+      </div>
+    }
+  </div>
   @if (editable) {
     <div
       class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 px-3 py-2"
     >
       <p class="text-xs text-slate-500">
-        Click the map to add boundary points. At least three points are required.
+        @if (drawingMode) {
+          Add at least three points, then press Finish drawing.
+        } @else {
+          Press Draw custom area before adding points to the map.
+        }
       </p>
-      <div class="flex gap-2">
+      <div class="flex flex-wrap gap-2">
+        @if (!drawingMode) {
+          <button
+            type="button"
+            class="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700"
+            (click)="startDrawing()"
+          >
+            Draw custom area
+          </button>
+        } @else {
+          <button
+            type="button"
+            class="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            [disabled]="vertexCount < 3"
+            (click)="finishDrawing()"
+          >
+            Finish drawing
+          </button>
+        }
         <button
           type="button"
           class="text-xs font-medium text-sky-700 disabled:text-slate-300"
-          [disabled]="vertexCount === 0"
+          [disabled]="!drawingMode || vertexCount === 0"
           (click)="undoVertex()"
         >
           Undo point

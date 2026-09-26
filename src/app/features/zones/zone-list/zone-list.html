@@ -418,9 +418,91 @@
             <section class="rounded-lg border border-slate-200 p-4">
               <h3 class="font-semibold text-slate-900">Service boundary</h3>
               <p class="mt-1 mb-4 text-xs text-slate-500">
-                Click around the permitted service area. Activating overlapping mapped zones is
-                blocked.
+                Search for an official city or province boundary, or draw a custom service area.
+                Blue shading is covered; the unshaded map is outside the zone.
               </p>
+              <div class="mb-4 space-y-3 rounded-lg bg-slate-50 p-3">
+                <label>
+                  <span class="mb-1 block text-xs font-semibold text-slate-700"
+                    >Find a Philippine city or province</span
+                  >
+                  <div class="grid gap-2 sm:grid-cols-[110px_minmax(0,1fr)_auto]">
+                    <select
+                      class="zone-input"
+                      [value]="boundarySearchType()"
+                      (change)="setBoundarySearchType($any($event.target).value)"
+                      aria-label="Boundary type"
+                    >
+                      <option value="city">City</option>
+                      <option value="province">Province</option>
+                    </select>
+                    <input
+                      type="search"
+                      placeholder="e.g. Cabanatuan City or Nueva Ecija"
+                      [value]="boundaryQuery()"
+                      (input)="setBoundaryQuery($any($event.target).value)"
+                      (keydown.enter)="$event.preventDefault(); searchBoundaries()"
+                      class="zone-input"
+                    />
+                    <app-button
+                      type="button"
+                      variant="primary"
+                      size="sm"
+                      [loading]="boundarySearching()"
+                      [disabled]="boundaryQuery().trim().length < 2"
+                      (clicked)="searchBoundaries()"
+                      >Search</app-button
+                    >
+                  </div>
+                </label>
+                <div class="flex flex-wrap gap-x-4 gap-y-2">
+                  <button
+                    type="button"
+                    class="text-xs font-semibold text-sky-700 hover:text-sky-800 disabled:text-slate-400"
+                    [disabled]="!form.controls.city.value"
+                    (click)="searchEnteredLocation('city')"
+                  >
+                    Select entire entered city
+                  </button>
+                  <button
+                    type="button"
+                    class="text-xs font-semibold text-sky-700 hover:text-sky-800 disabled:text-slate-400"
+                    [disabled]="!form.controls.province.value"
+                    (click)="searchEnteredLocation('province')"
+                  >
+                    Select entire entered province
+                  </button>
+                </div>
+
+                @if (boundarySearchError()) {
+                  <p class="text-xs font-medium text-red-700">{{ boundarySearchError() }}</p>
+                }
+                @if (boundaryResults().length) {
+                  <div
+                    class="max-h-48 space-y-2 overflow-y-auto"
+                    aria-label="Boundary search results"
+                  >
+                    @for (result of boundaryResults(); track result.place_id) {
+                      <button
+                        type="button"
+                        class="w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left transition hover:border-sky-400 hover:bg-sky-50"
+                        (click)="selectBoundary(result)"
+                      >
+                        <span class="block text-sm font-semibold text-slate-800">{{
+                          result.name
+                        }}</span>
+                        <span class="mt-0.5 block text-xs text-slate-500">{{
+                          result.display_name
+                        }}</span>
+                        <span
+                          class="mt-1 inline-block rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-600"
+                          >{{ result.type }}</span
+                        >
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
               <app-zone-boundary-map
                 [boundary]="boundary()"
                 (boundaryChange)="boundaryChanged($event)"

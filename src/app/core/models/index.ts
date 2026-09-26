@@ -170,9 +170,9 @@ export interface Address {
 export interface DeliveryZone {
   id: number;
   name: string;
-  city: string;
+  city: string | null;
   province: string;
-  boundary_geojson?: GeoJsonPolygon | null;
+  boundary_geojson?: GeoJsonBoundary | null;
   base_fee: number;
   included_km: number;
   maximum_delivery_km?: number | null;
@@ -193,6 +193,24 @@ export type DeliveryZoneStatus = 'DRAFT' | 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
 export interface GeoJsonPolygon {
   type: 'Polygon';
   coordinates: number[][][];
+}
+
+export interface GeoJsonMultiPolygon {
+  type: 'MultiPolygon';
+  coordinates: number[][][][];
+}
+
+export type GeoJsonBoundary = GeoJsonPolygon | GeoJsonMultiPolygon;
+
+export interface PlaceBoundaryResult {
+  place_id: string;
+  name: string;
+  display_name: string;
+  type: string;
+  city?: string | null;
+  province?: string | null;
+  geometry: GeoJsonBoundary;
+  bounding_box: number[];
 }
 
 export interface DeliveryZoneRevision {

@@ -1,6 +1,11 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ApiClientService } from '../api/api-client.service';
-import { DeliveryZone, PaginatedResponse, ZonePricingPreview } from '../models';
+import {
+  DeliveryZone,
+  PaginatedResponse,
+  PlaceBoundaryResult,
+  ZonePricingPreview,
+} from '../models';
 import { Observable } from 'rxjs';
 
 export interface ZoneFilters {
@@ -61,6 +66,10 @@ export class ZoneService {
     distance_method: 'STRAIGHT_LINE' | 'ROAD_ROUTE';
   }): Observable<ZonePricingPreview> {
     return this.api.post<ZonePricingPreview>('/admin/delivery-zones/preview', payload);
+  }
+
+  searchBoundaries(query: string, type: 'city' | 'province'): Observable<PlaceBoundaryResult[]> {
+    return this.api.get<PlaceBoundaryResult[]>('/admin/place-boundaries', { query, type });
   }
 
   private getZones(filters: ZoneFilters): Observable<PaginatedResponse<DeliveryZone>> {
