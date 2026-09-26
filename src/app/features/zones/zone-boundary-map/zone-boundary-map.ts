@@ -36,10 +36,14 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
     this.readBoundary();
     const map = new maplibregl.Map({
       container: this.mapContainer.nativeElement,
-      style: 'https://tiles.openfreemap.org/styles/liberty',
+      style: this.baseMapStyle(),
       center: this.initialCenter(),
       zoom: this.vertices.length > 0 ? 13 : 11,
-      attributionControl: {},
+      minZoom: 5,
+      maxZoom: 19,
+      fadeDuration: 0,
+      renderWorldCopies: false,
+      attributionControl: { compact: true },
     });
     this.map = map;
     this.resizeObserver = new ResizeObserver(() => map.resize());
@@ -166,6 +170,30 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
     const latitude =
       this.vertices.reduce((sum, point) => sum + Number(point[1]), 0) / this.vertices.length;
     return [longitude, latitude];
+  }
+
+  private baseMapStyle(): maplibregl.StyleSpecification {
+    return {
+      version: 8,
+      sources: {
+        openStreetMap: {
+          type: 'raster',
+          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+          tileSize: 256,
+          maxzoom: 19,
+          attribution: '© OpenStreetMap contributors',
+        },
+      },
+      layers: [
+        {
+          id: 'open-street-map',
+          type: 'raster',
+          source: 'openStreetMap',
+          minzoom: 0,
+          maxzoom: 19,
+        },
+      ],
+    };
   }
 
   private fitBoundary(): void {
