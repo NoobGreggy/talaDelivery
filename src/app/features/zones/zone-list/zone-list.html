@@ -203,267 +203,273 @@
     </div>
   }
 
-  <app-modal
-    [title]="editingZone() ? 'Edit delivery zone' : 'Create delivery zone'"
-    size="wide"
-    [open]="formModalOpen()"
-    (closed)="closeModal()"
-  >
-    <form [formGroup]="form" class="space-y-6" (ngSubmit)="save()">
-      <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
-        <div class="space-y-5">
-          <section class="rounded-lg border border-slate-200 p-4">
-            <h3 class="font-semibold text-slate-900">Coverage and availability</h3>
-            <p class="mt-1 mb-4 text-xs text-slate-500">
-              The polygon is the source of truth. City and province remain required for labels and
-              legacy zones.
-            </p>
-            <div class="grid gap-4 sm:grid-cols-2">
-              <label class="sm:col-span-2"
-                ><span class="mb-1 block text-sm font-medium text-slate-700">Zone name</span
-                ><input
-                  formControlName="name"
-                  type="text"
-                  placeholder="Cabanatuan central"
-                  class="zone-input"
-              /></label>
-              <label
-                ><span class="mb-1 block text-sm font-medium text-slate-700">City</span
-                ><input
-                  formControlName="city"
-                  list="zone-cities"
-                  type="text"
-                  placeholder="Cabanatuan City"
-                  class="zone-input"
-              /></label>
-              <label
-                ><span class="mb-1 block text-sm font-medium text-slate-700">Province</span
-                ><input
-                  formControlName="province"
-                  list="zone-provinces"
-                  type="text"
-                  placeholder="Nueva Ecija"
-                  class="zone-input"
-              /></label>
-              <label
-                ><span class="mb-1 block text-sm font-medium text-slate-700">Lifecycle status</span
-                ><select formControlName="status" class="zone-input">
-                  <option value="DRAFT">Draft — not used at checkout</option>
-                  <option value="ACTIVE">Active — accept orders</option>
-                  <option value="SUSPENDED">Suspended — temporarily unavailable</option>
-                  <option value="ARCHIVED">Archived — retained for history</option>
-                </select></label
-              >
-              <label
-                ><span class="mb-1 block text-sm font-medium text-slate-700">Effective from</span
-                ><input formControlName="effective_from" type="datetime-local" class="zone-input"
-              /></label>
-            </div>
-            <datalist id="zone-cities">
-              @for (city of citySuggestions(); track city) {
-                <option [value]="city"></option>
-              }
-            </datalist>
-            <datalist id="zone-provinces">
-              @for (province of provinceSuggestions(); track province) {
-                <option [value]="province"></option>
-              }
-            </datalist>
-          </section>
-
-          <section class="rounded-lg border border-slate-200 p-4">
-            <h3 class="font-semibold text-slate-900">Pricing</h3>
-            <p class="mt-1 mb-4 text-xs text-slate-500">
-              Fees use pickup-to-delivery distance. Rider-to-pickup travel is not charged.
-            </p>
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <label
-                ><span class="mb-1 block text-sm font-medium text-slate-700">Base fee (PHP)</span
-                ><input
-                  formControlName="base_fee"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  class="zone-input"
-              /></label>
-              <label
-                ><span class="mb-1 block text-sm font-medium text-slate-700"
-                  >Included distance (km)</span
-                ><input
-                  formControlName="included_km"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  class="zone-input"
-              /></label>
-              <label
-                ><span class="mb-1 block text-sm font-medium text-slate-700">Extra fee per km</span
-                ><input
-                  formControlName="extra_fee_per_km"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  class="zone-input"
-              /></label>
-              <label
-                ><span class="mb-1 block text-sm font-medium text-slate-700"
-                  >Maximum delivery km</span
-                ><input
-                  formControlName="maximum_delivery_km"
-                  type="number"
-                  min="0.1"
-                  step="0.1"
-                  placeholder="No limit"
-                  class="zone-input"
-              /></label>
-              <label
-                ><span class="mb-1 block text-sm font-medium text-slate-700">Maximum fee (PHP)</span
-                ><input
-                  formControlName="maximum_delivery_fee"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="No cap"
-                  class="zone-input"
-              /></label>
-              <label
-                ><span class="mb-1 block text-sm font-medium text-slate-700"
-                  >Round distance up to</span
-                ><select formControlName="distance_rounding_km" class="zone-input">
-                  <option [ngValue]="0.1">0.1 km</option>
-                  <option [ngValue]="0.5">0.5 km</option>
-                  <option [ngValue]="1">1 km</option>
-                </select></label
-              >
-            </div>
-          </section>
-
-          <section class="rounded-lg border border-slate-200 p-4" [formGroup]="previewForm">
-            <h3 class="font-semibold text-slate-900">Test this pricing before saving</h3>
-            <p class="mt-1 mb-4 text-xs text-slate-500">
-              Choose a store and enter a customer pin to verify coverage, distance, fee, and rider
-              commission.
-            </p>
-            <div class="grid gap-3 sm:grid-cols-2">
-              <label class="sm:col-span-2"
-                ><span class="mb-1 block text-sm font-medium text-slate-700">Pickup store</span
-                ><select formControlName="store_id" class="zone-input">
-                  <option [ngValue]="null">Select a store</option>
-                  @for (store of stores(); track store.id) {
-                    <option [ngValue]="store.id">{{ store.name }}</option>
-                  }
-                </select></label
-              >
-              <label
-                ><span class="mb-1 block text-sm font-medium text-slate-700">Customer latitude</span
-                ><input
-                  formControlName="delivery_latitude"
-                  type="number"
-                  min="-90"
-                  max="90"
-                  step="any"
-                  class="zone-input"
-              /></label>
-              <label
-                ><span class="mb-1 block text-sm font-medium text-slate-700"
-                  >Customer longitude</span
-                ><input
-                  formControlName="delivery_longitude"
-                  type="number"
-                  min="-180"
-                  max="180"
-                  step="any"
-                  class="zone-input"
-              /></label>
-              <label class="sm:col-span-2"
-                ><span class="mb-1 block text-sm font-medium text-slate-700"
-                  >Distance calculation</span
-                ><select formControlName="distance_method" class="zone-input">
-                  <option value="STRAIGHT_LINE">Straight-line estimate</option>
-                  <option value="ROAD_ROUTE">Road route (requires routing service)</option>
-                </select></label
-              >
-            </div>
-            <div class="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-              <app-button
-                type="button"
-                variant="secondary"
-                size="sm"
-                [loading]="previewing()"
-                [disabled]="previewForm.invalid || form.invalid"
-                (clicked)="runPreview()"
-                >Calculate preview</app-button
-              >
-              @if (preview(); as result) {
-                @if (result.covered) {
-                  <p class="text-sm font-medium text-emerald-700">
-                    {{ result.delivery_fee | currency: 'PHP' : 'symbol' }} ·
-                    {{ result.distance_km }} km actual · {{ result.billable_distance_km }} km billed
-                    · rider {{ result.rider_commission | currency: 'PHP' : 'symbol' }}
-                  </p>
-                } @else {
-                  <p class="text-sm font-medium text-red-700">Not covered: {{ result.reason }}</p>
-                }
-              }
-            </div>
-          </section>
-        </div>
-
-        <div class="space-y-5">
-          <section class="rounded-lg border border-slate-200 p-4">
-            <h3 class="font-semibold text-slate-900">Service boundary</h3>
-            <p class="mt-1 mb-4 text-xs text-slate-500">
-              Click around the permitted service area. Activating overlapping mapped zones is
-              blocked.
-            </p>
-            <app-zone-boundary-map
-              [boundary]="boundary()"
-              (boundaryChange)="boundaryChanged($event)"
-            />
-          </section>
-          @if (editingZone()?.revisions?.length) {
+  @if (formModalOpen()) {
+    <app-modal
+      [title]="editingZone() ? 'Edit delivery zone' : 'Create delivery zone'"
+      size="wide"
+      [open]="true"
+      (closed)="closeModal()"
+    >
+      <form [formGroup]="form" class="space-y-6" (ngSubmit)="save()">
+        <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
+          <div class="space-y-5">
             <section class="rounded-lg border border-slate-200 p-4">
-              <h3 class="font-semibold text-slate-900">Recent changes</h3>
-              <ul class="mt-3 max-h-48 space-y-3 overflow-y-auto">
-                @for (revision of editingZone()?.revisions ?? []; track revision.id) {
-                  <li
-                    class="flex items-start justify-between gap-3 border-b border-slate-100 pb-2 text-xs last:border-0"
-                  >
-                    <span class="font-medium text-slate-700"
-                      >{{ revision.action }} by {{ revision.user?.name ?? 'System' }}</span
-                    ><time class="whitespace-nowrap text-slate-400">{{
-                      revision.created_at | date: 'short'
-                    }}</time>
-                  </li>
+              <h3 class="font-semibold text-slate-900">Coverage and availability</h3>
+              <p class="mt-1 mb-4 text-xs text-slate-500">
+                The polygon is the source of truth. City and province remain required for labels and
+                legacy zones.
+              </p>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <label class="sm:col-span-2"
+                  ><span class="mb-1 block text-sm font-medium text-slate-700">Zone name</span
+                  ><input
+                    formControlName="name"
+                    type="text"
+                    placeholder="Cabanatuan central"
+                    class="zone-input"
+                /></label>
+                <label
+                  ><span class="mb-1 block text-sm font-medium text-slate-700">City</span
+                  ><input
+                    formControlName="city"
+                    list="zone-cities"
+                    type="text"
+                    placeholder="Cabanatuan City"
+                    class="zone-input"
+                /></label>
+                <label
+                  ><span class="mb-1 block text-sm font-medium text-slate-700">Province</span
+                  ><input
+                    formControlName="province"
+                    list="zone-provinces"
+                    type="text"
+                    placeholder="Nueva Ecija"
+                    class="zone-input"
+                /></label>
+                <label
+                  ><span class="mb-1 block text-sm font-medium text-slate-700"
+                    >Lifecycle status</span
+                  ><select formControlName="status" class="zone-input">
+                    <option value="DRAFT">Draft — not used at checkout</option>
+                    <option value="ACTIVE">Active — accept orders</option>
+                    <option value="SUSPENDED">Suspended — temporarily unavailable</option>
+                    <option value="ARCHIVED">Archived — retained for history</option>
+                  </select></label
+                >
+                <label
+                  ><span class="mb-1 block text-sm font-medium text-slate-700">Effective from</span
+                  ><input formControlName="effective_from" type="datetime-local" class="zone-input"
+                /></label>
+              </div>
+              <datalist id="zone-cities">
+                @for (city of citySuggestions(); track city) {
+                  <option [value]="city"></option>
                 }
-              </ul>
+              </datalist>
+              <datalist id="zone-provinces">
+                @for (province of provinceSuggestions(); track province) {
+                  <option [value]="province"></option>
+                }
+              </datalist>
             </section>
-          }
+
+            <section class="rounded-lg border border-slate-200 p-4">
+              <h3 class="font-semibold text-slate-900">Pricing</h3>
+              <p class="mt-1 mb-4 text-xs text-slate-500">
+                Fees use pickup-to-delivery distance. Rider-to-pickup travel is not charged.
+              </p>
+              <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                <label
+                  ><span class="mb-1 block text-sm font-medium text-slate-700">Base fee (PHP)</span
+                  ><input
+                    formControlName="base_fee"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="zone-input"
+                /></label>
+                <label
+                  ><span class="mb-1 block text-sm font-medium text-slate-700"
+                    >Included distance (km)</span
+                  ><input
+                    formControlName="included_km"
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    class="zone-input"
+                /></label>
+                <label
+                  ><span class="mb-1 block text-sm font-medium text-slate-700"
+                    >Extra fee per km</span
+                  ><input
+                    formControlName="extra_fee_per_km"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    class="zone-input"
+                /></label>
+                <label
+                  ><span class="mb-1 block text-sm font-medium text-slate-700"
+                    >Maximum delivery km</span
+                  ><input
+                    formControlName="maximum_delivery_km"
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    placeholder="No limit"
+                    class="zone-input"
+                /></label>
+                <label
+                  ><span class="mb-1 block text-sm font-medium text-slate-700"
+                    >Maximum fee (PHP)</span
+                  ><input
+                    formControlName="maximum_delivery_fee"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="No cap"
+                    class="zone-input"
+                /></label>
+                <label
+                  ><span class="mb-1 block text-sm font-medium text-slate-700"
+                    >Round distance up to</span
+                  ><select formControlName="distance_rounding_km" class="zone-input">
+                    <option [ngValue]="0.1">0.1 km</option>
+                    <option [ngValue]="0.5">0.5 km</option>
+                    <option [ngValue]="1">1 km</option>
+                  </select></label
+                >
+              </div>
+            </section>
+
+            <section class="rounded-lg border border-slate-200 p-4" [formGroup]="previewForm">
+              <h3 class="font-semibold text-slate-900">Test this pricing before saving</h3>
+              <p class="mt-1 mb-4 text-xs text-slate-500">
+                Choose a store and enter a customer pin to verify coverage, distance, fee, and rider
+                commission.
+              </p>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <label class="sm:col-span-2"
+                  ><span class="mb-1 block text-sm font-medium text-slate-700">Pickup store</span
+                  ><select formControlName="store_id" class="zone-input">
+                    <option [ngValue]="null">Select a store</option>
+                    @for (store of stores(); track store.id) {
+                      <option [ngValue]="store.id">{{ store.name }}</option>
+                    }
+                  </select></label
+                >
+                <label
+                  ><span class="mb-1 block text-sm font-medium text-slate-700"
+                    >Customer latitude</span
+                  ><input
+                    formControlName="delivery_latitude"
+                    type="number"
+                    min="-90"
+                    max="90"
+                    step="any"
+                    class="zone-input"
+                /></label>
+                <label
+                  ><span class="mb-1 block text-sm font-medium text-slate-700"
+                    >Customer longitude</span
+                  ><input
+                    formControlName="delivery_longitude"
+                    type="number"
+                    min="-180"
+                    max="180"
+                    step="any"
+                    class="zone-input"
+                /></label>
+                <label class="sm:col-span-2"
+                  ><span class="mb-1 block text-sm font-medium text-slate-700"
+                    >Distance calculation</span
+                  ><select formControlName="distance_method" class="zone-input">
+                    <option value="STRAIGHT_LINE">Straight-line estimate</option>
+                    <option value="ROAD_ROUTE">Road route (requires routing service)</option>
+                  </select></label
+                >
+              </div>
+              <div class="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                <app-button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  [loading]="previewing()"
+                  [disabled]="previewForm.invalid || form.invalid"
+                  (clicked)="runPreview()"
+                  >Calculate preview</app-button
+                >
+                @if (preview(); as result) {
+                  @if (result.covered) {
+                    <p class="text-sm font-medium text-emerald-700">
+                      {{ result.delivery_fee | currency: 'PHP' : 'symbol' }} ·
+                      {{ result.distance_km }} km actual · {{ result.billable_distance_km }} km
+                      billed · rider {{ result.rider_commission | currency: 'PHP' : 'symbol' }}
+                    </p>
+                  } @else {
+                    <p class="text-sm font-medium text-red-700">Not covered: {{ result.reason }}</p>
+                  }
+                }
+              </div>
+            </section>
+          </div>
+
+          <div class="space-y-5">
+            <section class="rounded-lg border border-slate-200 p-4">
+              <h3 class="font-semibold text-slate-900">Service boundary</h3>
+              <p class="mt-1 mb-4 text-xs text-slate-500">
+                Click around the permitted service area. Activating overlapping mapped zones is
+                blocked.
+              </p>
+              <app-zone-boundary-map
+                [boundary]="boundary()"
+                (boundaryChange)="boundaryChanged($event)"
+              />
+            </section>
+            @if (editingZone()?.revisions?.length) {
+              <section class="rounded-lg border border-slate-200 p-4">
+                <h3 class="font-semibold text-slate-900">Recent changes</h3>
+                <ul class="mt-3 max-h-48 space-y-3 overflow-y-auto">
+                  @for (revision of editingZone()?.revisions ?? []; track revision.id) {
+                    <li
+                      class="flex items-start justify-between gap-3 border-b border-slate-100 pb-2 text-xs last:border-0"
+                    >
+                      <span class="font-medium text-slate-700"
+                        >{{ revision.action }} by {{ revision.user?.name ?? 'System' }}</span
+                      ><time class="whitespace-nowrap text-slate-400">{{
+                        revision.created_at | date: 'short'
+                      }}</time>
+                    </li>
+                  }
+                </ul>
+              </section>
+            }
+          </div>
         </div>
-      </div>
-      @if (formError()) {
-        <div
-          role="alert"
-          class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-        >
-          {{ formError() }}
+        @if (formError()) {
+          <div
+            role="alert"
+            class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          >
+            {{ formError() }}
+          </div>
+        }
+        <div class="flex justify-end gap-2 border-t border-slate-200 pt-4">
+          <app-button type="button" variant="secondary" size="md" (clicked)="closeModal()"
+            >Cancel</app-button
+          >
+          <app-button
+            type="submit"
+            variant="primary"
+            size="md"
+            [loading]="acting()"
+            [disabled]="form.invalid"
+            >{{ editingZone() ? 'Save changes' : 'Create zone' }}</app-button
+          >
         </div>
-      }
-      <div class="flex justify-end gap-2 border-t border-slate-200 pt-4">
-        <app-button type="button" variant="secondary" size="md" (clicked)="closeModal()"
-          >Cancel</app-button
-        >
-        <app-button
-          type="submit"
-          variant="primary"
-          size="md"
-          [loading]="acting()"
-          [disabled]="form.invalid"
-          >{{ editingZone() ? 'Save changes' : 'Create zone' }}</app-button
-        >
-      </div>
-    </form>
-  </app-modal>
+      </form>
+    </app-modal>
+  }
 
   <app-confirm-dialog
     title="Archive delivery zone?"

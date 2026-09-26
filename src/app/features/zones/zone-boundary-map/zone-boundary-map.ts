@@ -28,6 +28,7 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
 
   protected vertexCount = 0;
   private map: maplibregl.Map | null = null;
+  private resizeObserver: ResizeObserver | null = null;
   private vertices: Position[] = [];
   private readonly sourceId = 'zone-boundary';
 
@@ -41,6 +42,9 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
       attributionControl: {},
     });
     this.map = map;
+    this.resizeObserver = new ResizeObserver(() => map.resize());
+    this.resizeObserver.observe(this.mapContainer.nativeElement);
+    requestAnimationFrame(() => map.resize());
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
     map.on('load', () => {
       map.addSource(this.sourceId, { type: 'geojson', data: this.featureCollection() });
@@ -87,6 +91,7 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
   }
 
   ngOnDestroy(): void {
+    this.resizeObserver?.disconnect();
     this.map?.remove();
   }
 
