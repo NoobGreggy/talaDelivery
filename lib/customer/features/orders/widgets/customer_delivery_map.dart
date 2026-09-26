@@ -30,12 +30,6 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap> {
     if (styleLoaded) unawaited(_syncAnnotations());
   }
 
-  @override
-  void dispose() {
-    controller?.dispose();
-    super.dispose();
-  }
-
   Future<void> _syncAnnotations() async {
     final map = controller;
     if (map == null || !styleLoaded) return;

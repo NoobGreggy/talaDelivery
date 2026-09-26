@@ -39,6 +39,7 @@ dependencies:
   shared_preferences: ^2.5.5
   web_socket_channel: ^3.0.3
   maplibre_gl: ^0.27.1
+  geolocator: ^14.0.3
 
 dev_dependencies:
   flutter_test:
@@ -50,6 +51,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -107,3 +109,13 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/images/tala_rider.png
+  adaptive_icon_background: "#F8FAFC"
+  adaptive_icon_foreground: assets/images/tala_rider.png
+  adaptive_icon_foreground_inset: 20
+  remove_alpha_ios: true
+  background_color_ios: "#F8FAFC"

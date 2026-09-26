@@ -11,6 +11,8 @@ class CustomerAppDependencies {
     this._ownedClient,
     CustomerRealtimeController? realtime,
     this.addressMapSurfaceBuilder,
+    this.locationService,
+    this.reverseGeocoder,
   ]) : realtime = realtime ?? CustomerRealtimeController();
 
   factory CustomerAppDependencies.live({CustomerApiConfig? config}) {
@@ -31,6 +33,9 @@ class CustomerAppDependencies {
         tokenStore: tokenStore,
         authClient: client,
       ),
+      null,
+      const GeolocatorCustomerLocationService(),
+      NominatimCustomerReverseGeocoder(client),
     );
   }
 
@@ -42,6 +47,8 @@ class CustomerAppDependencies {
   final CustomerCartController cartController;
   final CustomerRealtimeController realtime;
   final CustomerAddressMapSurfaceBuilder? addressMapSurfaceBuilder;
+  final CustomerLocationService? locationService;
+  final CustomerReverseGeocoder? reverseGeocoder;
   final http.Client? _ownedClient;
 
   void dispose() {

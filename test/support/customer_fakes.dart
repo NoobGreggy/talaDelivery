@@ -251,6 +251,8 @@ CustomerAppDependencies fakeCustomerDependencies({
   FakeCustomerAuthRepository? auth,
   FakeCustomerAddressRepository? addresses,
   FakeCustomerCatalogRepository? catalog,
+  CustomerLocationService? locationService,
+  CustomerReverseGeocoder? reverseGeocoder,
 }) => CustomerAppDependencies(
   auth ?? FakeCustomerAuthRepository(),
   addresses ?? FakeCustomerAddressRepository(),
@@ -265,4 +267,6 @@ CustomerAppDependencies fakeCustomerDependencies({
     color: Colors.black12,
     child: const SizedBox.expand(),
   ),
+  locationService,
+  reverseGeocoder,
 );

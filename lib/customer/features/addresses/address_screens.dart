@@ -187,6 +187,27 @@ class _AddressSetupPageState extends State<AddressSetupPage> {
                         selectedPoint: selectedPoint,
                         surfaceBuilder: CustomerDependencyScope.of(context)
                             .addressMapSurfaceBuilder,
+                        locationService: CustomerDependencyScope.of(context)
+                            .locationService,
+                        reverseGeocoder: CustomerDependencyScope.of(context)
+                            .reverseGeocoder,
+                        onAddressResolved: (address) => setState(() {
+                          if (address.street?.isNotEmpty ?? false) {
+                            addressController.text = address.street!;
+                          }
+                          if (address.barangay?.isNotEmpty ?? false) {
+                            barangayController.text = address.barangay!;
+                          }
+                          if (address.city?.isNotEmpty ?? false) {
+                            cityController.text = address.city!;
+                          }
+                          if (address.province?.isNotEmpty ?? false) {
+                            provinceController.text = address.province!;
+                          }
+                          if (address.postalCode?.isNotEmpty ?? false) {
+                            postalController.text = address.postalCode!;
+                          }
+                        }),
                         onChanged: (point) => setState(() {
                           selectedPoint = point;
                           mapError = null;
