@@ -34,6 +34,8 @@ enum RiderLocationPermission {
 /// important failures (permissions) without noise on every tick.
 enum RiderLocationReport {
   posted,
+  unchanged,
+  lowAccuracy,
   permissionDenied,
   permissionPermanentlyDenied,
   locationUnavailable,
@@ -128,7 +130,11 @@ class RiderLocationService {
     this.postTrackedLocation,
     this.interval = const Duration(seconds: 20),
     this.activeInterval = const Duration(seconds: 5),
-  });
+    this.minimumDistanceMeters = 10,
+    this.maximumSilence = const Duration(seconds: 30),
+    this.maximumAccuracyMeters = 100,
+    DateTime Function()? clock,
+  }) : _clock = clock ?? DateTime.now;
 
   final RiderLocationSource source;
   final Future<void> Function(RiderLatLng position) postLocation;
@@ -136,10 +142,16 @@ class RiderLocationService {
   postTrackedLocation;
   final Duration interval;
   final Duration activeInterval;
+  final double minimumDistanceMeters;
+  final Duration maximumSilence;
+  final double maximumAccuracyMeters;
+  final DateTime Function() _clock;
 
   Timer? _timer;
   bool _running = false;
   int? _activeDeliveryId;
+  RiderLatLng? _lastPostedPosition;
+  DateTime? _lastPostedAt;
 
   bool get isRunning => _running;
   int? get activeDeliveryId => _activeDeliveryId;
@@ -147,6 +159,8 @@ class RiderLocationService {
   void setActiveDelivery(int? deliveryId) {
     if (_activeDeliveryId == deliveryId) return;
     _activeDeliveryId = deliveryId;
+    _lastPostedPosition = null;
+    _lastPostedAt = null;
     if (_running) _schedule();
   }
 
@@ -167,6 +181,18 @@ class RiderLocationService {
     }
     final position = await source.currentPosition();
     if (position == null) return RiderLocationReport.locationUnavailable;
+    if (position.accuracy != null &&
+        position.accuracy! > maximumAccuracyMeters) {
+      return RiderLocationReport.lowAccuracy;
+    }
+    final previous = _lastPostedPosition;
+    final lastPostedAt = _lastPostedAt;
+    if (previous != null &&
+        lastPostedAt != null &&
+        _clock().difference(lastPostedAt) < maximumSilence &&
+        _distanceMeters(previous, position) < minimumDistanceMeters) {
+      return RiderLocationReport.unchanged;
+    }
     try {
       final deliveryId = _activeDeliveryId;
       final trackedPost = postTrackedLocation;
@@ -175,10 +201,29 @@ class RiderLocationService {
       } else {
         await postLocation(position);
       }
+      _lastPostedPosition = position;
+      _lastPostedAt = _clock();
       return RiderLocationReport.posted;
     } catch (_) {
       return RiderLocationReport.failed;
     }
+  }
+
+  static double _distanceMeters(RiderLatLng from, RiderLatLng to) {
+    const earthRadiusMeters = 6371000.0;
+    final fromLatitude = from.latitude * math.pi / 180;
+    final toLatitude = to.latitude * math.pi / 180;
+    final latitudeDelta = (to.latitude - from.latitude) * math.pi / 180;
+    final longitudeDelta = (to.longitude - from.longitude) * math.pi / 180;
+    final haversine =
+        math.sin(latitudeDelta / 2) * math.sin(latitudeDelta / 2) +
+        math.cos(fromLatitude) *
+            math.cos(toLatitude) *
+            math.sin(longitudeDelta / 2) *
+            math.sin(longitudeDelta / 2);
+    return earthRadiusMeters *
+        2 *
+        math.atan2(math.sqrt(haversine), math.sqrt(1 - haversine));
   }
 
   /// Starts immediate + periodic reporting. Safe to call repeatedly.

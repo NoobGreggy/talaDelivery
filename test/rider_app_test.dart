@@ -132,6 +132,10 @@ class _FakeRiderRepository implements RiderRepository {
   Future<void> updateLocation({
     required double latitude,
     required double longitude,
+    double? accuracy,
+    double? heading,
+    double? speed,
+    DateTime? recordedAt,
   }) async {}
 
   @override

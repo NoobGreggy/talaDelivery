@@ -20,12 +20,6 @@ class _RiderDeliveryMapState extends State<RiderDeliveryMap> {
       widget.delivery.deliveryLatitude != null &&
       widget.delivery.deliveryLongitude != null;
 
-  @override
-  void dispose() {
-    controller?.dispose();
-    super.dispose();
-  }
-
   Future<void> _addStops() async {
     final map = controller;
     if (map == null || !styleLoaded) return;

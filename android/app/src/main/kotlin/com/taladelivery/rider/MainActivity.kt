@@ -1,4 +1,4 @@
-package com.example.tala_delivery
+package com.taladelivery.rider
 
 import io.flutter.embedding.android.FlutterActivity
 

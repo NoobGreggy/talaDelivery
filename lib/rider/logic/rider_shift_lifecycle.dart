@@ -56,6 +56,13 @@ extension _RiderShiftLifecycle on RiderAppController {
     switch (outcome) {
       case RiderLocationReport.posted:
         _locationNoticeShown = false;
+      case RiderLocationReport.unchanged:
+        _locationNoticeShown = false;
+      case RiderLocationReport.lowAccuracy:
+        _notifyLocation(
+          'Your GPS accuracy is low. Move to an open area for more reliable '
+          'tracking.',
+        );
       case RiderLocationReport.permissionDenied:
         _notifyLocation(
           'Enable location access so nearby deliveries can find you.',
@@ -66,6 +73,9 @@ extension _RiderShiftLifecycle on RiderAppController {
           'receive nearby deliveries.',
         );
       case RiderLocationReport.locationUnavailable:
+        _notifyLocation(
+          'Location services are unavailable. Enable GPS to continue tracking.',
+        );
       case RiderLocationReport.failed:
         break;
     }

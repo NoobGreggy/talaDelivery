@@ -45,6 +45,10 @@ class RiderAppDependencies {
       postLocation: (position) => repository.updateLocation(
         latitude: position.latitude,
         longitude: position.longitude,
+        accuracy: position.accuracy,
+        heading: position.heading,
+        speed: position.speed,
+        recordedAt: position.recordedAt,
       ),
       postTrackedLocation: (position, deliveryId) => repository
           .updateTrackedLocation(deliveryId: deliveryId, position: position),

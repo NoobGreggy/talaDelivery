@@ -15,6 +15,10 @@ abstract class RiderRepository {
   Future<void> updateLocation({
     required double latitude,
     required double longitude,
+    double? accuracy,
+    double? heading,
+    double? speed,
+    DateTime? recordedAt,
   });
   Future<List<RiderNotification>> notifications();
   Future<void> markNotificationRead(int notificationId);
@@ -143,10 +147,21 @@ class ApiRiderRepository implements RiderRepository {
   Future<void> updateLocation({
     required double latitude,
     required double longitude,
+    double? accuracy,
+    double? heading,
+    double? speed,
+    DateTime? recordedAt,
   }) async {
     await _api.post(
       'rider/location',
-      body: {'latitude': latitude, 'longitude': longitude},
+      body: {
+        'latitude': latitude,
+        'longitude': longitude,
+        'accuracy_m': accuracy,
+        'heading_deg': heading,
+        'speed_mps': speed,
+        'recorded_at': (recordedAt ?? DateTime.now()).toUtc().toIso8601String(),
+      },
     );
   }
 

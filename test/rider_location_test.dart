@@ -117,6 +117,7 @@ void main() {
     final service = RiderLocationService(
       source: source,
       interval: const Duration(milliseconds: 10),
+      minimumDistanceMeters: 0,
       postLocation: (_) async {
         posts += 1;
       },
@@ -159,5 +160,34 @@ void main() {
     expect(idlePosts, 0);
     expect(trackedDeliveryId, 42);
     expect(tracked?.accuracy, 7);
+  });
+
+  test('does not post duplicate coordinates inside ten meters', () async {
+    final source = _FakeLocationSource(
+      position: const RiderLatLng(14.5, 121, accuracy: 8),
+    );
+    var posts = 0;
+    final service = RiderLocationService(
+      source: source,
+      postLocation: (_) async => posts += 1,
+    );
+
+    expect(await service.reportOnce(), RiderLocationReport.posted);
+    source.position = const RiderLatLng(14.50001, 121, accuracy: 8);
+    expect(await service.reportOnce(), RiderLocationReport.unchanged);
+    expect(posts, 1);
+  });
+
+  test('rejects a very inaccurate GPS reading', () async {
+    var posts = 0;
+    final service = RiderLocationService(
+      source: _FakeLocationSource(
+        position: const RiderLatLng(14.5, 121, accuracy: 250),
+      ),
+      postLocation: (_) async => posts += 1,
+    );
+
+    expect(await service.reportOnce(), RiderLocationReport.lowAccuracy);
+    expect(posts, 0);
   });
 }
