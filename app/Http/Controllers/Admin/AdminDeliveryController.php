@@ -20,7 +20,7 @@ class AdminDeliveryController extends Controller
     public function index(Request $request): JsonResponse
     {
         $deliveries = Delivery::query()
-            ->with(['order', 'store', 'rider'])
+            ->with(['order', 'store', 'rider.rider'])
             ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')))
             ->latest()
             ->paginate((int) $request->integer('per_page', 15));
@@ -30,7 +30,7 @@ class AdminDeliveryController extends Controller
 
     public function show(Delivery $delivery): JsonResponse
     {
-        $delivery->load(['order.items', 'store', 'rider', 'offers']);
+        $delivery->load(['order.items', 'store', 'rider.rider', 'offers']);
 
         return ApiResponse::success('Delivery retrieved.', new DeliveryResource($delivery));
     }
@@ -52,7 +52,7 @@ class AdminDeliveryController extends Controller
             ->where('status', DeliveryOfferStatus::Pending)
             ->update(['status' => DeliveryOfferStatus::Expired]);
 
-        return ApiResponse::success('Rider assigned to the delivery.', new DeliveryResource($delivery->load('order', 'rider')));
+        return ApiResponse::success('Rider assigned to the delivery.', new DeliveryResource($delivery->load('order', 'rider.rider')));
     }
 
     public function cancel(Request $request, Delivery $delivery): JsonResponse

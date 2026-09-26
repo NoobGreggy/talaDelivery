@@ -149,6 +149,9 @@ class RiderController extends Controller
         $rider->update([
             'current_latitude' => $validated['latitude'],
             'current_longitude' => $validated['longitude'],
+            'current_location_accuracy' => $validated['accuracy_m'] ?? null,
+            'current_location_heading' => $validated['heading_deg'] ?? null,
+            'current_location_speed' => $validated['speed_mps'] ?? null,
             'current_location_updated_at' => $recordedAt,
         ]);
 

@@ -31,6 +31,9 @@ class DeliveryResource extends JsonResource
             'rider_location' => $riderProfile === null ? null : [
                 'latitude' => $riderProfile->current_latitude,
                 'longitude' => $riderProfile->current_longitude,
+                'accuracy_m' => $riderProfile->current_location_accuracy,
+                'heading_deg' => $riderProfile->current_location_heading,
+                'speed_mps' => $riderProfile->current_location_speed,
                 'recorded_at' => $riderProfile->current_location_updated_at,
             ],
             'pickup_address' => $this->pickup_address,

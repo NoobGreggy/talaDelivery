@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
-#[Fillable(['user_id', 'vehicle_type', 'vehicle_plate', 'license_number', 'requirements', 'is_online', 'status', 'current_latitude', 'current_longitude', 'current_location_updated_at'])]
+#[Fillable(['user_id', 'vehicle_type', 'vehicle_plate', 'license_number', 'requirements', 'is_online', 'status', 'current_latitude', 'current_longitude', 'current_location_accuracy', 'current_location_heading', 'current_location_speed', 'current_location_updated_at'])]
 class Rider extends Model
 {
     /** @use HasFactory<RiderFactory> */
@@ -32,6 +32,9 @@ class Rider extends Model
             'status' => RiderStatus::class,
             'current_latitude' => 'decimal:7',
             'current_longitude' => 'decimal:7',
+            'current_location_accuracy' => 'decimal:2',
+            'current_location_heading' => 'decimal:2',
+            'current_location_speed' => 'decimal:3',
             'current_location_updated_at' => 'datetime',
         ];
     }

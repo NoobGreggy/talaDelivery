@@ -38,8 +38,17 @@ class RiderLocationTrackingTest extends ApiTestCase
             'recorded_at' => now()->toISOString(),
         ])->assertOk()
             ->assertJsonPath('data.current_latitude', '14.5995123')
-            ->assertJsonPath('data.current_longitude', '120.9842123');
+            ->assertJsonPath('data.current_longitude', '120.9842123')
+            ->assertJsonPath('data.current_location_accuracy', '8.50')
+            ->assertJsonPath('data.current_location_heading', '92.00')
+            ->assertJsonPath('data.current_location_speed', '6.200');
 
+        $this->assertDatabaseHas('riders', [
+            'id' => $rider->rider->id,
+            'current_location_accuracy' => 8.5,
+            'current_location_heading' => 92,
+            'current_location_speed' => 6.2,
+        ]);
         $this->assertNotNull($rider->rider->fresh()->current_location_updated_at);
         Event::assertDispatched(
             RiderLocationUpdated::class,
@@ -82,6 +91,30 @@ class RiderLocationTrackingTest extends ApiTestCase
             'longitude' => 120.9842,
         ])->assertUnprocessable()
             ->assertJsonPath('message', 'This rider is not assigned to the selected delivery.');
+    }
+
+    public function test_platform_admin_can_read_the_active_rider_location(): void
+    {
+        [$rider, $delivery] = $this->activeDelivery();
+        $rider->rider->update([
+            'current_latitude' => 14.5995123,
+            'current_longitude' => 120.9842123,
+            'current_location_accuracy' => 8.5,
+            'current_location_heading' => 92,
+            'current_location_speed' => 6.2,
+            'current_location_updated_at' => now(),
+        ]);
+        $admin = User::factory()->create(['role' => Role::PlatformAdmin->value]);
+        $admin->assignRole(Role::PlatformAdmin->value);
+
+        $this->withToken($admin->createToken('auth-token')->plainTextToken)
+            ->getJson("/api/v1/admin/deliveries/{$delivery->id}")
+            ->assertOk()
+            ->assertJsonPath('data.rider_location.latitude', '14.5995123')
+            ->assertJsonPath('data.rider_location.longitude', '120.9842123')
+            ->assertJsonPath('data.rider_location.accuracy_m', '8.50')
+            ->assertJsonPath('data.rider_location.heading_deg', '92.00')
+            ->assertJsonPath('data.rider_location.speed_mps', '6.200');
     }
 
     public function test_stale_location_is_rejected(): void
