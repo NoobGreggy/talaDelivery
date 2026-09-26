@@ -30,7 +30,7 @@ class CustomerDemoSeederTest extends ApiTestCase
         $this->assertDatabaseCount('delivery_zones', 1);
         $this->assertDatabaseHas('addresses', [
             'user_id' => $customer->id,
-            'city' => 'Cabanatuan City',
+            'city' => 'Cauayan City',
             'is_default' => true,
         ]);
     }

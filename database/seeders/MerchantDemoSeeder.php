@@ -18,7 +18,7 @@ class MerchantDemoSeeder extends Seeder
 {
     use WithoutModelEvents;
 
-    private const STORE_SLUG = 'cabanatuan-food-corner';
+    private const STORE_SLUG = 'cauayan-food-corner';
 
     private Store $store;
 
@@ -50,13 +50,13 @@ class MerchantDemoSeeder extends Seeder
 
         if (! $this->store->exists) {
             $this->store->fill([
-                'name' => 'Cabanatuan Food Corner',
+                'name' => 'Cauayan Food Corner',
                 'description' => 'Classic Filipino meals, merienda, and refreshing drinks.',
                 'phone' => '09170000001',
                 'email' => 'foodcorner@taladelivery.test',
-                'address' => 'Burgos Avenue, Cabanatuan City, Nueva Ecija',
-                'latitude' => 15.4859,
-                'longitude' => 120.9661,
+                'address' => 'Rizal Avenue, Poblacion, Cauayan City, Isabela',
+                'latitude' => 16.9290,
+                'longitude' => 121.7705,
                 'status' => StoreStatus::Active->value,
                 'opening_time' => '08:00:00',
                 'closing_time' => '21:00:00',
@@ -122,8 +122,8 @@ class MerchantDemoSeeder extends Seeder
                 'delivery_latitude' => $customer['latitude'],
                 'delivery_longitude' => $customer['longitude'],
                 'delivery_address' => $customer['address'],
-                'city' => 'Cabanatuan City',
-                'province' => 'Nueva Ecija',
+                'city' => 'Cauayan City',
+                'province' => 'Isabela',
                 'payment_method' => 'COD',
             ], $customer['user']);
 
@@ -189,8 +189,8 @@ class MerchantDemoSeeder extends Seeder
                 'name' => $customer->name,
                 'phone' => $customer->phone,
                 'address' => $address?->address_line ?? '123 Demo Street',
-                'latitude' => $address?->latitude ?? 15.4865 + ($index * 0.001),
-                'longitude' => $address?->longitude ?? 120.9734,
+                'latitude' => $address?->latitude ?? 16.9472 + ($index * 0.001),
+                'longitude' => $address?->longitude ?? 121.7663,
             ];
         }
 

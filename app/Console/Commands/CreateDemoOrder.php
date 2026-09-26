@@ -9,7 +9,7 @@ use Illuminate\Console\Command;
 
 class CreateDemoOrder extends Command
 {
-    protected $signature = 'tala:demo-order {--store=cabanatuan-food-corner} {--count=1}';
+    protected $signature = 'tala:demo-order {--store=cauayan-food-corner} {--count=1}';
 
     protected $description = 'Create a demo order through the order service to trigger the WebSocket broadcast.';
 
@@ -60,10 +60,10 @@ class CreateDemoOrder extends Command
                 'store_id' => $store->id,
                 'items' => $items,
                 'delivery_address' => $address?->address_line ?? '123 Demo Street',
-                'delivery_latitude' => $address?->latitude ?? 15.4865,
-                'delivery_longitude' => $address?->longitude ?? 120.9734,
-                'city' => $address?->city ?? 'Cabanatuan City',
-                'province' => $address?->province ?? 'Nueva Ecija',
+                'delivery_latitude' => $address?->latitude ?? 16.9472,
+                'delivery_longitude' => $address?->longitude ?? 121.7663,
+                'city' => $address?->city ?? 'Cauayan City',
+                'province' => $address?->province ?? 'Isabela',
                 'payment_method' => 'COD',
             ], $customer);
 

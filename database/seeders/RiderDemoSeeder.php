@@ -51,8 +51,8 @@ class RiderDemoSeeder extends Seeder
                     'license_number' => 'R-123456',
                     'is_online' => true,
                     'status' => RiderStatus::Online->value,
-                    'current_latitude' => 15.4867,
-                    'current_longitude' => 120.9670,
+                    'current_latitude' => 16.9300,
+                    'current_longitude' => 121.7690,
                 ],
             );
         });

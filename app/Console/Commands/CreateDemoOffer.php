@@ -2,15 +2,15 @@
 
 namespace App\Console\Commands;
 
-use App\Services\OrderService;
-use App\Services\RiderMatchingService;
 use App\Models\Store;
 use App\Models\User;
+use App\Services\OrderService;
+use App\Services\RiderMatchingService;
 use Illuminate\Console\Command;
 
 class CreateDemoOffer extends Command
 {
-    protected $signature = 'tala:demo-offer {--store=cabanatuan-food-corner}';
+    protected $signature = 'tala:demo-offer {--store=cauayan-food-corner}';
 
     protected $description = 'Create a demo order, advance it to ready, and match an online rider synchronously so the delivery.offered event fires.';
 
@@ -58,10 +58,10 @@ class CreateDemoOffer extends Command
             'store_id' => $store->id,
             'items' => $items,
             'delivery_address' => $address?->address_line ?? '123 Demo Street',
-            'delivery_latitude' => $address?->latitude ?? 15.4865,
-            'delivery_longitude' => $address?->longitude ?? 120.9734,
-            'city' => $address?->city ?? 'Cabanatuan City',
-            'province' => $address?->province ?? 'Nueva Ecija',
+            'delivery_latitude' => $address?->latitude ?? 16.9472,
+            'delivery_longitude' => $address?->longitude ?? 121.7663,
+            'city' => $address?->city ?? 'Cauayan City',
+            'province' => $address?->province ?? 'Isabela',
             'payment_method' => 'COD',
         ], $customer);
 
