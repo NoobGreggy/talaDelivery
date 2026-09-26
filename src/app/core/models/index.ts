@@ -170,12 +170,48 @@ export interface Address {
 export interface DeliveryZone {
   id: number;
   name: string;
-  city?: string;
-  province?: string;
+  city: string;
+  province: string;
+  boundary_geojson?: GeoJsonPolygon | null;
   base_fee: number;
   included_km: number;
+  maximum_delivery_km?: number | null;
   extra_fee_per_km: number;
-  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  maximum_delivery_fee?: number | null;
+  distance_rounding_km: number;
+  effective_from?: string | null;
+  status: DeliveryZoneStatus;
+  updated_by?: { id: number; name: string } | null;
+  revision_count?: number;
+  revisions?: DeliveryZoneRevision[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type DeliveryZoneStatus = 'DRAFT' | 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
+
+export interface GeoJsonPolygon {
+  type: 'Polygon';
+  coordinates: number[][][];
+}
+
+export interface DeliveryZoneRevision {
+  id: number;
+  action: 'CREATED' | 'UPDATED' | 'ARCHIVED';
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+  user?: { id: number; name: string } | null;
+  created_at: string;
+}
+
+export interface ZonePricingPreview {
+  covered: boolean;
+  reason?: string;
+  delivery_fee?: number;
+  distance_km?: number;
+  billable_distance_km?: number;
+  distance_method?: 'STRAIGHT_LINE' | 'ROAD_ROUTE';
+  rider_commission?: number;
 }
 
 export interface PlatformSettings {
@@ -185,7 +221,7 @@ export interface PlatformSettings {
   week_starts_on: number;
   settlement_timezone: string;
   settlement_day_starts_at: string;
-  distance_method: 'STRAIGHT_LINE';
+  distance_method: 'STRAIGHT_LINE' | 'ROAD_ROUTE';
   updated_at?: string;
 }
 

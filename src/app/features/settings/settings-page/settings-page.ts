@@ -30,7 +30,7 @@ export class SettingsPageComponent {
     week_starts_on: [1, [Validators.required, Validators.min(0), Validators.max(6)]],
     settlement_timezone: ['Asia/Manila', Validators.required],
     settlement_day_starts_at: ['00:00', Validators.required],
-    distance_method: ['STRAIGHT_LINE' as const, Validators.required],
+    distance_method: ['STRAIGHT_LINE' as 'STRAIGHT_LINE' | 'ROAD_ROUTE', Validators.required],
   });
 
   constructor() {

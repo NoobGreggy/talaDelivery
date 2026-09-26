@@ -8,11 +8,16 @@
     <!-- General -->
     <div class="space-y-6 lg:col-span-2">
       <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">Rider Commission</h3>
+        <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
+          Rider Commission
+        </h3>
         <div class="space-y-4">
           <div>
             <label class="mb-1 block text-sm font-medium text-slate-700">Commission Type</label>
-            <select formControlName="rider_commission_type" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+            <select
+              formControlName="rider_commission_type"
+              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            >
               <option value="PERCENTAGE">Percentage of delivery fee</option>
               <option value="FIXED">Fixed amount per delivery</option>
             </select>
@@ -24,8 +29,11 @@
               type="number"
               min="0"
               step="0.01"
-              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none" />
-            <p class="mt-1 text-xs text-slate-500">New orders snapshot this rule. Existing deliveries do not change.</p>
+              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"
+            />
+            <p class="mt-1 text-xs text-slate-500">
+              New orders snapshot this rule. Existing deliveries do not change.
+            </p>
           </div>
         </div>
       </div>
@@ -37,8 +45,12 @@
           Delivery fees and included distances are configured per zone under Zones &amp; Pricing.
         </p>
         <label class="mb-1 block text-sm font-medium text-slate-700">Distance Method</label>
-        <select formControlName="distance_method" class="mb-4 w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+        <select
+          formControlName="distance_method"
+          class="mb-4 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+        >
           <option value="STRAIGHT_LINE">Straight-line pickup to drop-off</option>
+          <option value="ROAD_ROUTE">Road-route distance (requires routing service)</option>
         </select>
         <a href="/zones" class="text-sm font-medium text-sky-600 hover:text-sky-700">
           Configure delivery zones
@@ -50,18 +62,28 @@
     <div class="space-y-6">
       <!-- Notifications -->
       <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">Earnings Periods</h3>
+        <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
+          Earnings Periods
+        </h3>
         <div class="space-y-4">
           <div>
             <label class="mb-1 block text-sm font-medium text-slate-700">Week Type</label>
-            <select formControlName="earnings_week_type" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+            <select
+              formControlName="earnings_week_type"
+              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            >
               <option value="ROLLING_SEVEN_DAYS">Rolling seven days</option>
               <option value="CALENDAR_WEEK">Calendar week</option>
             </select>
           </div>
           <div>
-            <label class="mb-1 block text-sm font-medium text-slate-700">Calendar Week Starts</label>
-            <select formControlName="week_starts_on" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+            <label class="mb-1 block text-sm font-medium text-slate-700"
+              >Calendar Week Starts</label
+            >
+            <select
+              formControlName="week_starts_on"
+              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            >
               <option [value]="0">Sunday</option>
               <option [value]="1">Monday</option>
               <option [value]="2">Tuesday</option>
@@ -73,11 +95,18 @@
           </div>
           <div>
             <label class="mb-1 block text-sm font-medium text-slate-700">Timezone</label>
-            <input formControlName="settlement_timezone" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            <input
+              formControlName="settlement_timezone"
+              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
           </div>
           <div>
             <label class="mb-1 block text-sm font-medium text-slate-700">Daily Cutoff Starts</label>
-            <input formControlName="settlement_day_starts_at" type="time" class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            <input
+              formControlName="settlement_day_starts_at"
+              type="time"
+              class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+            />
           </div>
         </div>
       </div>
@@ -96,7 +125,13 @@
           </div>
         </dl>
         <div class="mt-4">
-          <app-button type="submit" variant="primary" size="md" [loading]="saving()" [disabled]="form.invalid || loading()">
+          <app-button
+            type="submit"
+            variant="primary"
+            size="md"
+            [loading]="saving()"
+            [disabled]="form.invalid || loading()"
+          >
             Update Settings
           </app-button>
         </div>

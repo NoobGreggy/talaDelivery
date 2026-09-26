@@ -1,0 +1,8 @@
+:host {
+  display: block;
+}
+
+.zone-map {
+  height: 320px;
+  width: 100%;
+}

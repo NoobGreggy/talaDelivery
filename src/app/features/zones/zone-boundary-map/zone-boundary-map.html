@@ -1,0 +1,30 @@
+<div class="overflow-hidden rounded-lg border border-slate-200 bg-white">
+  <div #mapContainer class="zone-map"></div>
+  @if (editable) {
+    <div
+      class="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 px-3 py-2"
+    >
+      <p class="text-xs text-slate-500">
+        Click the map to add boundary points. At least three points are required.
+      </p>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="text-xs font-medium text-sky-700 disabled:text-slate-300"
+          [disabled]="vertexCount === 0"
+          (click)="undoVertex()"
+        >
+          Undo point
+        </button>
+        <button
+          type="button"
+          class="text-xs font-medium text-red-600 disabled:text-slate-300"
+          [disabled]="vertexCount === 0"
+          (click)="clearBoundary()"
+        >
+          Clear
+        </button>
+      </div>
+    </div>
+  }
+</div>

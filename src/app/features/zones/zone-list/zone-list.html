@@ -1,237 +1,482 @@
 <div class="space-y-6">
-  <!-- Header -->
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
       <h1 class="text-2xl font-semibold text-slate-900">Delivery Zones</h1>
-      <p class="mt-1 text-sm text-slate-500">Configure delivery zones and delivery fee pricing.</p>
+      <p class="mt-1 text-sm text-slate-500">
+        Define service boundaries, pricing rules, and availability.
+      </p>
     </div>
     <div class="flex items-center gap-2">
-      <app-button variant="primary" size="md" (clicked)="openCreate()">
-        New Zone
-      </app-button>
+      <app-button variant="primary" size="md" (clicked)="openCreate()">New Zone</app-button>
       <button
+        type="button"
         (click)="refresh()"
         aria-label="Refresh zones"
-        class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700">
+        class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-500 hover:bg-slate-50"
+      >
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M16.023 9.348h4.992M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99"
+          />
         </svg>
       </button>
     </div>
   </div>
 
-  <!-- Stats -->
   <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
     <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
       <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Zones</p>
       <p class="mt-1 text-2xl font-semibold text-slate-900">{{ zones().length }}</p>
     </div>
     <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Active</p>
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Accepting Orders</p>
       <p class="mt-1 text-2xl font-semibold text-emerald-600">{{ activeCount() }}</p>
     </div>
     <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Newest Zone Base Fee</p>
-      <p class="mt-1 text-2xl font-semibold text-slate-900">
-        {{ zones()[0]?.base_fee ?? 0 | currency: 'PHP' : 'symbol' }}
-      </p>
+      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Mapped Boundaries</p>
+      <p class="mt-1 text-2xl font-semibold text-sky-600">{{ mappedCount() }}</p>
     </div>
   </div>
 
-  <!-- Status filter pills -->
-  <div class="flex flex-wrap gap-2">
-    @for (f of [
-      { value: 'all', label: 'All' },
-      { value: 'ACTIVE', label: 'Active' },
-      { value: 'INACTIVE', label: 'Inactive' }
-    ]; track f.value) {
-      <button
-        (click)="setStatusFilter(f.value)"
-        class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
-        [class.bg-sky-600]="statusFilter() === f.value"
-        [class.text-white]="statusFilter() === f.value"
-        [class.bg-slate-100]="statusFilter() !== f.value"
-        [class.text-slate-600]="statusFilter() !== f.value"
-        [class.hover:bg-slate-200]="statusFilter() !== f.value">
-        {{ f.label }}
-      </button>
-    }
+  <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div class="relative max-w-md flex-1">
+      <svg
+        class="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-slate-400"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        stroke-width="2"
+      >
+        <circle cx="11" cy="11" r="7" />
+        <path stroke-linecap="round" d="m20 20-4-4" />
+      </svg>
+      <input
+        type="search"
+        placeholder="Search zone, city, or province"
+        [value]="search()"
+        (input)="setSearch($any($event.target).value)"
+        class="w-full rounded-lg border border-slate-300 bg-white py-2 pr-3 pl-9 text-sm outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+      />
+    </div>
+    <div class="flex flex-wrap gap-2">
+      @for (
+        filter of [
+          { value: 'all', label: 'All' },
+          { value: 'DRAFT', label: 'Draft' },
+          { value: 'ACTIVE', label: 'Active' },
+          { value: 'SUSPENDED', label: 'Suspended' },
+          { value: 'ARCHIVED', label: 'Archived' },
+        ];
+        track filter.value
+      ) {
+        <button
+          type="button"
+          (click)="setStatusFilter(filter.value)"
+          class="rounded-full px-3 py-1 text-xs font-medium"
+          [class.bg-sky-600]="statusFilter() === filter.value"
+          [class.text-white]="statusFilter() === filter.value"
+          [class.bg-slate-100]="statusFilter() !== filter.value"
+          [class.text-slate-600]="statusFilter() !== filter.value"
+        >
+          {{ filter.label }}
+        </button>
+      }
+    </div>
   </div>
 
-  <!-- Error -->
   @if (error()) {
     <div class="flex items-center justify-center py-16">
       <app-error-state
-        [message]="'Something went wrong'"
+        message="Unable to load delivery zones"
         [description]="error() ?? ''"
-        (retried)="refresh()" />
+        (retried)="refresh()"
+      />
+    </div>
+  } @else if (loading()) {
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      @for (skeleton of [1, 2, 3, 4, 5, 6]; track skeleton) {
+        <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="h-5 w-2/3 animate-pulse rounded bg-slate-200"></div>
+          <div class="mt-4 h-24 animate-pulse rounded bg-slate-100"></div>
+        </div>
+      }
+    </div>
+  } @else if (filteredZones().length === 0) {
+    <div class="flex items-center justify-center py-16">
+      <app-empty-state
+        message="No delivery zones found"
+        description="Create a zone or change the current filters."
+      />
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      @for (zone of filteredZones(); track zone.id) {
+        <article class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <h2 class="truncate font-semibold text-slate-900">{{ zone.name }}</h2>
+              <p class="mt-0.5 truncate text-xs text-slate-500">{{ zoneLocation(zone) }}</p>
+            </div>
+            <app-status-badge [status]="zone.status" />
+          </div>
+          <div
+            class="mt-4 flex items-center gap-2 rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600"
+          >
+            <span
+              class="h-2 w-2 rounded-full"
+              [class.bg-sky-500]="zone.boundary_geojson"
+              [class.bg-amber-500]="!zone.boundary_geojson"
+            ></span>
+            {{
+              zone.boundary_geojson
+                ? 'Polygon boundary controls coverage'
+                : 'Legacy city-wide fallback coverage'
+            }}
+          </div>
+          <dl class="mt-4 space-y-2 text-sm">
+            <div class="flex justify-between gap-3">
+              <dt class="text-slate-500">Starting price</dt>
+              <dd class="text-right font-semibold text-slate-900">
+                {{ zone.base_fee | currency: 'PHP' : 'symbol' }} for {{ zone.included_km }} km
+              </dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-slate-500">After included km</dt>
+              <dd class="font-semibold text-slate-900">
+                {{ zone.extra_fee_per_km | currency: 'PHP' : 'symbol' }}/km
+              </dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-slate-500">Maximum distance</dt>
+              <dd class="font-semibold text-slate-900">
+                {{
+                  zone.maximum_delivery_km == null ? 'No limit' : zone.maximum_delivery_km + ' km'
+                }}
+              </dd>
+            </div>
+            <div class="flex justify-between gap-3">
+              <dt class="text-slate-500">Fee cap</dt>
+              <dd class="font-semibold text-slate-900">
+                {{
+                  zone.maximum_delivery_fee == null
+                    ? 'No cap'
+                    : (zone.maximum_delivery_fee | currency: 'PHP' : 'symbol')
+                }}
+              </dd>
+            </div>
+          </dl>
+          <div class="mt-4 border-t border-slate-100 pt-3 text-xs text-slate-400">
+            {{
+              zone.effective_from
+                ? 'Effective ' + (zone.effective_from | date: 'medium')
+                : 'Effective immediately'
+            }}
+            @if (zone.revision_count) {
+              <span> · {{ zone.revision_count }} revisions</span>
+            }
+          </div>
+          <div class="mt-5 flex flex-wrap items-center gap-2">
+            <app-button variant="secondary" size="sm" (clicked)="openEdit(zone)">Edit</app-button>
+            @if (zone.status === 'ACTIVE') {
+              <app-button variant="secondary" size="sm" (clicked)="changeStatus(zone, 'SUSPENDED')"
+                >Suspend</app-button
+              >
+            } @else if (zone.status === 'DRAFT' || zone.status === 'SUSPENDED') {
+              <app-button variant="primary" size="sm" (clicked)="changeStatus(zone, 'ACTIVE')"
+                >Activate</app-button
+              >
+            }
+            @if (zone.status !== 'ARCHIVED') {
+              <button
+                type="button"
+                (click)="archiveTarget.set(zone)"
+                class="ml-auto text-xs font-medium text-red-600 hover:text-red-700"
+              >
+                Archive
+              </button>
+            }
+          </div>
+        </article>
+      }
     </div>
   }
 
-  <!-- Cards grid -->
-  @if (!error()) {
-    @if (loading()) {
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        @for (s of [1, 2, 3, 4, 5, 6]; track s) {
-          <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <div class="h-5 w-2/3 animate-pulse rounded bg-slate-200"></div>
-            <div class="mt-4 space-y-3">
-              <div class="h-4 w-full animate-pulse rounded bg-slate-100"></div>
-              <div class="h-4 w-full animate-pulse rounded bg-slate-100"></div>
-              <div class="h-4 w-1/2 animate-pulse rounded bg-slate-100"></div>
+  <app-modal
+    [title]="editingZone() ? 'Edit delivery zone' : 'Create delivery zone'"
+    size="wide"
+    [open]="formModalOpen()"
+    (closed)="closeModal()"
+  >
+    <form [formGroup]="form" class="space-y-6" (ngSubmit)="save()">
+      <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
+        <div class="space-y-5">
+          <section class="rounded-lg border border-slate-200 p-4">
+            <h3 class="font-semibold text-slate-900">Coverage and availability</h3>
+            <p class="mt-1 mb-4 text-xs text-slate-500">
+              The polygon is the source of truth. City and province remain required for labels and
+              legacy zones.
+            </p>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <label class="sm:col-span-2"
+                ><span class="mb-1 block text-sm font-medium text-slate-700">Zone name</span
+                ><input
+                  formControlName="name"
+                  type="text"
+                  placeholder="Cabanatuan central"
+                  class="zone-input"
+              /></label>
+              <label
+                ><span class="mb-1 block text-sm font-medium text-slate-700">City</span
+                ><input
+                  formControlName="city"
+                  list="zone-cities"
+                  type="text"
+                  placeholder="Cabanatuan City"
+                  class="zone-input"
+              /></label>
+              <label
+                ><span class="mb-1 block text-sm font-medium text-slate-700">Province</span
+                ><input
+                  formControlName="province"
+                  list="zone-provinces"
+                  type="text"
+                  placeholder="Nueva Ecija"
+                  class="zone-input"
+              /></label>
+              <label
+                ><span class="mb-1 block text-sm font-medium text-slate-700">Lifecycle status</span
+                ><select formControlName="status" class="zone-input">
+                  <option value="DRAFT">Draft — not used at checkout</option>
+                  <option value="ACTIVE">Active — accept orders</option>
+                  <option value="SUSPENDED">Suspended — temporarily unavailable</option>
+                  <option value="ARCHIVED">Archived — retained for history</option>
+                </select></label
+              >
+              <label
+                ><span class="mb-1 block text-sm font-medium text-slate-700">Effective from</span
+                ><input formControlName="effective_from" type="datetime-local" class="zone-input"
+              /></label>
             </div>
-          </div>
-        }
-      </div>
-    } @else if (filteredZones().length === 0) {
-      <div class="flex items-center justify-center py-16">
-        <app-empty-state
-          message="No delivery zones"
-          description="Create a delivery zone to configure delivery fees." />
-      </div>
-    } @else {
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        @for (zone of filteredZones(); track zone.id) {
-          <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
-            <div class="flex items-start justify-between gap-2">
-              <div>
-                <h3 class="font-semibold text-slate-900">{{ zone.name }}</h3>
-                @if (zone.city || zone.province) {
-                  <p class="mt-0.5 text-xs text-slate-400">
-                    {{ zoneLocation(zone) }}
-                  </p>
-                }
-              </div>
-              <app-status-badge [status]="zone.status" />
+            <datalist id="zone-cities">
+              @for (city of citySuggestions(); track city) {
+                <option [value]="city"></option>
+              }
+            </datalist>
+            <datalist id="zone-provinces">
+              @for (province of provinceSuggestions(); track province) {
+                <option [value]="province"></option>
+              }
+            </datalist>
+          </section>
+
+          <section class="rounded-lg border border-slate-200 p-4">
+            <h3 class="font-semibold text-slate-900">Pricing</h3>
+            <p class="mt-1 mb-4 text-xs text-slate-500">
+              Fees use pickup-to-delivery distance. Rider-to-pickup travel is not charged.
+            </p>
+            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <label
+                ><span class="mb-1 block text-sm font-medium text-slate-700">Base fee (PHP)</span
+                ><input
+                  formControlName="base_fee"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="zone-input"
+              /></label>
+              <label
+                ><span class="mb-1 block text-sm font-medium text-slate-700"
+                  >Included distance (km)</span
+                ><input
+                  formControlName="included_km"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  class="zone-input"
+              /></label>
+              <label
+                ><span class="mb-1 block text-sm font-medium text-slate-700">Extra fee per km</span
+                ><input
+                  formControlName="extra_fee_per_km"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="zone-input"
+              /></label>
+              <label
+                ><span class="mb-1 block text-sm font-medium text-slate-700"
+                  >Maximum delivery km</span
+                ><input
+                  formControlName="maximum_delivery_km"
+                  type="number"
+                  min="0.1"
+                  step="0.1"
+                  placeholder="No limit"
+                  class="zone-input"
+              /></label>
+              <label
+                ><span class="mb-1 block text-sm font-medium text-slate-700">Maximum fee (PHP)</span
+                ><input
+                  formControlName="maximum_delivery_fee"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="No cap"
+                  class="zone-input"
+              /></label>
+              <label
+                ><span class="mb-1 block text-sm font-medium text-slate-700"
+                  >Round distance up to</span
+                ><select formControlName="distance_rounding_km" class="zone-input">
+                  <option [ngValue]="0.1">0.1 km</option>
+                  <option [ngValue]="0.5">0.5 km</option>
+                  <option [ngValue]="1">1 km</option>
+                </select></label
+              >
             </div>
+          </section>
 
-            <dl class="mt-5 space-y-3 text-sm">
-              <div class="flex items-center justify-between">
-                <dt class="text-slate-500">Base Fee</dt>
-                <dd class="font-semibold text-slate-900">
-                  {{ zone.base_fee | currency: 'PHP' : 'symbol' }}
-                </dd>
-              </div>
-              <div class="flex items-center justify-between">
-                <dt class="text-slate-500">Included Distance</dt>
-                <dd class="font-semibold text-slate-900">{{ zone.included_km }} km</dd>
-              </div>
-              <div class="flex items-center justify-between">
-                <dt class="text-slate-500">Extra Distance</dt>
-                <dd class="font-semibold text-slate-900">
-                  {{ zone.extra_fee_per_km | currency: 'PHP' : 'symbol' }}/km
-                </dd>
-              </div>
-            </dl>
-
-            <div class="mt-5 flex items-center gap-2">
-              <app-button variant="secondary" size="sm" (clicked)="openEdit(zone)">
-                Edit
-              </app-button>
+          <section class="rounded-lg border border-slate-200 p-4" [formGroup]="previewForm">
+            <h3 class="font-semibold text-slate-900">Test this pricing before saving</h3>
+            <p class="mt-1 mb-4 text-xs text-slate-500">
+              Choose a store and enter a customer pin to verify coverage, distance, fee, and rider
+              commission.
+            </p>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label class="sm:col-span-2"
+                ><span class="mb-1 block text-sm font-medium text-slate-700">Pickup store</span
+                ><select formControlName="store_id" class="zone-input">
+                  <option [ngValue]="null">Select a store</option>
+                  @for (store of stores(); track store.id) {
+                    <option [ngValue]="store.id">{{ store.name }}</option>
+                  }
+                </select></label
+              >
+              <label
+                ><span class="mb-1 block text-sm font-medium text-slate-700">Customer latitude</span
+                ><input
+                  formControlName="delivery_latitude"
+                  type="number"
+                  min="-90"
+                  max="90"
+                  step="any"
+                  class="zone-input"
+              /></label>
+              <label
+                ><span class="mb-1 block text-sm font-medium text-slate-700"
+                  >Customer longitude</span
+                ><input
+                  formControlName="delivery_longitude"
+                  type="number"
+                  min="-180"
+                  max="180"
+                  step="any"
+                  class="zone-input"
+              /></label>
+              <label class="sm:col-span-2"
+                ><span class="mb-1 block text-sm font-medium text-slate-700"
+                  >Distance calculation</span
+                ><select formControlName="distance_method" class="zone-input">
+                  <option value="STRAIGHT_LINE">Straight-line estimate</option>
+                  <option value="ROAD_ROUTE">Road route (requires routing service)</option>
+                </select></label
+              >
+            </div>
+            <div class="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center">
               <app-button
-                [variant]="zone.status === 'ACTIVE' ? 'danger' : 'primary'"
+                type="button"
+                variant="secondary"
                 size="sm"
-                (clicked)="toggleStatus(zone)">
-                {{ zone.status === 'ACTIVE' ? 'Deactivate' : 'Activate' }}
-              </app-button>
-              @if (zone.status !== 'ACTIVE') {
-                <button
-                  (click)="deleteTarget.set(zone)"
-                  class="ml-auto text-sm font-medium text-red-600 hover:text-red-700">
-                  Delete
-                </button>
+                [loading]="previewing()"
+                [disabled]="previewForm.invalid || form.invalid"
+                (clicked)="runPreview()"
+                >Calculate preview</app-button
+              >
+              @if (preview(); as result) {
+                @if (result.covered) {
+                  <p class="text-sm font-medium text-emerald-700">
+                    {{ result.delivery_fee | currency: 'PHP' : 'symbol' }} ·
+                    {{ result.distance_km }} km actual · {{ result.billable_distance_km }} km billed
+                    · rider {{ result.rider_commission | currency: 'PHP' : 'symbol' }}
+                  </p>
+                } @else {
+                  <p class="text-sm font-medium text-red-700">Not covered: {{ result.reason }}</p>
+                }
               }
             </div>
-          </div>
-        }
-      </div>
-    }
-  }
+          </section>
+        </div>
 
-  <!-- Create / Edit modal -->
-  <app-modal
-    [title]="editingZone() ? 'Edit Zone' : 'New Zone'"
-    [open]="formModalOpen()"
-    (closed)="closeModal()">
-    <form [formGroup]="form" class="space-y-4" (ngSubmit)="save()">
-      <div>
-        <label class="mb-1 block text-sm font-medium text-slate-700">Name</label>
-        <input
-          formControlName="name"
-          type="text"
-          placeholder="e.g. Cabanatuan Zone"
-          class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none" />
-      </div>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label class="mb-1 block text-sm font-medium text-slate-700">City</label>
-          <input
-            formControlName="city"
-            type="text"
-            placeholder="Cabanatuan"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none" />
-        </div>
-        <div>
-          <label class="mb-1 block text-sm font-medium text-slate-700">Province</label>
-          <input
-            formControlName="province"
-            type="text"
-            placeholder="Nueva Ecija"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none" />
-        </div>
-      </div>
-      <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div>
-          <label class="mb-1 block text-sm font-medium text-slate-700">Base Fee</label>
-          <input
-            formControlName="base_fee"
-            type="number"
-            min="0"
-            step="0.01"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none" />
-        </div>
-        <div>
-          <label class="mb-1 block text-sm font-medium text-slate-700">Included (km)</label>
-          <input
-            formControlName="included_km"
-            type="number"
-            min="0"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none" />
-        </div>
-        <div>
-          <label class="mb-1 block text-sm font-medium text-slate-700">Extra Fee / km</label>
-          <input
-            formControlName="extra_fee_per_km"
-            type="number"
-            min="0"
-            step="0.01"
-            class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none" />
+        <div class="space-y-5">
+          <section class="rounded-lg border border-slate-200 p-4">
+            <h3 class="font-semibold text-slate-900">Service boundary</h3>
+            <p class="mt-1 mb-4 text-xs text-slate-500">
+              Click around the permitted service area. Activating overlapping mapped zones is
+              blocked.
+            </p>
+            <app-zone-boundary-map
+              [boundary]="boundary()"
+              (boundaryChange)="boundaryChanged($event)"
+            />
+          </section>
+          @if (editingZone()?.revisions?.length) {
+            <section class="rounded-lg border border-slate-200 p-4">
+              <h3 class="font-semibold text-slate-900">Recent changes</h3>
+              <ul class="mt-3 max-h-48 space-y-3 overflow-y-auto">
+                @for (revision of editingZone()?.revisions ?? []; track revision.id) {
+                  <li
+                    class="flex items-start justify-between gap-3 border-b border-slate-100 pb-2 text-xs last:border-0"
+                  >
+                    <span class="font-medium text-slate-700"
+                      >{{ revision.action }} by {{ revision.user?.name ?? 'System' }}</span
+                    ><time class="whitespace-nowrap text-slate-400">{{
+                      revision.created_at | date: 'short'
+                    }}</time>
+                  </li>
+                }
+              </ul>
+            </section>
+          }
         </div>
       </div>
-      <div class="flex justify-end gap-2 pt-2">
-        <app-button variant="secondary" size="md" (clicked)="closeModal()">
-          Cancel
-        </app-button>
+      @if (formError()) {
+        <div
+          role="alert"
+          class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+        >
+          {{ formError() }}
+        </div>
+      }
+      <div class="flex justify-end gap-2 border-t border-slate-200 pt-4">
+        <app-button type="button" variant="secondary" size="md" (clicked)="closeModal()"
+          >Cancel</app-button
+        >
         <app-button
           type="submit"
           variant="primary"
           size="md"
           [loading]="acting()"
-          [disabled]="form.invalid">
-          {{ editingZone() ? 'Save Changes' : 'Create Zone' }}
-        </app-button>
+          [disabled]="form.invalid"
+          >{{ editingZone() ? 'Save changes' : 'Create zone' }}</app-button
+        >
       </div>
     </form>
   </app-modal>
 
-  <!-- Delete confirm -->
   <app-confirm-dialog
-    title="Delete zone?"
-    [message]="'Delete ' + (deleteTarget()?.name ?? 'this zone') + '? This cannot be undone.'"
-    confirmLabel="Delete Zone"
+    title="Archive delivery zone?"
+    [message]="
+      'Archive ' +
+      (archiveTarget()?.name ?? 'this zone') +
+      '? It will stop accepting new orders but its history will be retained.'
+    "
+    confirmLabel="Archive Zone"
     cancelLabel="Cancel"
     [danger]="true"
-    [open]="!!deleteTarget()"
-    (confirmed)="confirmDelete()"
-    (cancelled)="deleteTarget.set(null)" />
+    [open]="!!archiveTarget()"
+    (confirmed)="confirmArchive()"
+    (cancelled)="archiveTarget.set(null)"
+  />
 </div>

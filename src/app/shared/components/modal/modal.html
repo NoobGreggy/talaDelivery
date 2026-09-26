@@ -1,11 +1,10 @@
 @if (open()) {
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center"
-    (click)="close()"
-  >
+  <div class="fixed inset-0 z-50 flex items-center justify-center" (click)="close()">
     <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
     <div
-      class="relative mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
+      class="relative mx-4 max-h-[calc(100vh-2rem)] w-full overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
+      [class.max-w-lg]="size() === 'default'"
+      [class.max-w-6xl]="size() === 'wide'"
       (click)="$event.stopPropagation()"
     >
       <div class="flex items-start justify-between gap-4">
@@ -18,7 +17,14 @@
           (click)="close()"
           aria-label="Close"
         >
-          <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <svg
+            class="h-5 w-5"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="2"
+            stroke="currentColor"
+          >
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
           </svg>
         </button>

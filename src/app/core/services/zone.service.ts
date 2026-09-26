@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ApiClientService } from '../api/api-client.service';
-import { DeliveryZone, PaginatedResponse } from '../models';
+import { DeliveryZone, PaginatedResponse, ZonePricingPreview } from '../models';
 import { Observable } from 'rxjs';
 
 export interface ZoneFilters {
@@ -30,7 +30,7 @@ export class ZoneService {
         this._loading.set(false);
       },
       error: () => {
-        this._error.set('We couldn\'t load delivery zones.');
+        this._error.set("We couldn't load delivery zones.");
         this._loading.set(false);
       },
     });
@@ -50,6 +50,17 @@ export class ZoneService {
 
   deleteZone(id: number): Observable<void> {
     return this.api.delete(`/admin/delivery-zones/${id}`);
+  }
+
+  previewPricing(payload: {
+    zone: Partial<DeliveryZone>;
+    pickup_latitude: number;
+    pickup_longitude: number;
+    delivery_latitude: number;
+    delivery_longitude: number;
+    distance_method: 'STRAIGHT_LINE' | 'ROAD_ROUTE';
+  }): Observable<ZonePricingPreview> {
+    return this.api.post<ZonePricingPreview>('/admin/delivery-zones/preview', payload);
   }
 
   private getZones(filters: ZoneFilters): Observable<PaginatedResponse<DeliveryZone>> {

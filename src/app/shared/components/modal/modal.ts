@@ -9,6 +9,7 @@ import { Component, input, output } from '@angular/core';
 export class ModalComponent {
   title = input('');
   open = input(false);
+  size = input<'default' | 'wide'>('default');
   closed = output<void>();
 
   close(): void {
