@@ -4,7 +4,7 @@ import Pusher from 'pusher-js';
 import { environment } from '../../../environments/environment';
 import { ApiClientService } from '../api/api-client.service';
 import { AuthService } from '../auth/auth.service';
-import { AppNotification } from '../models';
+import { AppNotification, RiderLocationEvent } from '../models';
 
 declare global {
   interface Window {
@@ -72,10 +72,25 @@ export class EchoService {
     this.unread.set(0);
   }
 
+  listenToDeliveryLocation(
+    deliveryId: number,
+    onLocation: (location: RiderLocationEvent) => void,
+  ): () => void {
+    this.connect();
+    const echo = this.echo;
+    if (!echo) return () => undefined;
+
+    echo.private(`delivery.${deliveryId}`).listen('.rider.location.updated', onLocation);
+
+    return () => echo.leave(`delivery.${deliveryId}`);
+  }
+
   private loadInitialNotifications(): void {
     this.loading.set(true);
     this.api
-      .get<{ data: AppNotification[]; meta: { total: number } }>('/notifications', { per_page: '10' })
+      .get<{ data: AppNotification[]; meta: { total: number } }>('/notifications', {
+        per_page: '10',
+      })
       .subscribe({
         next: (result) => {
           this.notifications.set(result.data);

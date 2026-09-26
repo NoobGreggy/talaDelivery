@@ -1,0 +1,16 @@
+<div class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+  <div
+    class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3"
+  >
+    <div>
+      <h3 class="text-sm font-semibold text-slate-900">Live delivery location</h3>
+      <p class="text-xs text-slate-500">Blue: pickup · Green: customer · Orange: rider</p>
+    </div>
+    @if (delivery.rider_location?.recorded_at) {
+      <span class="text-xs text-slate-500">
+        Updated {{ delivery.rider_location?.recorded_at | date: 'shortTime' }}
+      </span>
+    }
+  </div>
+  <div #mapContainer class="delivery-map" aria-label="Live delivery map"></div>
+</div>

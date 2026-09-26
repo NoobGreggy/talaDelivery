@@ -51,7 +51,16 @@ export interface Order {
   created_at: string;
 }
 
-export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'PREPARING' | 'READY_FOR_PICKUP' | 'RIDER_ASSIGNED' | 'PICKED_UP' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'CANCELLED';
+export type OrderStatus =
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'PREPARING'
+  | 'READY_FOR_PICKUP'
+  | 'RIDER_ASSIGNED'
+  | 'PICKED_UP'
+  | 'OUT_FOR_DELIVERY'
+  | 'DELIVERED'
+  | 'CANCELLED';
 
 export interface OrderItem {
   id: number;
@@ -74,12 +83,42 @@ export interface Delivery {
   commission_type?: 'PERCENTAGE' | 'FIXED' | null;
   commission_value?: number | null;
   pickup_address: string;
+  pickup_latitude?: number | null;
+  pickup_longitude?: number | null;
   delivery_address: string;
+  delivery_latitude?: number | null;
+  delivery_longitude?: number | null;
+  rider_location?: RiderLocation | null;
   timeline: DeliveryEvent[];
   created_at: string;
 }
 
-export type DeliveryStatus = 'FINDING_RIDER' | 'RIDER_ASSIGNED' | 'PICKED_UP' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'FAILED' | 'CANCELLED';
+export interface RiderLocation {
+  latitude: number;
+  longitude: number;
+  accuracy_m?: number | null;
+  heading_deg?: number | null;
+  speed_mps?: number | null;
+  recorded_at?: string | null;
+}
+
+export interface RiderLocationEvent extends RiderLocation {
+  delivery_id: number;
+  rider_id: number;
+  sequence: number;
+}
+
+export type DeliveryStatus =
+  | 'FINDING_RIDER'
+  | 'RIDER_ASSIGNED'
+  | 'ASSIGNED'
+  | 'ACCEPTED'
+  | 'PICKED_UP'
+  | 'OUT_FOR_DELIVERY'
+  | 'IN_TRANSIT'
+  | 'DELIVERED'
+  | 'FAILED'
+  | 'CANCELLED';
 
 export interface DeliveryEvent {
   label: string;

@@ -13,7 +13,9 @@ import { ErrorStateComponent } from '../../../shared/components/error-state/erro
 import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton';
 import { AvatarComponent } from '../../../shared/components/avatar/avatar';
 import { CardComponent } from '../../../shared/components/card/card';
-import { Delivery, DeliveryEvent, Rider } from '../../../core/models';
+import { Delivery, DeliveryEvent, Rider, RiderLocationEvent } from '../../../core/models';
+import { EchoService } from '../../../core/echo/echo.service';
+import { DeliveryTrackingMapComponent } from '../delivery-tracking-map/delivery-tracking-map';
 
 @Component({
   selector: 'app-delivery-detail',
@@ -31,6 +33,7 @@ import { Delivery, DeliveryEvent, Rider } from '../../../core/models';
     SkeletonComponent,
     AvatarComponent,
     CardComponent,
+    DeliveryTrackingMapComponent,
   ],
   templateUrl: './delivery-detail.html',
   styleUrl: './delivery-detail.css',
@@ -42,6 +45,8 @@ export class DeliveryDetailComponent {
   private riderService = inject(RiderService);
   private toastService = inject(ToastService);
   private destroyRef = inject(DestroyRef);
+  private echoService = inject(EchoService);
+  private stopLocationTracking: (() => void) | null = null;
 
   protected readonly delivery = signal<Delivery | null>(null);
   protected readonly loading = signal(true);
@@ -80,15 +85,17 @@ export class DeliveryDetailComponent {
 
     return steps.map((step, i) => ({
       label: step.label,
-      active: i === statusIndex &&
-        status !== 'FAILED' &&
-        status !== 'CANCELLED',
+      active: i === statusIndex && status !== 'FAILED' && status !== 'CANCELLED',
       completed: i < statusIndex,
     }));
   });
 
-  protected readonly statusLabel = computed(() =>
-    this.delivery()?.status?.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? '',
+  protected readonly statusLabel = computed(
+    () =>
+      this.delivery()
+        ?.status?.replace(/_/g, ' ')
+        .toLowerCase()
+        .replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? '',
   );
 
   constructor() {
@@ -96,7 +103,10 @@ export class DeliveryDetailComponent {
       const id = Number(params.get('id'));
       this.loadDelivery(id);
     });
-    this.destroyRef.onDestroy(() => sub.unsubscribe());
+    this.destroyRef.onDestroy(() => {
+      sub.unsubscribe();
+      this.stopLocationTracking?.();
+    });
   }
 
   private loadDelivery(id: number): void {
@@ -106,14 +116,44 @@ export class DeliveryDetailComponent {
     this.deliveryService.getDelivery(id).subscribe({
       next: (delivery) => {
         this.delivery.set(delivery);
+        this.startLocationTracking(delivery);
         this.loading.set(false);
         this.checkQueryParams();
       },
       error: () => {
-        this.error.set('We couldn\'t load this delivery.');
+        this.error.set("We couldn't load this delivery.");
         this.loading.set(false);
       },
     });
+  }
+
+  private startLocationTracking(delivery: Delivery): void {
+    this.stopLocationTracking?.();
+    this.stopLocationTracking = null;
+    if (!['ASSIGNED', 'ACCEPTED', 'PICKED_UP', 'IN_TRANSIT'].includes(delivery.status)) {
+      return;
+    }
+    this.stopLocationTracking = this.echoService.listenToDeliveryLocation(
+      delivery.id,
+      (location: RiderLocationEvent) => {
+        if (location.delivery_id !== delivery.id) return;
+        this.delivery.update((current) =>
+          current
+            ? {
+                ...current,
+                rider_location: {
+                  latitude: location.latitude,
+                  longitude: location.longitude,
+                  accuracy_m: location.accuracy_m,
+                  heading_deg: location.heading_deg,
+                  speed_mps: location.speed_mps,
+                  recorded_at: location.recorded_at,
+                },
+              }
+            : current,
+        );
+      },
+    );
   }
 
   protected retry(): void {
@@ -139,9 +179,7 @@ export class DeliveryDetailComponent {
   }
 
   protected selectRider(rider: Rider): void {
-    this.selectedRiderId.update((current) =>
-      current === rider.id ? null : rider.id,
-    );
+    this.selectedRiderId.update((current) => (current === rider.id ? null : rider.id));
   }
 
   protected assignRider(): void {
