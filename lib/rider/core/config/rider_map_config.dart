@@ -1,12 +1,16 @@
 class RiderMapConfig {
-  const RiderMapConfig({required this.styleUrl});
+  const RiderMapConfig({required this.accessToken, required this.styleUrl});
 
   factory RiderMapConfig.fromEnvironment() => const RiderMapConfig(
+    accessToken: String.fromEnvironment('TALA_MAPBOX_ACCESS_TOKEN'),
     styleUrl: String.fromEnvironment(
-      'TALA_MAP_STYLE_URL',
-      defaultValue: 'https://tiles.openfreemap.org/styles/liberty',
+      'TALA_MAPBOX_STYLE_URL',
+      defaultValue: 'mapbox://styles/mapbox/streets-v12',
     ),
   );
 
+  final String accessToken;
   final String styleUrl;
+
+  bool get isConfigured => accessToken.trim().isNotEmpty;
 }

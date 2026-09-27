@@ -10,8 +10,11 @@ class RiderDeliveryMap extends StatefulWidget {
 }
 
 class _RiderDeliveryMapState extends State<RiderDeliveryMap> {
-  MapLibreMapController? controller;
+  mapbox.MapboxMap? controller;
+  mapbox.CircleAnnotationManager? circleManager;
   bool styleLoaded = false;
+  bool addingStops = false;
+  bool stopsAdded = false;
 
   bool get hasPickup =>
       widget.delivery.pickupLatitude != null &&
@@ -21,35 +24,45 @@ class _RiderDeliveryMapState extends State<RiderDeliveryMap> {
       widget.delivery.deliveryLongitude != null;
 
   Future<void> _addStops() async {
-    final map = controller;
-    if (map == null || !styleLoaded) return;
-    if (hasPickup) {
-      await map.addCircle(
-        CircleOptions(
-          geometry: LatLng(
-            widget.delivery.pickupLatitude!,
-            widget.delivery.pickupLongitude!,
+    final manager = circleManager;
+    if (manager == null || !styleLoaded || addingStops || stopsAdded) return;
+    addingStops = true;
+    try {
+      if (hasPickup) {
+        await manager.create(
+          mapbox.CircleAnnotationOptions(
+            geometry: mapbox.Point(
+              coordinates: mapbox.Position(
+                widget.delivery.pickupLongitude!,
+                widget.delivery.pickupLatitude!,
+              ),
+            ),
+            circleColor: 0xFF2563EB,
+            circleRadius: 9,
+            circleStrokeColor: 0xFFFFFFFF,
+            circleStrokeWidth: 3,
           ),
-          circleColor: '#2563EB',
-          circleRadius: 9,
-          circleStrokeColor: '#FFFFFF',
-          circleStrokeWidth: 3,
-        ),
-      );
-    }
-    if (hasDestination) {
-      await map.addCircle(
-        CircleOptions(
-          geometry: LatLng(
-            widget.delivery.deliveryLatitude!,
-            widget.delivery.deliveryLongitude!,
+        );
+      }
+      if (hasDestination) {
+        await manager.create(
+          mapbox.CircleAnnotationOptions(
+            geometry: mapbox.Point(
+              coordinates: mapbox.Position(
+                widget.delivery.deliveryLongitude!,
+                widget.delivery.deliveryLatitude!,
+              ),
+            ),
+            circleColor: 0xFF16A34A,
+            circleRadius: 10,
+            circleStrokeColor: 0xFFFFFFFF,
+            circleStrokeWidth: 3,
           ),
-          circleColor: '#16A34A',
-          circleRadius: 10,
-          circleStrokeColor: '#FFFFFF',
-          circleStrokeWidth: 3,
-        ),
-      );
+        );
+      }
+      stopsAdded = true;
+    } finally {
+      addingStops = false;
     }
   }
 
@@ -68,6 +81,14 @@ class _RiderDeliveryMapState extends State<RiderDeliveryMap> {
     final longitude = hasDestination
         ? widget.delivery.deliveryLongitude!
         : widget.delivery.pickupLongitude!;
+    final mapConfig = RiderMapConfig.fromEnvironment();
+    if (!mapConfig.isConfigured) {
+      return const RiderEmptyState(
+        icon: Icons.map_outlined,
+        title: 'Mapbox is not configured',
+        message: 'Add TALA_MAPBOX_ACCESS_TOKEN to your config file.',
+      );
+    }
     final palette = riderPaletteOf(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(22),
@@ -75,19 +96,24 @@ class _RiderDeliveryMapState extends State<RiderDeliveryMap> {
         height: 280,
         child: Stack(
           children: [
-            MapLibreMap(
-              styleString: RiderMapConfig.fromEnvironment().styleUrl,
-              initialCameraPosition: CameraPosition(
-                target: LatLng(latitude, longitude),
+            mapbox.MapWidget(
+              styleUri: mapConfig.styleUrl,
+              viewport: mapbox.CameraViewportState(
+                center: mapbox.Point(
+                  coordinates: mapbox.Position(longitude, latitude),
+                ),
                 zoom: 13,
               ),
-              myLocationEnabled: true,
-              myLocationTrackingMode: MyLocationTrackingMode.none,
-              compassEnabled: true,
-              logoEnabled: false,
-              attributionButtonPosition: AttributionButtonPosition.bottomRight,
-              onMapCreated: (value) => controller = value,
-              onStyleLoadedCallback: () {
+              onMapCreated: (value) async {
+                controller = value;
+                circleManager = await value.annotations
+                    .createCircleAnnotationManager();
+                if (styleLoaded) unawaited(_addStops());
+                await value.location.updateSettings(
+                  mapbox.LocationComponentSettings(enabled: true),
+                );
+              },
+              onStyleLoadedListener: (_) {
                 styleLoaded = true;
                 unawaited(_addStops());
               },

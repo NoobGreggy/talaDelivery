@@ -7,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mapbox;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -42,6 +42,10 @@ part 'features/profile/rider_profile_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final mapConfig = RiderMapConfig.fromEnvironment();
+  if (mapConfig.isConfigured) {
+    mapbox.MapboxOptions.setAccessToken(mapConfig.accessToken);
+  }
   final dependencies = await RiderAppDependencies.live();
   final theme = await RiderThemeController.restore();
   runApp(TalaDeliveryApp(dependencies: dependencies, themeController: theme));
