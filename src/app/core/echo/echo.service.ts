@@ -53,10 +53,12 @@ export class EchoService {
       key: environment.reverb.appKey,
       wsHost: environment.reverb.host,
       wsPort: environment.reverb.port,
-      wrapTLS: false,
-      forceTLS: false,
+      wssPort: environment.reverb.port,
+      // pusher-js falls back to plain ws:// when the page itself is http:// (the dev
+      // server), which this TLS-only Reverb host rejects. forceTLS keeps it on wss://.
+      forceTLS: environment.reverb.scheme === 'https',
       enabledTransports: ['ws', 'wss'],
-      authEndpoint: '/broadcasting/auth',
+      authEndpoint: environment.broadcastAuthUrl,
       auth: {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -66,11 +68,21 @@ export class EchoService {
       },
     });
 
-    this.echo
-      .private(`user.${user.id}`)
+    // `PusherConnector` is not exported by laravel-echo, so narrow structurally.
+    const pusher = (this.echo.connector as { pusher?: Pusher }).pusher;
+    pusher?.connection.bind('pusher:error', (error: unknown) => {
+      console.error('[Echo] Realtime connection error:', error);
+    });
+
+    const userChannel = this.echo.private(`user.${user.id}`);
+    userChannel
       .listen('.notification.created', (payload: AppNotification) => {
         this.notifications.update((current) => [payload, ...current].slice(0, 50));
         this.unread.update((count) => count + 1);
+      })
+      .listen('.error', (error: unknown) => {
+        // Raised when /broadcasting/auth rejects the subscription (CORS, 401, 403).
+        console.error('[Echo] Channel subscription error:', error);
       });
 
     if (storeId) {

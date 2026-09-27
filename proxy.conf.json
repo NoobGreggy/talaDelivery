@@ -1,12 +1,12 @@
 {
   "/api/**": {
-    "target": "http://127.0.0.1:8000",
-    "secure": false,
+    "target": "https://delivery-api.tala-works.online",
+    "secure": true,
     "changeOrigin": true
   },
   "/broadcasting/**": {
-    "target": "http://127.0.0.1:8000",
-    "secure": false,
+    "target": "https://delivery-api.tala-works.online",
+    "secure": true,
     "changeOrigin": true
   }
 }
