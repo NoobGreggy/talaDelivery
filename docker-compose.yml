@@ -17,6 +17,11 @@ services:
     env_file:
       - .env
 
+    environment:
+      REVERB_HOST: reverb
+      REVERB_PORT: 6001
+      REVERB_SCHEME: http
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -61,6 +66,11 @@ services:
     env_file:
       - .env
 
+    environment:
+      REVERB_HOST: reverb
+      REVERB_PORT: 6001
+      REVERB_SCHEME: http
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
@@ -69,7 +79,6 @@ services:
         "php",
         "artisan",
         "queue:work",
-        "redis",
         "--sleep=3",
         "--tries=3",
         "--timeout=90",

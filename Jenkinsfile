@@ -85,6 +85,39 @@ pipeline {
             }
         }
 
+        stage('Validate Realtime Configuration') {
+            steps {
+                sh '''
+                    set -e
+
+                    require_env() {
+                        NAME="$1"
+                        VALUE=$(sed -n "s/^${NAME}=//p" .env | tail -n 1)
+
+                        if [ -z "$VALUE" ]; then
+                            echo "ERROR: $NAME is missing from the Jenkins environment file."
+                            exit 1
+                        fi
+                    }
+
+                    require_env BROADCAST_CONNECTION
+                    require_env QUEUE_CONNECTION
+                    require_env REVERB_APP_ID
+                    require_env REVERB_APP_KEY
+                    require_env REVERB_APP_SECRET
+
+                    BROADCAST_DRIVER=$(sed -n 's/^BROADCAST_CONNECTION=//p' .env | tail -n 1)
+
+                    if [ "$BROADCAST_DRIVER" != "reverb" ]; then
+                        echo "ERROR: BROADCAST_CONNECTION must be reverb."
+                        exit 1
+                    fi
+
+                    echo "Realtime environment configuration valid."
+                '''
+            }
+        }
+
         stage('Build') {
             steps {
                 sh '''
@@ -217,7 +250,74 @@ pipeline {
                         fi
                     done
 
-                    echo "All TalaDelivery services are running."
+                    echo "Checking the internal Reverb WebSocket handshake..."
+
+                    docker compose \
+                        --env-file .env \
+                        exec -T api \
+                        php -r '
+                            $key = rawurlencode((string) getenv("REVERB_APP_KEY"));
+                            $socket = @fsockopen("reverb", 6001, $errorCode, $errorMessage, 5);
+
+                            if ($socket === false) {
+                                fwrite(STDERR, "Unable to reach Reverb: {$errorMessage} ({$errorCode})\\n");
+                                exit(1);
+                            }
+
+                            stream_set_timeout($socket, 5);
+                            $path = "/app/{$key}?protocol=7&client=jenkins&version=1.0&flash=false";
+                            fwrite($socket, "GET {$path} HTTP/1.1\\r\\nHost: reverb:6001\\r\\nUpgrade: websocket\\r\\nConnection: Upgrade\\r\\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\\r\\nSec-WebSocket-Version: 13\\r\\n\\r\\n");
+                            $status = fgets($socket);
+
+                            if ($status === false || ! str_contains($status, " 101 ")) {
+                                fclose($socket);
+                                fwrite(STDERR, "Reverb rejected the WebSocket handshake.\\n");
+                                exit(1);
+                            }
+
+                            while (($header = fgets($socket)) !== false && trim($header) !== "") {
+                            }
+
+                            $frameHeader = fread($socket, 2);
+
+                            if ($frameHeader === false || strlen($frameHeader) !== 2) {
+                                fclose($socket);
+                                fwrite(STDERR, "Reverb did not return a connection frame.\\n");
+                                exit(1);
+                            }
+
+                            $payloadLength = ord($frameHeader[1]) & 127;
+
+                            if ($payloadLength === 126) {
+                                $extendedLength = fread($socket, 2);
+                                $payloadLength = unpack("n", $extendedLength)[1];
+                            } elseif ($payloadLength === 127) {
+                                $extendedLength = fread($socket, 8);
+                                $parts = unpack("Nhigh/Nlow", $extendedLength);
+                                $payloadLength = ($parts["high"] << 32) | $parts["low"];
+                            }
+
+                            $payload = "";
+
+                            while (strlen($payload) < $payloadLength) {
+                                $chunk = fread($socket, $payloadLength - strlen($payload));
+
+                                if ($chunk === false || $chunk === "") {
+                                    break;
+                                }
+
+                                $payload .= $chunk;
+                            }
+
+                            fclose($socket);
+
+                            if (! str_contains($payload, "pusher:connection_established")) {
+                                fwrite(STDERR, "Reverb did not establish the application connection.\\n");
+                                exit(1);
+                            }
+                        '
+
+                    echo "All TalaDelivery services and the Reverb handshake are healthy."
                 '''
             }
         }
