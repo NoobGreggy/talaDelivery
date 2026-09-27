@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\RiderStatus;
 use App\Enums\Role;
 use App\Events\DeliveryOffered;
+use App\Events\DeliveryUpdated;
 use App\Events\NotificationCreated;
 use App\Events\OrderUpdated;
 use App\Jobs\ExpireDeliveryOffer;
@@ -15,6 +16,7 @@ use App\Models\Store;
 use App\Models\StoreUser;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
+use Illuminate\Contracts\Events\ShouldDispatchAfterCommit;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 
@@ -23,6 +25,21 @@ class BroadcastEventTest extends ApiTestCase
     private Store $store;
 
     private Product $product;
+
+    public function test_queued_broadcast_events_wait_for_database_commit(): void
+    {
+        foreach ([
+            OrderUpdated::class,
+            DeliveryUpdated::class,
+            DeliveryOffered::class,
+            NotificationCreated::class,
+        ] as $event) {
+            $this->assertTrue(
+                is_subclass_of($event, ShouldDispatchAfterCommit::class),
+                "{$event} must not broadcast state before its transaction commits.",
+            );
+        }
+    }
 
     protected function setUp(): void
     {
