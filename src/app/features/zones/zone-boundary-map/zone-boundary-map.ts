@@ -12,8 +12,9 @@ import {
   ViewChild,
 } from '@angular/core';
 import type { Feature, FeatureCollection, Geometry, Position } from 'geojson';
-import * as maplibregl from 'maplibre-gl';
+import * as mapboxgl from 'mapbox-gl';
 import { GeoJsonBoundary } from '../../../core/models';
+import { environment } from '../../../../environments/environment';
 
 const COVERAGE_SOURCE_ID = 'zone-coverage';
 const DRAWING_SOURCE_ID = 'zone-drawing';
@@ -34,29 +35,32 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
   protected vertexCount = 0;
   protected hasImportedBoundary = false;
   protected drawingMode = false;
-  private map: maplibregl.Map | null = null;
+  protected readonly mapboxConfigured = environment.mapboxAccessToken.trim().length > 0;
+  private map: mapboxgl.Map | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private vertices: Position[] = [];
   private lastPublishedBoundary: GeoJsonBoundary | null | undefined;
 
   ngAfterViewInit(): void {
     this.readBoundary();
-    const map = new maplibregl.Map({
+    if (!this.mapboxConfigured) return;
+    const map = new mapboxgl.Map({
+      accessToken: environment.mapboxAccessToken,
       container: this.mapContainer.nativeElement,
-      style: this.baseMapStyle(),
+      style: 'mapbox://styles/mapbox/streets-v12',
       center: this.initialCenter(),
       zoom: this.focusPoints().length > 0 ? 13 : 11,
       minZoom: 5,
       maxZoom: 19,
       fadeDuration: 0,
       renderWorldCopies: false,
-      attributionControl: { compact: true },
+      attributionControl: true,
     });
     this.map = map;
     this.resizeObserver = new ResizeObserver(() => map.resize());
     this.resizeObserver.observe(this.mapContainer.nativeElement);
     requestAnimationFrame(() => map.resize());
-    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
     if (isDevMode()) {
       map.on('error', (event) => {
         console.error('Zone map rendering error', event.error);
@@ -130,7 +134,7 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
     this.syncMapSources();
   }
 
-  private addCoverageLayers(map: maplibregl.Map): void {
+  private addCoverageLayers(map: mapboxgl.Map): void {
     map.addLayer({
       id: 'zone-coverage-fill',
       type: 'fill',
@@ -157,7 +161,7 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
     });
   }
 
-  private addDrawingLayers(map: maplibregl.Map): void {
+  private addDrawingLayers(map: mapboxgl.Map): void {
     map.addLayer({
       id: 'zone-drawing-line',
       type: 'line',
@@ -248,8 +252,8 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
   private syncMapSources(): void {
     const map = this.map;
     if (map === null) return;
-    const coverage = map.getSource(COVERAGE_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
-    const drawing = map.getSource(DRAWING_SOURCE_ID) as maplibregl.GeoJSONSource | undefined;
+    const coverage = map.getSource(COVERAGE_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+    const drawing = map.getSource(DRAWING_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
     coverage?.setData(this.coverageData());
     drawing?.setData(this.drawingData());
     map.triggerRepaint();
@@ -296,37 +300,13 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
     return [longitude, latitude];
   }
 
-  private baseMapStyle(): maplibregl.StyleSpecification {
-    return {
-      version: 8,
-      sources: {
-        openStreetMap: {
-          type: 'raster',
-          tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-          tileSize: 256,
-          maxzoom: 19,
-          attribution: '© OpenStreetMap contributors',
-        },
-      },
-      layers: [
-        {
-          id: 'open-street-map',
-          type: 'raster',
-          source: 'openStreetMap',
-          minzoom: 0,
-          maxzoom: 19,
-        },
-      ],
-    };
-  }
-
   private fitBoundary(): void {
     const map = this.map;
     const points = this.focusPoints();
     if (!map || points.length < 2) return;
     const bounds = points.reduce(
       (current, point) => current.extend([Number(point[0]), Number(point[1])]),
-      new maplibregl.LngLatBounds(
+      new mapboxgl.LngLatBounds(
         [Number(points[0][0]), Number(points[0][1])],
         [Number(points[0][0]), Number(points[0][1])],
       ),

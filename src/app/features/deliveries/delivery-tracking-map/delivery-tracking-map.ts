@@ -9,9 +9,10 @@ import {
   ViewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import * as maplibregl from 'maplibre-gl';
-import { LngLatBounds, Map, Marker } from 'maplibre-gl';
+import * as mapboxgl from 'mapbox-gl';
+import { LngLatBounds, Map, Marker } from 'mapbox-gl';
 import { Delivery } from '../../../core/models';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-delivery-tracking-map',
@@ -28,18 +29,21 @@ export class DeliveryTrackingMapComponent implements AfterViewInit, OnChanges, O
   private pickupMarker: Marker | null = null;
   private destinationMarker: Marker | null = null;
   private riderMarker: Marker | null = null;
+  protected readonly mapboxConfigured = environment.mapboxAccessToken.trim().length > 0;
 
   ngAfterViewInit(): void {
+    if (!this.mapboxConfigured) return;
     const center = this.initialCenter();
-    const map = new maplibregl.Map({
+    const map = new mapboxgl.Map({
+      accessToken: environment.mapboxAccessToken,
       container: this.mapContainer.nativeElement,
-      style: 'https://tiles.openfreemap.org/styles/liberty',
+      style: 'mapbox://styles/mapbox/streets-v12',
       center,
       zoom: 13,
-      attributionControl: {},
+      attributionControl: true,
     });
     this.map = map;
-    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
     map.on('load', () => this.syncMarkers(true));
   }
 
@@ -81,9 +85,9 @@ export class DeliveryTrackingMapComponent implements AfterViewInit, OnChanges, O
       points.push(pickup);
       const pickupMarker =
         this.pickupMarker ??
-        new maplibregl.Marker({ color: '#2563eb' })
+        new mapboxgl.Marker({ color: '#2563eb' })
           .setLngLat(pickup)
-          .setPopup(new maplibregl.Popup().setText('Pickup'))
+          .setPopup(new mapboxgl.Popup().setText('Pickup'))
           .addTo(map);
       this.pickupMarker = pickupMarker;
       pickupMarker.setLngLat(pickup);
@@ -97,9 +101,9 @@ export class DeliveryTrackingMapComponent implements AfterViewInit, OnChanges, O
       points.push(destination);
       const destinationMarker =
         this.destinationMarker ??
-        new maplibregl.Marker({ color: '#16a34a' })
+        new mapboxgl.Marker({ color: '#16a34a' })
           .setLngLat(destination)
-          .setPopup(new maplibregl.Popup().setText('Customer'))
+          .setPopup(new mapboxgl.Popup().setText('Customer'))
           .addTo(map);
       this.destinationMarker = destinationMarker;
       destinationMarker.setLngLat(destination);
@@ -111,9 +115,9 @@ export class DeliveryTrackingMapComponent implements AfterViewInit, OnChanges, O
       points.push(riderPoint);
       const riderMarker =
         this.riderMarker ??
-        new maplibregl.Marker({ color: '#f97316' })
+        new mapboxgl.Marker({ color: '#f97316' })
           .setLngLat(riderPoint)
-          .setPopup(new maplibregl.Popup().setText('Rider'))
+          .setPopup(new mapboxgl.Popup().setText('Rider'))
           .addTo(map);
       this.riderMarker = riderMarker;
       riderMarker.setLngLat(riderPoint);

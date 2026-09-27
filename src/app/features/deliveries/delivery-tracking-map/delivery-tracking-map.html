@@ -12,5 +12,11 @@
       </span>
     }
   </div>
-  <div #mapContainer class="delivery-map" aria-label="Live delivery map"></div>
+  @if (mapboxConfigured) {
+    <div #mapContainer class="delivery-map" aria-label="Live delivery map"></div>
+  } @else {
+    <div class="flex h-80 items-center justify-center px-6 text-center text-sm text-slate-500">
+      Add the public Mapbox access token to the admin environment configuration.
+    </div>
+  }
 </div>
