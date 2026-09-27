@@ -32,8 +32,9 @@ class CustomerAddressMapPicker extends StatefulWidget {
 class _CustomerAddressMapPickerState extends State<CustomerAddressMapPicker> {
   static const fallbackCenter = CustomerMapPoint(15.4865, 120.9734);
 
-  MapLibreMapController? controller;
-  Circle? pin;
+  mapbox.MapboxMap? controller;
+  mapbox.CircleAnnotationManager? circleManager;
+  mapbox.CircleAnnotation? pin;
   bool styleLoaded = false;
   bool locating = false;
   bool resolvingAddress = false;
@@ -53,17 +54,27 @@ class _CustomerAddressMapPickerState extends State<CustomerAddressMapPicker> {
     final map = controller;
     final point = widget.selectedPoint;
     if (map == null || !styleLoaded || point == null) return;
-    final options = CircleOptions(
-      geometry: LatLng(point.latitude, point.longitude),
-      circleColor: '#F97316',
+    final options = mapbox.CircleAnnotationOptions(
+      geometry: mapbox.Point(
+        coordinates: mapbox.Position(point.longitude, point.latitude),
+      ),
+      circleColor: 0xFFF97316,
       circleRadius: 11,
-      circleStrokeColor: '#FFFFFF',
+      circleStrokeColor: 0xFFFFFFFF,
       circleStrokeWidth: 4,
     );
+    final manager = circleManager;
+    if (manager == null) return;
     if (pin == null) {
-      pin = await map.addCircle(options);
+      pin = await manager.create(options);
     } else {
-      await map.updateCircle(pin!, options);
+      pin!
+        ..geometry = options.geometry
+        ..circleColor = options.circleColor
+        ..circleRadius = options.circleRadius
+        ..circleStrokeColor = options.circleStrokeColor
+        ..circleStrokeWidth = options.circleStrokeWidth;
+      await manager.update(pin!);
     }
   }
 
@@ -73,8 +84,14 @@ class _CustomerAddressMapPickerState extends State<CustomerAddressMapPicker> {
   }) async {
     widget.onChanged(point);
     if (moveCamera) {
-      await controller?.animateCamera(
-        CameraUpdate.newLatLngZoom(LatLng(point.latitude, point.longitude), 17),
+      await controller?.easeTo(
+        mapbox.CameraOptions(
+          center: mapbox.Point(
+            coordinates: mapbox.Position(point.longitude, point.latitude),
+          ),
+          zoom: 17,
+        ),
+        mapbox.MapAnimationOptions(duration: 500),
       );
     }
     await _reverseGeocode(point);
@@ -170,23 +187,41 @@ class _CustomerAddressMapPickerState extends State<CustomerAddressMapPicker> {
         (selected) => unawaited(_selectPoint(selected)),
       );
     }
-    return MapLibreMap(
+    final mapConfig = CustomerMapConfig.fromEnvironment();
+    if (!mapConfig.isConfigured) {
+      return const InfoBanner(
+        icon: Icons.map_outlined,
+        text: 'Mapbox is not configured. Add TALA_MAPBOX_ACCESS_TOKEN to your config file.',
+      );
+    }
+    return mapbox.MapWidget(
       key: const Key('address-map'),
-      styleString: CustomerMapConfig.fromEnvironment().styleUrl,
-      initialCameraPosition: CameraPosition(
-        target: LatLng(point.latitude, point.longitude),
+      styleUri: mapConfig.styleUrl,
+      viewport: mapbox.CameraViewportState(
+        center: mapbox.Point(
+          coordinates: mapbox.Position(point.longitude, point.latitude),
+        ),
         zoom: widget.selectedPoint == null ? 12 : 16,
       ),
-      compassEnabled: true,
-      logoEnabled: false,
-      attributionButtonPosition: AttributionButtonPosition.bottomRight,
-      onMapClick: (_, coordinates) => unawaited(
-        _selectPoint(
-          CustomerMapPoint(coordinates.latitude, coordinates.longitude),
-        ),
-      ),
-      onMapCreated: (value) => controller = value,
-      onStyleLoadedCallback: () {
+      onMapCreated: (value) async {
+        controller = value;
+        circleManager = await value.annotations.createCircleAnnotationManager();
+        if (styleLoaded) unawaited(_syncPin());
+        value.addInteraction(
+          mapbox.TapInteraction.onMap(
+            (tap) => unawaited(
+              _selectPoint(
+                CustomerMapPoint(
+                  tap.point.coordinates.lat.toDouble(),
+                  tap.point.coordinates.lng.toDouble(),
+                ),
+              ),
+            ),
+          ),
+          interactionID: 'customer-address-map-tap',
+        );
+      },
+      onStyleLoadedListener: (_) {
         styleLoaded = true;
         unawaited(_syncPin());
       },

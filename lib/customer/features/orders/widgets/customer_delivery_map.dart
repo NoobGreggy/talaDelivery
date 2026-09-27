@@ -15,10 +15,11 @@ class CustomerDeliveryMap extends StatefulWidget {
 }
 
 class _CustomerDeliveryMapState extends State<CustomerDeliveryMap> {
-  MapLibreMapController? controller;
-  Circle? pickupCircle;
-  Circle? destinationCircle;
-  Circle? riderCircle;
+  mapbox.MapboxMap? controller;
+  mapbox.CircleAnnotationManager? circleManager;
+  mapbox.CircleAnnotation? pickupCircle;
+  mapbox.CircleAnnotation? destinationCircle;
+  mapbox.CircleAnnotation? riderCircle;
   bool styleLoaded = false;
 
   CustomerRiderLocation? get riderLocation =>
@@ -37,14 +38,14 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap> {
       map,
       pickupCircle,
       widget.delivery.pickupPoint,
-      '#2563EB',
+      0xFF2563EB,
       8,
     );
     destinationCircle = await _upsertCircle(
       map,
       destinationCircle,
       widget.delivery.deliveryPoint,
-      '#16A34A',
+      0xFF16A34A,
       9,
     );
     final rider = riderLocation;
@@ -53,29 +54,39 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap> {
         map,
         riderCircle,
         CustomerMapPoint(rider.latitude!, rider.longitude!),
-        '#F97316',
+        0xFFF97316,
         10,
       );
     }
   }
 
-  Future<Circle?> _upsertCircle(
-    MapLibreMapController map,
-    Circle? circle,
+  Future<mapbox.CircleAnnotation?> _upsertCircle(
+    mapbox.MapboxMap map,
+    mapbox.CircleAnnotation? circle,
     CustomerMapPoint? point,
-    String color,
+    int color,
     double radius,
   ) async {
     if (point == null) return circle;
-    final options = CircleOptions(
-      geometry: LatLng(point.latitude, point.longitude),
+    final options = mapbox.CircleAnnotationOptions(
+      geometry: mapbox.Point(
+        coordinates: mapbox.Position(point.longitude, point.latitude),
+      ),
       circleColor: color,
       circleRadius: radius,
-      circleStrokeColor: '#FFFFFF',
+      circleStrokeColor: 0xFFFFFFFF,
       circleStrokeWidth: 3,
     );
-    if (circle == null) return map.addCircle(options);
-    await map.updateCircle(circle, options);
+    final manager = circleManager;
+    if (manager == null) return circle;
+    if (circle == null) return manager.create(options);
+    circle
+      ..geometry = options.geometry
+      ..circleColor = options.circleColor
+      ..circleRadius = options.circleRadius
+      ..circleStrokeColor = options.circleStrokeColor
+      ..circleStrokeWidth = options.circleStrokeWidth;
+    await manager.update(circle);
     return circle;
   }
 
@@ -100,6 +111,13 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap> {
       points.map((point) => point.longitude).reduce((a, b) => a + b) /
           points.length,
     );
+    final mapConfig = CustomerMapConfig.fromEnvironment();
+    if (!mapConfig.isConfigured) {
+      return const InfoBanner(
+        icon: Icons.map_outlined,
+        text: 'Mapbox is not configured. Add TALA_MAPBOX_ACCESS_TOKEN to your config file.',
+      );
+    }
     final palette = appPaletteOf(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(22),
@@ -107,17 +125,24 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap> {
         height: 270,
         child: Stack(
           children: [
-            MapLibreMap(
-              styleString: CustomerMapConfig.fromEnvironment().styleUrl,
-              initialCameraPosition: CameraPosition(
-                target: LatLng(center.latitude, center.longitude),
+            mapbox.MapWidget(
+              styleUri: mapConfig.styleUrl,
+              viewport: mapbox.CameraViewportState(
+                center: mapbox.Point(
+                  coordinates: mapbox.Position(
+                    center.longitude,
+                    center.latitude,
+                  ),
+                ),
                 zoom: 13,
               ),
-              compassEnabled: true,
-              logoEnabled: false,
-              attributionButtonPosition: AttributionButtonPosition.bottomRight,
-              onMapCreated: (value) => controller = value,
-              onStyleLoadedCallback: () {
+              onMapCreated: (value) async {
+                controller = value;
+                circleManager = await value.annotations
+                    .createCircleAnnotationManager();
+                if (styleLoaded) unawaited(_syncAnnotations());
+              },
+              onStyleLoadedListener: (_) {
                 styleLoaded = true;
                 unawaited(_syncAnnotations());
               },

@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
-import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mapbox;
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'core/config/customer_api_config.dart';
@@ -62,6 +62,10 @@ Future<TalaCustomerApp> createCustomerApp({
   CustomerAppDependencies? dependencies,
 }) async {
   WidgetsFlutterBinding.ensureInitialized();
+  final mapConfig = CustomerMapConfig.fromEnvironment();
+  if (mapConfig.isConfigured) {
+    mapbox.MapboxOptions.setAccessToken(mapConfig.accessToken);
+  }
   final themeController = await ThemeController.restore();
   return TalaCustomerApp(
     themeController: themeController,
