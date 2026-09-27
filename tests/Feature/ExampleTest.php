@@ -15,5 +15,10 @@ class ExampleTest extends TestCase
         $response = $this->get('/');
 
         $response->assertStatus(200);
+        $response->assertExactJson([
+            'success' => true,
+            'message' => 'Welcome to Tala Delivery API.',
+            'data' => null,
+        ]);
     }
 }
