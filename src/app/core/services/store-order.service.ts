@@ -30,6 +30,7 @@ export class StoreOrderService {
   error = this._error.asReadonly();
 
   private lastFilters: OrderFilters = {};
+  private hasLoaded = false;
 
   constructor() {
     effect(() => {
@@ -38,9 +39,16 @@ export class StoreOrderService {
         this.refresh();
       }
     });
+    effect(() => {
+      const connectionVersion = this.echoService.connectionVersion$();
+      if (connectionVersion > 0 && this.hasLoaded) {
+        this.refresh();
+      }
+    });
   }
 
   load(filters: OrderFilters = {}): void {
+    this.hasLoaded = true;
     this.lastFilters = filters;
     this._loading.set(true);
     this._error.set(null);

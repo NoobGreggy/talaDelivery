@@ -30,11 +30,13 @@ export class EchoService {
   private unread = signal(0);
   private loading = signal(false);
   private orderUpdated = signal<OrderUpdatedPayload | null>(null);
+  private connectionVersion = signal(0);
 
   readonly notifications$ = this.notifications.asReadonly();
   readonly unreadCount$ = this.unread.asReadonly();
   readonly loadingNotifications = this.loading.asReadonly();
   readonly orderUpdated$ = this.orderUpdated.asReadonly();
+  readonly connectionVersion$ = this.connectionVersion.asReadonly();
 
   connect(): void {
     if (this.echo) return;
@@ -72,6 +74,11 @@ export class EchoService {
 
     // `PusherConnector` is not exported by laravel-echo, so narrow structurally.
     const pusher = (this.echo.connector as { pusher?: Pusher }).pusher;
+    pusher?.connection.bind('connected', () => {
+      // Reverb does not replay messages missed while the browser was offline.
+      // Consumers use this monotonic version to reconcile from the REST API.
+      this.connectionVersion.update((version) => version + 1);
+    });
     pusher?.connection.bind('pusher:error', (error: unknown) => {
       console.error('[Echo] Realtime connection error:', error);
     });

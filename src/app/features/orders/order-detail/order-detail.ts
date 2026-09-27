@@ -56,6 +56,12 @@ export class OrderDetailComponent {
         untracked(() => this.loadOrder(update.id));
       }
     });
+    effect(() => {
+      if (this.echoService.connectionVersion$() > 0) {
+        const id = Number(this.route.snapshot.paramMap.get('id'));
+        if (id > 0) untracked(() => this.loadOrder(id));
+      }
+    });
   }
 
   private loadOrder(id: number): void {
