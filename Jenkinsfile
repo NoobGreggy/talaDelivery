@@ -13,6 +13,8 @@ pipeline {
                 echo "TalaDelivery DEV Build #${BUILD_NUMBER}"
 
                 sh '''
+                    set -e
+
                     git log -1 --oneline
                     docker --version
                     docker compose version
@@ -36,7 +38,16 @@ pipeline {
             }
         }
 
-        stage('Validate Compose') {
+        /*
+         * Jenkins stores the deployment .env as a Secret File.
+         *
+         * docker-compose.yml expects:
+         *     .env
+         *
+         * Copy the Jenkins secret into the workspace temporarily.
+         * It will be deleted in post -> always.
+         */
+        stage('Prepare Environment') {
             steps {
                 withCredentials([
                     file(
@@ -47,38 +58,50 @@ pipeline {
                     sh '''
                         set -e
 
-                        docker compose \
-                            --env-file "$TALADELIVERY_ENV" \
-                            config -q
+                        echo "Preparing TalaDelivery environment..."
 
-                        echo "Compose configuration valid."
+                        cp "$TALADELIVERY_ENV" .env
+                        chmod 600 .env
+
+                        test -f .env
+
+                        echo "TalaDelivery environment prepared."
                     '''
                 }
             }
         }
 
+        stage('Validate Compose') {
+            steps {
+                sh '''
+                    set -e
+
+                    docker compose \
+                        --env-file .env \
+                        config -q
+
+                    echo "Compose configuration valid."
+                '''
+            }
+        }
+
         stage('Build') {
             steps {
-                withCredentials([
-                    file(
-                        credentialsId: 'taladelivery-dev-env',
-                        variable: 'TALADELIVERY_ENV'
-                    )
-                ]) {
-                    sh '''
-                        set -e
+                sh '''
+                    set -e
 
-                        docker compose \
-                            --env-file "$TALADELIVERY_ENV" \
-                            build api
+                    echo "Building TalaDelivery API image..."
 
-                        docker image inspect \
-                            taladelivery-api:latest \
-                            > /dev/null
+                    docker compose \
+                        --env-file .env \
+                        build api
 
-                        echo "TalaDelivery image built successfully."
-                    '''
-                }
+                    docker image inspect \
+                        taladelivery-api:latest \
+                        > /dev/null
+
+                    echo "TalaDelivery image built successfully."
+                '''
             }
         }
 
@@ -87,17 +110,25 @@ pipeline {
                 sh '''
                     set -e
 
+                    echo "Checking Swoole..."
+
                     docker run --rm \
                         taladelivery-api:latest \
                         php --ri swoole > /dev/null
+
+                    echo "Checking Laravel..."
 
                     docker run --rm \
                         taladelivery-api:latest \
                         php artisan --version
 
+                    echo "Checking Octane..."
+
                     docker run --rm \
                         taladelivery-api:latest \
                         php artisan list | grep octane
+
+                    echo "Checking Reverb..."
 
                     docker run --rm \
                         taladelivery-api:latest \
@@ -110,111 +141,94 @@ pipeline {
 
         stage('Migrate') {
             steps {
-                withCredentials([
-                    file(
-                        credentialsId: 'taladelivery-dev-env',
-                        variable: 'TALADELIVERY_ENV'
-                    )
-                ]) {
-                    sh '''
-                        set -e
+                sh '''
+                    set -e
 
-                        docker compose \
-                            --env-file "$TALADELIVERY_ENV" \
-                            run --rm migrate
+                    echo "Running TalaDelivery database migrations..."
 
-                        echo "Database migrations completed."
-                    '''
-                }
+                    docker compose \
+                        --env-file .env \
+                        run --rm migrate
+
+                    echo "Database migrations completed."
+                '''
             }
         }
 
         stage('Deploy') {
             steps {
-                withCredentials([
-                    file(
-                        credentialsId: 'taladelivery-dev-env',
-                        variable: 'TALADELIVERY_ENV'
-                    )
-                ]) {
-                    sh '''
-                        set -e
+                sh '''
+                    set -e
 
-                        docker compose \
-                            --env-file "$TALADELIVERY_ENV" \
-                            up -d \
-                            --no-deps \
-                            --force-recreate \
-                            api reverb worker
+                    echo "Deploying TalaDelivery..."
 
-                        echo "TalaDelivery deployed."
-                    '''
-                }
+                    docker compose \
+                        --env-file .env \
+                        up -d \
+                        --no-deps \
+                        --force-recreate \
+                        api reverb worker
+
+                    echo "TalaDelivery containers deployed."
+                '''
             }
         }
 
         stage('Verify Deployment') {
             steps {
-                withCredentials([
-                    file(
-                        credentialsId: 'taladelivery-dev-env',
-                        variable: 'TALADELIVERY_ENV'
-                    )
-                ]) {
-                    sh '''
-                        set -e
+                sh '''
+                    set -e
 
-                        echo "Waiting for containers..."
-                        sleep 10
+                    echo "Waiting for TalaDelivery containers..."
+                    sleep 10
 
-                        for SERVICE in api reverb worker
-                        do
-                            CONTAINER=$(docker compose \
-                                --env-file "$TALADELIVERY_ENV" \
-                                ps -q "$SERVICE")
+                    for SERVICE in api reverb worker
+                    do
+                        echo "Checking $SERVICE..."
 
-                            if [ -z "$CONTAINER" ]; then
-                                echo "ERROR: $SERVICE container not found."
-                                exit 1
-                            fi
+                        CONTAINER=$(docker compose \
+                            --env-file .env \
+                            ps -q "$SERVICE")
 
-                            STATUS=$(docker inspect \
-                                --format='{{.State.Status}}' \
-                                "$CONTAINER")
+                        if [ -z "$CONTAINER" ]; then
+                            echo "ERROR: $SERVICE container not found."
 
-                            echo "$SERVICE: $STATUS"
+                            docker compose \
+                                --env-file .env \
+                                logs --tail=100 "$SERVICE" || true
 
-                            if [ "$STATUS" != "running" ]; then
-                                echo "ERROR: $SERVICE failed."
+                            exit 1
+                        fi
 
-                                docker compose \
-                                    --env-file "$TALADELIVERY_ENV" \
-                                    logs --tail=100 "$SERVICE"
+                        STATUS=$(docker inspect \
+                            --format='{{.State.Status}}' \
+                            "$CONTAINER")
 
-                                exit 1
-                            fi
-                        done
+                        echo "$SERVICE status: $STATUS"
 
-                        echo "All TalaDelivery services are running."
-                    '''
-                }
+                        if [ "$STATUS" != "running" ]; then
+                            echo "ERROR: $SERVICE failed."
+
+                            docker compose \
+                                --env-file .env \
+                                logs --tail=100 "$SERVICE" || true
+
+                            exit 1
+                        fi
+                    done
+
+                    echo "All TalaDelivery services are running."
+                '''
             }
         }
 
         stage('Status') {
             steps {
-                withCredentials([
-                    file(
-                        credentialsId: 'taladelivery-dev-env',
-                        variable: 'TALADELIVERY_ENV'
-                    )
-                ]) {
-                    sh '''
-                        docker compose \
-                            --env-file "$TALADELIVERY_ENV" \
-                            ps
-                    '''
-                }
+                sh '''
+                    docker compose \
+                        --env-file .env \
+                        ps
+                '''
             }
         }
     }
@@ -241,6 +255,15 @@ pipeline {
             Build #${BUILD_NUMBER}
             ========================================
             """
+        }
+
+        always {
+            sh '''
+                echo "Cleaning temporary environment file..."
+                rm -f .env
+            '''
+
+            echo "TalaDelivery Jenkins pipeline finished."
         }
     }
 }
