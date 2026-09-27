@@ -6,7 +6,7 @@ export const environment = {
   reverb: {
     appKey: 'jBalLpiRXnBrgyURwkYuRTEMabfZMQnKRdRBrmeWmEJnkcY',
     host: 'delivery-reverb.tala-works.online',
-    scheme: 'https',
     port: 443,
+    scheme: 'https',
   },
 };

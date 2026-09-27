@@ -47,6 +47,7 @@ export class EchoService {
     this.loadInitialNotifications();
 
     window.Pusher = Pusher;
+    const useTls = environment.reverb.scheme === 'https';
 
     this.echo = new Echo({
       broadcaster: 'reverb',
@@ -54,9 +55,10 @@ export class EchoService {
       wsHost: environment.reverb.host,
       wsPort: environment.reverb.port,
       wssPort: environment.reverb.port,
+      wrapTLS: useTls,
       // pusher-js falls back to plain ws:// when the page itself is http:// (the dev
       // server), which this TLS-only Reverb host rejects. forceTLS keeps it on wss://.
-      forceTLS: environment.reverb.scheme === 'https',
+      forceTLS: useTls,
       enabledTransports: ['ws', 'wss'],
       authEndpoint: environment.broadcastAuthUrl,
       auth: {
