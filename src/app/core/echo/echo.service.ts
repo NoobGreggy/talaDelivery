@@ -36,14 +36,16 @@ export class EchoService {
     this.loadInitialNotifications();
 
     window.Pusher = Pusher;
+    const useTls = environment.reverb.scheme === 'https';
 
     this.echo = new Echo({
       broadcaster: 'reverb',
       key: environment.reverb.appKey,
       wsHost: environment.reverb.host,
       wsPort: environment.reverb.port,
-      wrapTLS: false,
-      forceTLS: false,
+      wssPort: environment.reverb.port,
+      wrapTLS: useTls,
+      forceTLS: useTls,
       enabledTransports: ['ws', 'wss'],
       authEndpoint: '/broadcasting/auth',
       auth: {

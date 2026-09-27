@@ -3,9 +3,9 @@ export const environment = {
   apiBaseUrl: '/api/v1',
   appKey: 'base64:p1bMvccoy1PXI8O5Shqq+CyjUld8/3hVzHHrDy/W/uU=',
   reverb: {
-    appKey: 'tala-delivery-key',
-    host: '127.0.0.1',
-    port: 6001,
-    scheme: 'http',
+    appKey: 'jBalLpiRXnBrgyURwkYuRTEMabfZMQnKRdRBrmeWmEJnkcY',
+    host: 'delivery-reverb.tala-works.online',
+    port: 443,
+    scheme: 'https',
   },
 };
