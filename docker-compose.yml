@@ -1,0 +1,96 @@
+name: taladelivery
+
+services:
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+
+    image: taladelivery-api:latest
+    restart: unless-stopped
+
+    ports:
+      - "8002:8002"
+
+    env_file:
+      - .env
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    command:
+      [
+        "php",
+        "artisan",
+        "octane:start",
+        "--server=swoole",
+        "--host=0.0.0.0",
+        "--port=8002"
+      ]
+
+
+  reverb:
+    image: taladelivery-api:latest
+    restart: unless-stopped
+
+    ports:
+      - "6001:6001"
+
+    env_file:
+      - .env
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    command:
+      [
+        "php",
+        "artisan",
+        "reverb:start",
+        "--host=0.0.0.0",
+        "--port=6001"
+      ]
+
+
+  worker:
+    image: taladelivery-api:latest
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    command:
+      [
+        "php",
+        "artisan",
+        "queue:work",
+        "redis",
+        "--sleep=3",
+        "--tries=3",
+        "--timeout=90",
+        "--max-time=3600"
+      ]
+
+
+  migrate:
+    image: taladelivery-api:latest
+    restart: "no"
+
+    env_file:
+      - .env
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    command:
+      [
+        "php",
+        "artisan",
+        "migrate",
+        "--force"
+      ]
