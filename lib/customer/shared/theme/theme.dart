@@ -62,6 +62,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
     required this.splashMid,
     required this.splashEnd,
     required this.frosted,
+    required this.duskDeep,
+    required this.duskMid,
+    required this.ratingStar,
+    required this.urgent,
+    required this.positive,
   });
 
   final Color brand;
@@ -86,6 +91,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
   final Color splashMid;
   final Color splashEnd;
   final Color frosted;
+  final Color duskDeep;
+  final Color duskMid;
+  final Color ratingStar;
+  final Color urgent;
+  final Color positive;
 
   static const light = AppPalette(
     brand: Color(0xFF102238),
@@ -110,6 +120,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
     splashMid: Color(0xFFEAF6FF),
     splashEnd: Color(0xFFD8EDFF),
     frosted: Colors.white,
+    duskDeep: Color(0xFF0A2647),
+    duskMid: Color(0xFF144C8C),
+    ratingStar: Color(0xFFFFC94D),
+    urgent: Color(0xFFFF6F4A),
+    positive: Color(0xFF2FA876),
   );
 
   static const dark = AppPalette(
@@ -135,6 +150,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
     splashMid: Color(0xFF0F1E33),
     splashEnd: Color(0xFF081424),
     frosted: Color(0xFF1A263A),
+    duskDeep: Color(0xFF0A2647),
+    duskMid: Color(0xFF144C8C),
+    ratingStar: Color(0xFFFFC94D),
+    urgent: Color(0xFFFF8062),
+    positive: Color(0xFF4CC59A),
   );
 
   AppPalette _copyWith(
@@ -160,6 +180,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? splashMid,
     Color? splashEnd,
     Color? frosted,
+    Color? duskDeep,
+    Color? duskMid,
+    Color? ratingStar,
+    Color? urgent,
+    Color? positive,
   ) => AppPalette(
     brand: brand ?? this.brand,
     text: text ?? this.text,
@@ -183,6 +208,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
     splashMid: splashMid ?? this.splashMid,
     splashEnd: splashEnd ?? this.splashEnd,
     frosted: frosted ?? this.frosted,
+    duskDeep: duskDeep ?? this.duskDeep,
+    duskMid: duskMid ?? this.duskMid,
+    ratingStar: ratingStar ?? this.ratingStar,
+    urgent: urgent ?? this.urgent,
+    positive: positive ?? this.positive,
   );
 
   @override
@@ -209,6 +239,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
     Color? splashMid,
     Color? splashEnd,
     Color? frosted,
+    Color? duskDeep,
+    Color? duskMid,
+    Color? ratingStar,
+    Color? urgent,
+    Color? positive,
   }) => _copyWith(
     brand,
     text,
@@ -232,6 +267,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
     splashMid,
     splashEnd,
     frosted,
+    duskDeep,
+    duskMid,
+    ratingStar,
+    urgent,
+    positive,
   );
 
   @override
@@ -264,6 +304,11 @@ class AppPalette extends ThemeExtension<AppPalette> {
       splashMid: Color.lerp(splashMid, other.splashMid, t)!,
       splashEnd: Color.lerp(splashEnd, other.splashEnd, t)!,
       frosted: Color.lerp(frosted, other.frosted, t)!,
+      duskDeep: Color.lerp(duskDeep, other.duskDeep, t)!,
+      duskMid: Color.lerp(duskMid, other.duskMid, t)!,
+      ratingStar: Color.lerp(ratingStar, other.ratingStar, t)!,
+      urgent: Color.lerp(urgent, other.urgent, t)!,
+      positive: Color.lerp(positive, other.positive, t)!,
     );
   }
 }
@@ -284,6 +329,10 @@ ThemeData buildAppTheme(AppPalette palette) {
         surface: palette.surface,
         onSurface: palette.text,
         outline: palette.line,
+        outlineVariant: palette.line,
+        tertiary: palette.urgent,
+        error: palette.urgent,
+        surfaceContainerHighest: palette.background,
       );
   return ThemeData(
     useMaterial3: true,

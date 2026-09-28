@@ -57,15 +57,22 @@ void main() {
     await tester.pump();
     await tester.tap(find.text('Save delivery address'));
     await tester.pumpAndSettle();
-    expect(find.text('Available stores'), findsOneWidget);
+    expect(find.text('Stores near you'), findsOneWidget);
     expect(tester.takeException(), isNull, reason: 'home layout');
 
+    await tester.scrollUntilVisible(
+      find.text('API Store'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -140));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('API Store'));
     await tester.pumpAndSettle();
     expect(find.text('Products'), findsOneWidget);
     expect(tester.takeException(), isNull, reason: 'store layout');
 
-    await tester.tap(find.text('Add').first);
+    await tester.tap(find.byKey(const Key('product-add-11')));
     await tester.pumpAndSettle();
     await tester.tap(find.text('View cart • 1 item'));
     await tester.pumpAndSettle();

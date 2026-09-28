@@ -29,6 +29,9 @@ class _TalaButtonState extends State<TalaButton> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    final scheme = Theme.of(context).colorScheme;
+    final reducedMotion = MediaQuery.disableAnimationsOf(context);
     final canTap = widget.enabled && !widget.loading;
     return GestureDetector(
       onTapDown: canTap ? (_) => setState(() => pressed = true) : null,
@@ -41,49 +44,53 @@ class _TalaButtonState extends State<TalaButton> {
           : null,
       child: AnimatedScale(
         duration: const Duration(milliseconds: 120),
-        scale: pressed ? .985 : 1,
+        scale: pressed ? .97 : 1,
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 180),
-          opacity: canTap ? 1 : .72,
+          opacity: canTap ? 1 : .45,
           child: Stack(
             children: [
               Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [tint(sky, .12), sky, shade(sky, .1)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                      colors: [scheme.primary, palette.duskMid],
                     ),
-                    borderRadius: BorderRadius.circular(18),
-                    boxShadow: [
-                      BoxShadow(
-                        color: sky.withValues(alpha: .32),
-                        blurRadius: 22,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: canTap
+                        ? [
+                            BoxShadow(
+                              color: scheme.primary.withValues(alpha: .34),
+                              blurRadius: 26,
+                              offset: const Offset(0, 14),
+                            ),
+                          ]
+                        : null,
                   ),
                 ),
               ),
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0, end: 1),
-                duration: const Duration(milliseconds: 1200),
+                duration: reducedMotion
+                    ? Duration.zero
+                    : const Duration(milliseconds: 3200),
                 curve: Curves.easeOutCubic,
                 builder: (context, value, _) {
-                  if (value <= 0 || value >= 1) return const SizedBox.shrink();
+                  if (!canTap || reducedMotion || value <= 0 || value >= 1) {
+                    return const SizedBox.shrink();
+                  }
                   final width = MediaQuery.sizeOf(context).width - 60;
                   return Positioned(
                     left: -80 + value * (width + 160),
                     top: 6,
                     bottom: 6,
                     width: 46,
-                    child: const DecoratedBox(
+                    child: DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
                             Colors.transparent,
-                            Color(0x33FFFFFF),
+                            Colors.white.withValues(alpha: .35),
                             Colors.transparent,
                           ],
                         ),
@@ -93,12 +100,12 @@ class _TalaButtonState extends State<TalaButton> {
                 },
               ),
               SizedBox(
-                height: 58,
+                height: 54,
                 child: Center(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      if (widget.loading) ...[
+                      if (widget.loading)
                         const SizedBox(
                           width: 18,
                           height: 18,
@@ -106,17 +113,16 @@ class _TalaButtonState extends State<TalaButton> {
                             strokeWidth: 2.4,
                             valueColor: AlwaysStoppedAnimation(Colors.white),
                           ),
+                        )
+                      else
+                        Text(
+                          widget.label,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
                         ),
-                        const SizedBox(width: 9),
-                      ],
-                      Text(
-                        widget.label,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
                       if (!widget.loading && widget.icon != null) ...[
                         const SizedBox(width: 8),
                         Icon(widget.icon, color: Colors.white, size: 17),
@@ -152,6 +158,7 @@ class TalaPrimaryField extends StatefulWidget {
     this.textInputAction,
     this.onSubmitted,
     this.autofocus = false,
+    this.autofillHints,
   });
 
   final String label;
@@ -165,6 +172,7 @@ class TalaPrimaryField extends StatefulWidget {
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
   final bool autofocus;
+  final Iterable<String>? autofillHints;
 
   @override
   State<TalaPrimaryField> createState() => _TalaPrimaryFieldState();
@@ -194,30 +202,28 @@ class _TalaPrimaryFieldState extends State<TalaPrimaryField> {
   @override
   Widget build(BuildContext context) {
     final palette = appPaletteOf(context);
+    final scheme = Theme.of(context).colorScheme;
     final hasError = widget.errorText != null;
     final focused = _focusNode.hasFocus;
     final baseBorder = Border.all(
-      color: hasError ? danger : palette.line,
-      width: 1,
+      color: hasError ? scheme.error : palette.line,
+      width: 1.5,
     );
-    final activeBorder = Border.all(color: sky, width: 1.4);
+    final activeBorder = Border.all(
+      color: hasError ? scheme.error : scheme.primary,
+      width: 1.5,
+    );
     final shadow = focused
         ? [
             BoxShadow(
-              color: sky.withValues(alpha: .10),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
+              color: scheme.primary.withValues(alpha: .16),
+              blurRadius: 0,
+              spreadRadius: 4,
             ),
           ]
-        : [
-            BoxShadow(
-              color: const Color(0xFF0F172A).withValues(alpha: .05),
-              blurRadius: 20,
-              offset: const Offset(0, 7),
-            ),
-          ];
+        : null;
 
-    final borderRadius = BorderRadius.circular(18);
+    final borderRadius = BorderRadius.circular(14);
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOutCubic,
@@ -237,6 +243,7 @@ class _TalaPrimaryFieldState extends State<TalaPrimaryField> {
                 editableTextState: editableTextState,
               ),
           obscureText: widget.obscureText,
+          autofillHints: widget.autofillHints,
           validator: widget.validator,
           keyboardType: widget.keyboardType,
           textInputAction: widget.textInputAction,
@@ -251,7 +258,7 @@ class _TalaPrimaryFieldState extends State<TalaPrimaryField> {
             labelText: widget.label,
             floatingLabelBehavior: FloatingLabelBehavior.auto,
             floatingLabelStyle: TextStyle(
-              color: sky,
+              color: scheme.primary,
               fontWeight: FontWeight.w600,
               fontSize: 10,
               letterSpacing: 0.5,
@@ -262,15 +269,15 @@ class _TalaPrimaryFieldState extends State<TalaPrimaryField> {
               fontSize: 13,
             ),
             errorText: widget.errorText,
-            contentPadding: const EdgeInsets.fromLTRB(16, 20, 14, 10),
+            contentPadding: const EdgeInsets.fromLTRB(14, 17, 14, 11),
             prefixIcon: widget.prefixIcon == null
                 ? null
                 : Icon(
                     widget.prefixIcon,
                     size: 19,
-                    color: focused ? sky : palette.quiet,
+                    color: focused ? scheme.primary : palette.quiet,
                   ),
-            suffixIcon: widget.obscureText && widget.onToggleVisibility != null
+            suffixIcon: widget.onToggleVisibility != null
                 ? IconButton(
                     onPressed: widget.onToggleVisibility,
                     tooltip: widget.obscureText ? 'Show password' : 'Hide',
@@ -284,7 +291,7 @@ class _TalaPrimaryFieldState extends State<TalaPrimaryField> {
                   )
                 : null,
             filled: true,
-            fillColor: palette.surface,
+            fillColor: focused ? palette.surface : palette.background,
             border: InputBorder.none,
             enabledBorder: InputBorder.none,
             focusedBorder: InputBorder.none,
@@ -454,79 +461,63 @@ class TalaCategoryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = appPaletteOf(context);
-    final selectedFill = Theme.of(context).brightness == Brightness.dark
-        ? shade(sky, .22)
-        : palette.brand;
+    final primary = Theme.of(context).colorScheme.primary;
     return Semantics(
       button: true,
       selected: selected,
-      label: label,
-      child: GestureDetector(
+      label: '$label${selected ? ', selected' : ''}',
+      child: InkResponse(
         onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          width: 100,
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: selected ? selectedFill : palette.surface,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: selected ? selectedFill : palette.cardBorder,
-            ),
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: selectedFill.withValues(alpha: .16),
-                      blurRadius: 16,
-                      offset: const Offset(0, 8),
-                    ),
-                  ]
-                : null,
-          ),
+        radius: 42,
+        child: SizedBox(
+          width: 68,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 40,
-                height: 40,
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 58,
+                height: 58,
                 decoration: BoxDecoration(
-                  color: selected
-                      ? Colors.white.withValues(alpha: .14)
-                      : color.withValues(alpha: .11),
-                  borderRadius: BorderRadius.circular(14),
+                  color: Color.alphaBlend(
+                    color.withValues(alpha: .18),
+                    palette.surface,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Colors.white.withValues(alpha: .4)),
+                  boxShadow: selected
+                      ? [
+                          BoxShadow(
+                            color: primary.withValues(alpha: .3),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
+                          ),
+                        ]
+                      : null,
                 ),
-                child: Icon(
-                  icon,
-                  size: 19,
-                  color: selected ? Colors.white : color,
-                ),
+                child: Icon(icon, size: 24, color: color),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
                 label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: selected ? Colors.white : palette.text,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
+                  color: selected ? palette.text : palette.quiet,
+                  fontSize: 11.5,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                 ),
               ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 1),
-                Text(
-                  subtitle!,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: selected
-                        ? Colors.white.withValues(alpha: .6)
-                        : palette.quiet,
-                    fontSize: 9,
-                  ),
+              const SizedBox(height: 5),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 5,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: selected ? primary : Colors.transparent,
+                  shape: BoxShape.circle,
                 ),
-              ],
+              ),
             ],
           ),
         ),
@@ -536,15 +527,24 @@ class TalaCategoryChip extends StatelessWidget {
 }
 
 /// Tala market card using real store data only.
-class TalaMarketCard extends StatelessWidget {
+class TalaMarketCard extends StatefulWidget {
   const TalaMarketCard({super.key, required this.store, required this.onTap});
 
   final StoreData store;
   final VoidCallback onTap;
 
   @override
+  State<TalaMarketCard> createState() => _TalaMarketCardState();
+}
+
+class _TalaMarketCardState extends State<TalaMarketCard> {
+  bool saved = false;
+  bool pressed = false;
+
+  @override
   Widget build(BuildContext context) {
     final palette = appPaletteOf(context);
+    final store = widget.store;
     final categoryName = store.categories.isEmpty
         ? null
         : store.categories.first.name;
@@ -553,156 +553,201 @@ class TalaMarketCard extends StatelessWidget {
         : store.categories.take(3).map((c) => c.name).join(' · ');
     final hours = store.openingTime == null
         ? null
-        : '${store.openingTime} – ${store.closingTime ?? ''}';
+        : '${_talaShortHour(store.openingTime!)} – ${_talaShortHour(store.closingTime ?? '')}';
+    final imageUrl = store.products
+        .map((product) => product.image)
+        .whereType<String>()
+        .firstOrNull;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(28),
-        child: Ink(
-          decoration: BoxDecoration(
-            color: palette.surface,
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: palette.cardBorder),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: .06),
-                blurRadius: 26,
-                offset: const Offset(0, 12),
-              ),
-            ],
-          ),
-          child: LayoutBuilder(
-            builder: (context, constraints) => IntrinsicHeight(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(minHeight: 152),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(
-                      width: (constraints.maxWidth * .34).clamp(88.0, 132.0),
-                      child: DecoratedBox(
+    return AnimatedScale(
+      duration: const Duration(milliseconds: 150),
+      scale: pressed ? .98 : 1,
+      child: Material(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(24),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: widget.onTap,
+          onHighlightChanged: (value) => setState(() => pressed = value),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: palette.surface,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: palette.line),
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context).colorScheme.shadow
+                      .withValues(alpha: .06),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: 170,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      _StoreImageFallback(icon: store.icon),
+                      if (imageUrl != null)
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final dpr = MediaQuery.devicePixelRatioOf(context);
+                            return Image.network(
+                              imageUrl,
+                              fit: BoxFit.cover,
+                              cacheWidth: (constraints.maxWidth * dpr).ceil(),
+                              cacheHeight: (constraints.maxHeight * dpr).ceil(),
+                              gaplessPlayback: true,
+                              frameBuilder: (
+                                context,
+                                child,
+                                frame,
+                                wasSynchronouslyLoaded,
+                              ) {
+                                if (wasSynchronouslyLoaded) return child;
+                                if (frame == null) return const SizedBox.shrink();
+                                return child;
+                              },
+                              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                            );
+                          },
+                        ),
+                      DecoratedBox(
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [tint(sky, .88), tint(sky, .78)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(28),
-                            bottomLeft: Radius.circular(28),
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: .35),
+                            ],
                           ),
                         ),
-                        child: CustomPaint(
-                          painter: _TalaOrbitPainter(
-                            accent: sky.withValues(alpha: .28),
-                            glow: Colors.white.withValues(alpha: .55),
-                          ),
-                          child: Center(
-                            child: Icon(
-                              store.icon,
-                              size: 46,
-                              color: sky.withValues(alpha: .85),
+                      ),
+                      Positioned(
+                        top: 14,
+                        right: 14,
+                        child: Semantics(
+                          button: true,
+                          label: saved
+                              ? 'Remove ${store.name} from saved'
+                              : 'Save ${store.name}',
+                          child: InkWell(
+                            onTap: () => setState(() => saved = !saved),
+                            borderRadius: BorderRadius.circular(11),
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: .85),
+                                borderRadius: BorderRadius.circular(11),
+                              ),
+                              child: Icon(
+                                saved
+                                    ? Icons.favorite_rounded
+                                    : Icons.favorite_border_rounded,
+                                color: palette.urgent,
+                                size: 17,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 16, 14, 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    store.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: palette.text,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 15,
-                                      letterSpacing: -0.2,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                                StatusPill(
-                                  label: store.open ? 'Open' : 'Closed',
-                                  color: store.open ? success : danger,
-                                ),
-                              ],
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              store.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: palette.text,
+                                fontSize: 16.5,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                            const SizedBox(height: 6),
-                            Text(
-                              subtitle,
-                              maxLines: 2,
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  (store.open ? palette.positive : palette.line)
+                                      .withValues(alpha: .12),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              store.open ? 'Open' : 'Closed',
+                              style: TextStyle(
+                                color: store.open
+                                    ? palette.positive
+                                    : palette.quiet,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: palette.quiet, fontSize: 13),
+                      ),
+                      const SizedBox(height: 14),
+                      Divider(height: 1, color: palette.line),
+                      const SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.schedule_rounded,
+                            color: palette.quiet,
+                            size: 15,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              hours ?? 'Hours not provided',
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: palette.quiet,
-                                fontSize: 10.5,
-                                height: 1.4,
+                                fontSize: 13,
                               ),
                             ),
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.schedule_rounded,
-                                  color: palette.quiet,
-                                  size: 13,
-                                ),
-                                const SizedBox(width: 5),
-                                Flexible(
-                                  child: Text(
-                                    hours ?? 'Hours not provided',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      color: palette.quiet,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            if (categoryName != null) ...[
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 9,
-                                    vertical: 3,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: tint(sky, .88),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    categoryName.toUpperCase(),
-                                    style: TextStyle(
-                                      color: sky,
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.8,
-                                    ),
-                                  ),
-                                ),
+                          ),
+                          if (categoryName != null)
+                            Text(
+                              categoryName,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
                               ),
-                            ],
-                          ],
-                        ),
+                            ),
+                        ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
@@ -711,6 +756,30 @@ class TalaMarketCard extends StatelessWidget {
   }
 }
 
+class _StoreImageFallback extends StatelessWidget {
+  const _StoreImageFallback({required this.icon});
+
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [palette.duskDeep, Theme.of(context).colorScheme.primary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Center(
+        child: Icon(icon, color: Colors.white.withValues(alpha: .88), size: 44),
+      ),
+    );
+  }
+}
+
+// ignore: unused_element
 class _TalaOrbitPainter extends CustomPainter {
   const _TalaOrbitPainter({required this.accent, required this.glow});
 

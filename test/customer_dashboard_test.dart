@@ -104,7 +104,7 @@ void main() {
     expect(find.text('Grocery Market'), findsOneWidget);
     expect(find.text('Pharmacy Store'), findsNothing);
 
-    await tester.tap(find.text('Show all'));
+    await tester.tap(find.text('See all').first);
     await tester.pumpAndSettle();
     expect(find.text('Grocery Market'), findsOneWidget);
     expect(find.text('Pharmacy Store'), findsOneWidget);
@@ -117,7 +117,11 @@ void main() {
     addTearDown(tester.view.resetPadding);
     await _openDashboard(tester, size: const Size(393, 852));
 
-    expect(tester.getTopLeft(find.text('DELIVER TO')).dy, greaterThan(59));
+    expect(
+      tester.getTopLeft(find.textContaining('delivering to')).dy,
+      greaterThan(59),
+    );
+    expect(find.textContaining('Test'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -136,6 +140,39 @@ void main() {
       find.text('Store categories will appear here when available.'),
       findsOneWidget,
     );
+    final categoriesCard = tester.widget<Container>(
+      find.byKey(const Key('dashboard-categories-card')),
+    );
+    expect(
+      (categoriesCard.decoration! as BoxDecoration).borderRadius,
+      BorderRadius.circular(26),
+    );
+  });
+
+  testWidgets('dashboard uses a floating four-item navigation bar', (
+    tester,
+  ) async {
+    await _openDashboard(tester, size: const Size(390, 844));
+
+    final nav = find.byKey(const Key('customer-floating-nav'));
+    final navRect = tester.getRect(nav);
+    expect(nav, findsOneWidget);
+    expect(navRect.left, greaterThan(0));
+    expect(navRect.right, lessThan(390));
+    expect(navRect.bottom, lessThan(844));
+    expect(
+      find.descendant(
+        of: nav,
+        matching: find.byIcon(Icons.shopping_cart_rounded),
+      ),
+      findsNothing,
+    );
+    for (final label in ['Home', 'Orders', 'Saved', 'Account']) {
+      expect(
+        find.descendant(of: nav, matching: find.text(label)),
+        findsOneWidget,
+      );
+    }
   });
 
   testWidgets('dark dashboard and profile fit a narrow phone', (tester) async {
@@ -146,15 +183,14 @@ void main() {
       textScale: 1.6,
     );
     expect(tester.takeException(), isNull, reason: 'dashboard layout');
-    expect(
-      tester.widget<Text>(find.text('What you need,')).style?.color,
-      AppPalette.dark.text,
-    );
+    expect(find.text('Categories'), findsOneWidget);
     final selectedCategory = tester.widget<AnimatedContainer>(
-      find.descendant(
-        of: find.byType(TalaCategoryChip).first,
-        matching: find.byType(AnimatedContainer),
-      ),
+      find
+          .descendant(
+            of: find.byType(TalaCategoryChip).first,
+            matching: find.byType(AnimatedContainer),
+          )
+          .first,
     );
     expect(
       (selectedCategory.decoration! as BoxDecoration).color,
@@ -168,7 +204,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull, reason: 'market card layout');
-    await tester.tap(find.text('Profile').last);
+    await tester.tap(find.text('Account').last);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull, reason: 'profile layout');
     await tester.scrollUntilVisible(
@@ -213,9 +249,43 @@ void main() {
 
     await tester.pageBack();
     await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Grocery Market'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -140));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Grocery Market'));
     await tester.pumpAndSettle();
     expect(find.text('Products'), findsOneWidget);
+  });
+
+  testWidgets('store redesign fits a narrow dark-mode phone', (tester) async {
+    await _openDashboard(
+      tester,
+      size: const Size(320, 640),
+      themeMode: ThemeMode.dark,
+      textScale: 1.6,
+    );
+    await tester.dragUntilVisible(
+      find.text('Grocery Market'),
+      find.byType(CustomScrollView).first,
+      const Offset(0, -60),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Grocery Market'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('store-metrics-card')), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('product-add-11')),
+      220,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('API Product'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('order confirmation fits a small phone with enlarged text', (

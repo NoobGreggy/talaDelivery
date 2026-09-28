@@ -36,7 +36,7 @@ class NominatimCustomerReverseGeocoder implements CustomerReverseGeocoder {
       headers: const {
         'Accept': 'application/json',
         'Accept-Language': 'en',
-        'User-Agent': 'TalaDeliveryCustomer/1.0',
+        'User-Agent': 'TalaDelivery/1.0',
       },
     );
     if (response.statusCode < 200 || response.statusCode >= 300) {

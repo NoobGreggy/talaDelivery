@@ -104,28 +104,33 @@ class CustomerApiClient {
       path.startsWith('/') ? path.substring(1) : path,
     );
     final encodedBody = body == null ? null : jsonEncode(body);
-    final response = switch (method) {
-      'GET' => await _client.get(uri, headers: headers),
-      'POST' => await _client.post(uri, headers: headers, body: encodedBody),
-      'PUT' => await _client.put(uri, headers: headers, body: encodedBody),
-      'DELETE' => await _client.delete(uri, headers: headers),
-      _ => throw ArgumentError.value(method, 'method', 'Unsupported method'),
-    };
+    final startedAt = DateTime.now();
+    try {
+      final response = switch (method) {
+        'GET' => await _client.get(uri, headers: headers),
+        'POST' => await _client.post(uri, headers: headers, body: encodedBody),
+        'PUT' => await _client.put(uri, headers: headers, body: encodedBody),
+        'DELETE' => await _client.delete(uri, headers: headers),
+        _ => throw ArgumentError.value(method, 'method', 'Unsupported method'),
+      };
 
-    final payload = _decodePayload(response.body);
-    if (response.statusCode >= 200 &&
-        response.statusCode < 300 &&
-        payload['success'] != false) {
-      return payload;
+      final payload = _decodePayload(response.body);
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          payload['success'] != false) {
+        return payload;
+      }
+
+      throw CustomerApiException(
+        payload['message'] is String
+            ? payload['message'] as String
+            : 'The request could not be completed.',
+        statusCode: response.statusCode,
+        fieldErrors: _parseFieldErrors(payload['errors']),
+      );
+    } finally {
+      _customerPerfTrace('customer.api $method $path', startedAt);
     }
-
-    throw CustomerApiException(
-      payload['message'] is String
-          ? payload['message'] as String
-          : 'The request could not be completed.',
-      statusCode: response.statusCode,
-      fieldErrors: _parseFieldErrors(payload['errors']),
-    );
   }
 
   Map<String, dynamic> _decodePayload(String body) {

@@ -31,7 +31,12 @@ class _ProfilePageState extends State<ProfilePage> {
     return SafeArea(
       bottom: false,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 22, 20, 28),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          22,
+          20,
+          _customerScrollClearance(context),
+        ),
         children: [
           Text('Profile', style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 20),

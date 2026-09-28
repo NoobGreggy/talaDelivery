@@ -625,7 +625,7 @@ class AddressCard extends StatelessWidget {
   }
 }
 
-class NotificationTile extends StatelessWidget {
+class NotificationTile extends StatefulWidget {
   const NotificationTile({
     super.key,
     required this.icon,
@@ -644,58 +644,147 @@ class NotificationTile extends StatelessWidget {
   final VoidCallback onTap;
   final bool isRead;
   @override
+  State<NotificationTile> createState() => _NotificationTileState();
+}
+
+class _NotificationTileState extends State<NotificationTile> {
+  bool pressed = false;
+  @override
   Widget build(BuildContext context) {
     final palette = appPaletteOf(context);
-    return Material(
-      color: isRead ? palette.surface : palette.unreadFill,
-      borderRadius: BorderRadius.circular(18),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(18),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 45,
-                height: 45,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: .11),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Icon(icon, color: color),
+    final primary = Theme.of(context).colorScheme.primary;
+    final tile = widget;
+    return AnimatedScale(
+      duration: const Duration(milliseconds: 140),
+      scale: pressed ? .98 : 1,
+      child: Material(
+        color: tile.isRead ? palette.surface : palette.unreadFill,
+        borderRadius: BorderRadius.circular(22),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(22),
+          onTap: tile.onTap,
+          onHighlightChanged: (value) => setState(() => pressed = value),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: tile.isRead ? palette.surface : palette.unreadFill,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: tile.isRead ? palette.line : tint(primary, .6),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        color: palette.text,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      messageText,
-                      style: TextStyle(color: palette.quiet, fontSize: 13),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      time,
-                      style: const TextStyle(
-                        color: sky,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .shadow
+                      .withValues(alpha: .05),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
                 ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: Color.alphaBlend(
+                            tile.color.withValues(alpha: .16),
+                            palette.surface,
+                          ),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Icon(tile.icon, color: tile.color, size: 21),
+                      ),
+                      if (!tile.isRead)
+                        Positioned(
+                          right: -3,
+                          top: -3,
+                          child: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: palette.urgent,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: palette.surface,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 13),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tile.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: palette.text,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14.5,
+                            height: 1.25,
+                          ),
+                        ),
+                        if (tile.messageText.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            tile.messageText,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: palette.quiet,
+                              fontSize: 12.5,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.schedule_rounded,
+                              color: palette.quiet,
+                              size: 12,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              tile.time,
+                              style: TextStyle(
+                                color: palette.quiet,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Icon(
+                      Icons.chevron_right_rounded,
+                      color: palette.quiet,
+                      size: 20,
+                    ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),

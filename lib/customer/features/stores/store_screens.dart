@@ -212,6 +212,46 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
     }
   }
 
+  /// Groups the menu by category and orders both the categories and the items
+  /// inside them alphabetically so the store reads like a proper menu.
+  static List<_StoreMenuSection> _menuSections(StoreData store) {
+    final pending = List<ProductData>.of(store.products);
+    final categories = [...store.categories]
+      ..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final sections = <_StoreMenuSection>[];
+    for (final category in categories) {
+      final items = <ProductData>[];
+      pending.removeWhere((product) {
+        if (product.categoryId != category.id) return false;
+        items.add(product);
+        return true;
+      });
+      if (items.isEmpty) continue;
+      items.sort(_byProductName);
+      sections.add(
+        _StoreMenuSection(
+          categoryId: category.id,
+          title: category.name,
+          products: items,
+        ),
+      );
+    }
+    if (pending.isNotEmpty) {
+      pending.sort(_byProductName);
+      sections.add(
+        _StoreMenuSection(
+          categoryId: null,
+          title: store.categories.isEmpty ? null : 'Other items',
+          products: pending,
+        ),
+      );
+    }
+    return sections;
+  }
+
+  static int _byProductName(ProductData a, ProductData b) =>
+      a.name.toLowerCase().compareTo(b.name.toLowerCase());
+
   @override
   Widget build(BuildContext context) {
     final cart = CustomerDependencyScope.of(context).cartController;
@@ -229,19 +269,23 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
             );
           }
           final store = snapshot.data!;
-          final products = store.products
+          final sections = _menuSections(store)
               .where(
-                (product) =>
-                    categoryId == null || product.categoryId == categoryId,
+                (section) =>
+                    categoryId == null || section.categoryId == categoryId,
               )
               .toList(growable: false);
+          final menuCount = sections.fold<int>(
+            0,
+            (total, section) => total + section.products.length,
+          );
           return CustomScrollView(
             slivers: [
               SliverAppBar(
                 expandedHeight: 220,
                 pinned: true,
-                backgroundColor: appPaletteOf(context).surface,
-                foregroundColor: appPaletteOf(context).text,
+                backgroundColor: appPaletteOf(context).duskDeep,
+                foregroundColor: Colors.white,
                 actions: [
                   ListenableBuilder(
                     listenable: cart,
@@ -257,11 +301,7 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
                   ),
                 ],
                 flexibleSpace: FlexibleSpaceBar(
-                  background: StoreArtwork(
-                    icon: store.icon,
-                    color: store.color,
-                    large: true,
-                  ),
+                  background: _StoreDetailHero(store: store),
                 ),
               ),
               SliverToBoxAdapter(
@@ -296,42 +336,45 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
                           color: sky,
                         ),
                       ],
+                      const SizedBox(height: 20),
+                      _StoreMetricsCard(store: store),
                       if (store.categories.isNotEmpty) ...[
-                        const SizedBox(height: 22),
-                        SizedBox(
-                          height: 41,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            children: [
-                              ChoiceChip(
-                                label: const Text('All'),
-                                selected: categoryId == null,
-                                onSelected: (_) =>
-                                    setState(() => categoryId = null),
-                              ),
-                              ...store.categories.map(
-                                (category) => Padding(
-                                  padding: const EdgeInsets.only(left: 8),
-                                  child: ChoiceChip(
-                                    label: Text(category.name),
-                                    selected: categoryId == category.id,
-                                    onSelected: (_) => setState(
-                                      () => categoryId = category.id,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                        const SizedBox(height: 26),
+                        _StoreCategoryFilters(
+                          categories: store.categories,
+                          products: store.products,
+                          selectedId: categoryId,
+                          onSelected: (id) => setState(() => categoryId = id),
                         ),
                       ],
-                      const SizedBox(height: 23),
-                      const SectionHeading(title: 'Products'),
+                      const SizedBox(height: 26),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              'Products',
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                            ),
+                          ),
+                          Text(
+                            '$menuCount ${menuCount == 1 ? 'item' : 'items'}',
+                            style: TextStyle(
+                              color: appPaletteOf(context).quiet,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
               ),
-              if (products.isEmpty)
+              if (sections.isEmpty)
                 const SliverToBoxAdapter(
                   child: EmptyState(
                     icon: Icons.inventory_2_outlined,
@@ -341,20 +384,43 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
                 )
               else
                 SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 110),
-                  sliver: SliverList.separated(
-                    itemCount: products.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final product = products[index];
-                      return ProductRow(
-                        product: product,
-                        onOpen: () => openProduct(store, product),
-                        onAdd: product.available && store.open
-                            ? () => addProduct(store, product)
-                            : null,
-                      );
-                    },
+                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 110),
+                  sliver: SliverMainAxisGroup(
+                    slivers: [
+                      for (var index = 0; index < sections.length; index++) ...[
+                        if (sections[index].title != null)
+                          SliverToBoxAdapter(
+                            child: _StoreMenuHeader(
+                              title: sections[index].title!,
+                              count: sections[index].products.length,
+                              style: _menuSectionStyle(
+                                context,
+                                sections[index],
+                              ),
+                            ),
+                          )
+                        else
+                          const SliverToBoxAdapter(child: SizedBox(height: 4)),
+                        SliverList.separated(
+                          itemCount: sections[index].products.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: 12),
+                          itemBuilder: (context, productIndex) {
+                            final product =
+                                sections[index].products[productIndex];
+                            return ProductRow(
+                              product: product,
+                              onOpen: () => openProduct(store, product),
+                              onAdd: product.available && store.open
+                                  ? () => addProduct(store, product)
+                                  : null,
+                            );
+                          },
+                        ),
+                        if (index != sections.length - 1)
+                          const SliverToBoxAdapter(child: SizedBox(height: 28)),
+                      ],
+                    ],
                   ),
                 ),
             ],
@@ -376,6 +442,381 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
                       Navigator.pushNamed(context, CustomerRoutes.cart),
                 ),
               ),
+      ),
+    );
+  }
+}
+
+class _StoreDetailHero extends StatelessWidget {
+  const _StoreDetailHero({required this.store});
+
+  final StoreData store;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [palette.duskDeep, palette.duskMid, store.color],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Icon(
+            Icons.circle,
+            color: Colors.white.withValues(alpha: .08),
+            size: 190,
+          ),
+          Icon(store.icon, color: Colors.white, size: 78),
+          Positioned(
+            right: 42,
+            top: 62,
+            child: Icon(
+              Icons.auto_awesome_rounded,
+              color: Colors.white.withValues(alpha: .58),
+              size: 24,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StoreMetricsCard extends StatelessWidget {
+  const _StoreMetricsCard({required this.store});
+
+  final StoreData store;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    final hours = store.openingTime == null
+        ? 'Not set'
+        : '${_talaShortHour(store.openingTime!)}–${_talaShortHour(store.closingTime ?? '')}';
+    final metrics = [
+      _StoreMetricData(
+        value: store.open ? 'Open' : 'Closed',
+        label: 'Status',
+        icon: store.open ? Icons.check_circle_rounded : Icons.schedule_rounded,
+        color: store.open ? success : danger,
+      ),
+      _StoreMetricData(
+        value: hours,
+        label: 'Hours',
+        icon: Icons.schedule_rounded,
+        color: Theme.of(context).colorScheme.primary,
+      ),
+      _StoreMetricData(
+        value: '${store.products.length}',
+        label: 'Items',
+        icon: Icons.inventory_2_rounded,
+        color: palette.ratingStar,
+      ),
+      _StoreMetricData(
+        value: '${store.categories.length}',
+        label: 'Categories',
+        icon: Icons.grid_view_rounded,
+        color: palette.positive,
+      ),
+    ];
+    return Container(
+      key: const Key('store-metrics-card'),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: palette.surface,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: palette.line),
+        boxShadow: [
+          BoxShadow(
+            color: palette.duskDeep.withValues(alpha: .1),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact =
+              constraints.maxWidth < 330 ||
+              MediaQuery.textScalerOf(context).scale(14) > 19;
+          if (compact) {
+            return Column(
+              children: [
+                _StoreMetricRow(metrics: metrics.take(2).toList()),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Divider(height: 1, color: palette.line),
+                ),
+                _StoreMetricRow(metrics: metrics.skip(2).toList()),
+              ],
+            );
+          }
+          return _StoreMetricRow(metrics: metrics);
+        },
+      ),
+    );
+  }
+}
+
+class _StoreMetricData {
+  const _StoreMetricData({
+    required this.value,
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+
+  final String value;
+  final String label;
+  final IconData icon;
+  final Color color;
+}
+
+class _StoreMetricRow extends StatelessWidget {
+  const _StoreMetricRow({required this.metrics});
+
+  final List<_StoreMetricData> metrics;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        for (var index = 0; index < metrics.length; index++) ...[
+          Expanded(child: _StoreMetricCell(metric: metrics[index])),
+          if (index != metrics.length - 1)
+            Container(width: 1, height: 50, color: palette.line),
+        ],
+      ],
+    );
+  }
+}
+
+class _StoreMetricCell extends StatelessWidget {
+  const _StoreMetricCell({required this.metric});
+
+  final _StoreMetricData metric;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 5),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(metric.icon, color: metric.color, size: 15),
+                const SizedBox(width: 5),
+                Text(
+                  metric.value,
+                  style: TextStyle(
+                    color: palette.text,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            metric.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: palette.quiet,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StoreMenuSection {
+  const _StoreMenuSection({
+    required this.categoryId,
+    required this.title,
+    required this.products,
+  });
+
+  final int? categoryId;
+  final String? title;
+  final List<ProductData> products;
+}
+
+_DashboardCategoryStyle _menuSectionStyle(
+  BuildContext context,
+  _StoreMenuSection section,
+) => section.categoryId == null
+    ? _DashboardCategoryStyle(
+        Icons.local_dining_rounded,
+        Theme.of(context).colorScheme.primary,
+      )
+    : _categoryStyle(context, section.title!.toLowerCase());
+
+/// Category shortcuts above the store menu. Purely visual: the selected id is
+/// still owned by the page state.
+class _StoreCategoryFilters extends StatelessWidget {
+  const _StoreCategoryFilters({
+    required this.categories,
+    required this.products,
+    required this.selectedId,
+    required this.onSelected,
+  });
+
+  final List<CategoryData> categories;
+  final List<ProductData> products;
+  final int? selectedId;
+  final ValueChanged<int?> onSelected;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    height: 54,
+    child: ListView.separated(
+      key: const Key('store-category-filters'),
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 2),
+      itemCount: categories.length + 1,
+      separatorBuilder: (_, _) => const SizedBox(width: 12),
+      itemBuilder: (context, index) {
+        final id = index == 0 ? null : categories[index - 1].id;
+        final label = id == null ? 'All' : categories[index - 1].name;
+        return _StoreCategoryPill(
+          label: label,
+          count: id == null
+              ? products.length
+              : products.where((product) => product.categoryId == id).length,
+          selected: selectedId == id,
+          onTap: () => onSelected(id),
+        );
+      },
+    ),
+  );
+}
+
+class _StoreCategoryPill extends StatelessWidget {
+  const _StoreCategoryPill({
+    required this.label,
+    required this.count,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    final primary = Theme.of(context).colorScheme.primary;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$label, $count ${count == 1 ? 'item' : 'items'}',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            color: selected ? primary : palette.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: selected ? primary : palette.line),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: primary.withValues(alpha: .22),
+                      blurRadius: 12,
+                      offset: const Offset(0, 5),
+                    ),
+                  ]
+                : null,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? Colors.white : palette.quiet,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StoreMenuHeader extends StatelessWidget {
+  const _StoreMenuHeader({
+    required this.title,
+    required this.count,
+    required this.style,
+  });
+
+  final String title;
+  final int count;
+  final _DashboardCategoryStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Color.alphaBlend(
+                style.color.withValues(alpha: .18),
+                palette.surface,
+              ),
+              borderRadius: BorderRadius.circular(11),
+            ),
+            child: Icon(style.icon, size: 17, color: style.color),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: palette.text,
+                fontSize: 15.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Text(
+            '$count ${count == 1 ? 'item' : 'items'}',
+            style: TextStyle(
+              color: palette.quiet,
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -155,7 +155,7 @@ void main() {
     await tester.tap(find.text('Sign in'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Available stores'), findsOneWidget);
+    expect(find.text('Stores near you'), findsOneWidget);
     expect(find.text('Where should we deliver?'), findsNothing);
   });
 

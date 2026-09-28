@@ -10,44 +10,36 @@ void main() {
     (const Size(320, 640), 1.3),
     (const Size(320, 640), 1.6),
   ]) {
-    testWidgets('login headline stays centered above the form at $size', (
-      tester,
-    ) async {
-      tester.view.physicalSize = size;
-      tester.view.devicePixelRatio = 1;
-      tester.view.padding = const FakeViewPadding(top: 59, bottom: 34);
-      tester.platformDispatcher.textScaleFactorTestValue = scale;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      addTearDown(tester.view.resetPadding);
-      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    testWidgets(
+      'login brand stays top-left above the full-width form at $size',
+      (tester) async {
+        tester.view.physicalSize = size;
+        tester.view.devicePixelRatio = 1;
+        tester.view.padding = const FakeViewPadding(top: 59, bottom: 34);
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPadding);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-      await tester.pumpWidget(
-        TalaCustomerApp(dependencies: fakeCustomerDependencies()),
-      );
-      await tester.pump(const Duration(seconds: 2));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          TalaCustomerApp(dependencies: fakeCustomerDependencies()),
+        );
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pumpAndSettle();
 
-      final headline = tester.getRect(
-        find.text('Your deliveries are\none sign-in away.'),
-      );
-      final brand = tester.getRect(find.text('TalaDelivery'));
-      final map = tester.getRect(find.byKey(const Key('login-map-preview')));
-      final form = tester.getRect(find.byType(Form).first);
+        final logo = tester.getRect(find.byKey(const Key('login-brand-logo')));
+        final brand = tester.getRect(find.text('TalaDelivery'));
+        final tagline = tester.getRect(find.text('Delivered by starlight'));
+        final form = tester.getRect(find.byType(Form).first);
 
-      expect((headline.center.dx - size.width / 2).abs(), lessThan(10));
-      expect(headline.top, greaterThan(brand.bottom + 20));
-      expect(map.top, greaterThan(headline.bottom + 10));
-      expect(map.bottom, lessThan(form.top - 20));
-      expect(
-        find.descendant(
-          of: find.byKey(const Key('login-map-preview')),
-          matching: find.byIcon(Icons.location_on_rounded),
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('FAST · SIMPLE · RELIABLE'), findsNothing);
-      expect(tester.takeException(), isNull);
-    });
+        expect(logo.left, closeTo(24, 1));
+        expect(logo.bottom, lessThanOrEqualTo(brand.top));
+        expect(tagline.top, greaterThan(brand.bottom));
+        expect(tagline.bottom, lessThanOrEqualTo(form.top));
+        expect(find.byIcon(Icons.star_rounded), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
   }
 }

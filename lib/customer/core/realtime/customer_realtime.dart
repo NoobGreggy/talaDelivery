@@ -262,6 +262,7 @@ class CustomerRealtimeController extends ChangeNotifier {
         _subscriptionDeadline?.cancel();
         _subscribed = true;
         debugPrint('Customer realtime: private user channel subscribed.');
+        _customerPerfEvent('customer.realtime.connected');
         _retry = 0;
         _startHeartbeat(generation);
         // Events can be missed during a disconnected interval.
@@ -292,6 +293,7 @@ class CustomerRealtimeController extends ChangeNotifier {
       }
       lastRiderLocation = location;
       locationVersion++;
+      _customerPerfEvent('customer.realtime.location.updated');
       notifyListeners();
       return;
     }
@@ -306,11 +308,13 @@ class CustomerRealtimeController extends ChangeNotifier {
       if (!_remember(_seenOrderEvents, signature)) return;
       lastOrderId = id;
       orderVersion++;
+      _customerPerfEvent('customer.realtime.dispatch $event');
       notifyListeners();
     } else if (event == 'notification.created') {
       final id = _jsonInt(data['id']);
       if (id <= 0 || !_remember(_seenNotificationIds, id)) return;
       notificationVersion++;
+      _customerPerfEvent('customer.realtime.dispatch $event');
       notifyListeners();
     }
   }

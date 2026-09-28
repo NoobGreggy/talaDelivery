@@ -55,216 +55,68 @@ class _CustomerSplashState extends State<CustomerSplash> {
   @override
   Widget build(BuildContext context) {
     final palette = appPaletteOf(context);
-    return Scaffold(
-      backgroundColor: palette.splashBg,
-      body: SizedBox.expand(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    palette.splashStart,
-                    palette.splashMid,
-                    palette.splashEnd,
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-              ),
-            ),
-            CustomPaint(painter: _CustomerSplashPainter(palette: palette)),
-            SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) => SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 22, 24, 24),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: palette.frosted.withValues(alpha: .76),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: const Text(
-                                'CUSTOMER APP',
-                                style: TextStyle(
-                                  color: sky,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 1.4,
-                                ),
-                              ),
-                            ),
-                          ),
-                          Column(
-                            children: [
-                              Container(
-                                width: 238,
-                                height: 238,
-                                padding: const EdgeInsets.all(24),
-                                decoration: BoxDecoration(
-                                  color: palette.frosted.withValues(alpha: .72),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: palette.frosted,
-                                    width: 2,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: sky.withValues(alpha: .15),
-                                      blurRadius: 34,
-                                      offset: const Offset(0, 18),
-                                    ),
-                                  ],
-                                ),
-                                child: Image.asset(
-                                  'assets/images/tala_rider.png',
-                                ),
-                              ),
-                              const SizedBox(height: 24),
-                              const Brand(size: 38, centered: true),
-                              const SizedBox(height: 9),
-                              Text(
-                                'Your neighborhood, delivered.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: palette.quiet,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                          Column(
-                            children: [
-                              const Wrap(
-                                alignment: WrapAlignment.center,
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: [
-                                  _SplashFeature(
-                                    icon: Icons.restaurant_rounded,
-                                    label: 'Food',
-                                  ),
-                                  _SplashFeature(
-                                    icon: Icons.local_grocery_store_rounded,
-                                    label: 'Grocery',
-                                  ),
-                                  _SplashFeature(
-                                    icon: Icons.medication_rounded,
-                                    label: 'Pharmacy',
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 24),
-                              SizedBox(
-                                width: 150,
-                                child: TweenAnimationBuilder<double>(
-                                  tween: Tween(begin: 0, end: 1),
-                                  duration: const Duration(milliseconds: 1250),
-                                  builder: (context, value, child) =>
-                                      LinearProgressIndicator(
-                                        value: value,
-                                        minHeight: 5,
-                                        borderRadius: BorderRadius.circular(8),
-                                        backgroundColor: palette.surface,
-                                      ),
-                                ),
-                              ),
-                              const SizedBox(height: 11),
-                              Text(
-                                'Preparing stores near you…',
-                                style: TextStyle(
-                                  color: palette.quiet,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        backgroundColor: palette.splashBg,
+        body: TalaDuskSky(
+          animate: !MediaQuery.disableAnimationsOf(context),
+          child: SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 238,
+                    height: 238,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: .1),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: .22),
+                        width: 2,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: sky.withValues(alpha: .18),
+                          blurRadius: 40,
+                          offset: const Offset(0, 20),
+                        ),
+                      ],
+                    ),
+                    child: Image.asset(
+                      'assets/images/tala_rider.png',
                     ),
                   ),
-                ),
+                  const SizedBox(height: 26),
+                  Text.rich(
+                    TextSpan(
+                      children: [
+                        const TextSpan(text: 'Tala'),
+                        TextSpan(
+                          text: 'Delivery',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 38,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -.7,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
   }
-}
-
-class _SplashFeature extends StatelessWidget {
-  const _SplashFeature({required this.icon, required this.label});
-  final IconData icon;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    final palette = appPaletteOf(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
-      decoration: BoxDecoration(
-        color: palette.frosted.withValues(alpha: .76),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: sky, size: 15),
-          const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-              color: palette.text,
-              fontWeight: FontWeight.w700,
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CustomerSplashPainter extends CustomPainter {
-  const _CustomerSplashPainter({required this.palette});
-
-  final AppPalette palette;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final softBlue = Paint()..color = sky.withValues(alpha: .06);
-    canvas.drawCircle(
-      Offset(size.width + 28, size.height * .18),
-      120,
-      softBlue,
-    );
-    canvas.drawCircle(Offset(-35, size.height * .78), 105, softBlue);
-    canvas.drawCircle(
-      Offset(size.width * .72, size.height * .7),
-      34,
-      Paint()..color = palette.frosted.withValues(alpha: .32),
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant _CustomerSplashPainter oldDelegate) =>
-      oldDelegate.palette != palette;
 }
 
 class LoginPage extends StatefulWidget {
@@ -358,184 +210,234 @@ class _LoginPageState extends State<LoginPage> {
       listenable: viewModel!,
       builder: (context, _) {
         final submitBusy = viewModel!.isSubmitting || isCheckingAddress;
-        final submitLabel = isCheckingAddress
-            ? 'Checking saved address…'
-            : viewModel!.isSubmitting
-            ? 'Signing in…'
-            : 'Sign in';
-        return Scaffold(
-          body: Stack(
-            children: [
-              SafeArea(
-                bottom: false,
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: Column(
-                    children: [
-                      const _LoginHero(),
-                      _LoginSheet(
-                        topOffset: 26,
-                        child: Form(
-                          key: formKey,
-                          autovalidateMode: hasSubmitted
-                              ? AutovalidateMode.onUserInteraction
-                              : AutovalidateMode.disabled,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              const _LoginSheetHandle(),
-                              const SizedBox(height: 18),
-                              Text(
-                                'Sign in to your account',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineMedium,
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'Enter your account details to continue.',
-                                style: TextStyle(
-                                  color: appPaletteOf(context).quiet,
-                                  fontSize: 12.5,
-                                  height: 1.4,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              TalaPrimaryField(
-                                key: const Key('login-email'),
-                                label: 'Email',
-                                controller: emailController,
-                                prefixIcon: Icons.mail_outline_rounded,
-                                keyboardType: TextInputType.emailAddress,
-                                validator: CustomerValidators.email,
-                                errorText: viewModel!.fieldError('email'),
-                                textInputAction: TextInputAction.next,
-                              ),
-                              const SizedBox(height: 13),
-                              TalaPrimaryField(
-                                key: const Key('login-password'),
-                                label: 'Password',
-                                controller: passwordController,
-                                prefixIcon: Icons.lock_outline_rounded,
-                                obscureText: hidden,
-                                onToggleVisibility: () =>
-                                    setState(() => hidden = !hidden),
-                                validator: CustomerValidators.password,
-                                errorText: viewModel!.fieldError('password'),
-                                textInputAction: TextInputAction.done,
-                                onSubmitted: submitBusy
-                                    ? null
-                                    : (_) => submit(),
-                              ),
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  onPressed: () => Navigator.pushNamed(
-                                    context,
-                                    CustomerRoutes.forgotPassword,
+        final palette = appPaletteOf(context);
+        final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+        return AnnotatedRegion<SystemUiOverlayStyle>(
+          value: SystemUiOverlayStyle.light,
+          child: Scaffold(
+            resizeToAvoidBottomInset: true,
+            body: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+              child: Stack(
+                children: [
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final heroHeight = keyboardOpen
+                          ? 168.0
+                          : (constraints.maxHeight * .37).clamp(260.0, 340.0);
+                      return TalaDuskSky(
+                        child: Column(
+                          children: [
+                            AnimatedContainer(
+                              duration: MediaQuery.disableAnimationsOf(context)
+                                  ? const Duration(milliseconds: 150)
+                                  : const Duration(milliseconds: 300),
+                              curve: Curves.easeOutCubic,
+                              height: heroHeight,
+                              child: _TalaLoginHero(compact: keyboardOpen),
+                            ),
+                            Expanded(
+                              child: Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: palette.surface,
+                                  borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(36),
                                   ),
-                                  child: const Text('Forgot password?'),
-                                ),
-                              ),
-                              AuthErrorBanner(
-                                errorMessage: viewModel!.errorMessage,
-                              ),
-                              const SizedBox(height: 14),
-                              TalaButton(
-                                label: submitLabel,
-                                loading: submitBusy,
-                                enabled: !submitBusy,
-                                onPressed: submit,
-                                icon: submitBusy
-                                    ? null
-                                    : Icons.arrow_forward_rounded,
-                              ),
-                              const SizedBox(height: 18),
-                              if (continueAsRider != null) ...[
-                                Row(
-                                  children: [
-                                    const Expanded(child: Divider()),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                      ),
-                                      child: Text(
-                                        'NOT A CUSTOMER?',
-                                        style: TextStyle(
-                                          color: appPaletteOf(context).quiet,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: 1,
-                                        ),
+                                  border: Border(
+                                    top: BorderSide(
+                                      color: palette.line.withValues(
+                                        alpha: .65,
                                       ),
                                     ),
-                                    const Expanded(child: Divider()),
-                                  ],
-                                ),
-                                const SizedBox(height: 14),
-                                OutlinedButton.icon(
-                                  onPressed: continueAsRider,
-                                  style: OutlinedButton.styleFrom(
-                                    minimumSize: const Size.fromHeight(54),
-                                    side: const BorderSide(color: sky),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(17),
-                                    ),
-                                  ),
-                                  icon: const Icon(
-                                    Icons.delivery_dining_rounded,
-                                  ),
-                                  label: const Text(
-                                    'Continue as rider',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 14),
-                              ],
-                              Wrap(
-                                alignment: WrapAlignment.center,
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                children: [
-                                  const Text('Don’t have an account?'),
-                                  TextButton(
-                                    onPressed: () => Navigator.pushNamed(
-                                      context,
-                                      CustomerRoutes.register,
-                                    ),
-                                    child: const Text('Create account'),
+                                clipBehavior: Clip.antiAlias,
+                                child: SingleChildScrollView(
+                                  padding: EdgeInsets.fromLTRB(
+                                    24,
+                                    28,
+                                    24,
+                                    22 + MediaQuery.paddingOf(context).bottom,
                                   ),
-                                ],
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                'By continuing, you agree to TalaDelivery’s Terms and Privacy Policy.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: appPaletteOf(context).quiet,
-                                  fontSize: 9.5,
-                                  height: 1.6,
+                                  keyboardDismissBehavior:
+                                      ScrollViewKeyboardDismissBehavior.onDrag,
+                                  child: Form(
+                                    key: formKey,
+                                    autovalidateMode: hasSubmitted
+                                        ? AutovalidateMode.onUserInteraction
+                                        : AutovalidateMode.disabled,
+                                    child: AutofillGroup(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: [
+                                          Text(
+                                            'Welcome back',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .titleLarge
+                                                ?.copyWith(
+                                                  fontSize: 22,
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                          ),
+                                          const SizedBox(height: 5),
+                                          Text(
+                                            'Sign in to keep your orders on the way',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium
+                                                ?.copyWith(fontSize: 13),
+                                          ),
+                                          const SizedBox(height: 20),
+                                          TalaPrimaryField(
+                                            key: const Key('login-email'),
+                                            label: 'Email or mobile',
+                                            controller: emailController,
+                                            prefixIcon:
+                                                Icons.mail_outline_rounded,
+                                            keyboardType:
+                                                TextInputType.emailAddress,
+                                            validator: CustomerValidators.email,
+                                            errorText: viewModel!.fieldError(
+                                              'email',
+                                            ),
+                                            textInputAction:
+                                                TextInputAction.next,
+                                            autofillHints: const [
+                                              AutofillHints.username,
+                                              AutofillHints.email,
+                                            ],
+                                          ),
+                                          const SizedBox(height: 12),
+                                          TalaPrimaryField(
+                                            key: const Key('login-password'),
+                                            label: 'Password',
+                                            controller: passwordController,
+                                            prefixIcon:
+                                                Icons.lock_outline_rounded,
+                                            obscureText: hidden,
+                                            onToggleVisibility: () => setState(
+                                              () => hidden = !hidden,
+                                            ),
+                                            validator:
+                                                CustomerValidators.password,
+                                            errorText: viewModel!.fieldError(
+                                              'password',
+                                            ),
+                                            textInputAction:
+                                                TextInputAction.done,
+                                            autofillHints: const [
+                                              AutofillHints.password,
+                                            ],
+                                            onSubmitted: submitBusy
+                                                ? null
+                                                : (_) => submit(),
+                                          ),
+                                          Align(
+                                            alignment: Alignment.centerRight,
+                                            child: TextButton(
+                                              onPressed: () =>
+                                                  Navigator.pushNamed(
+                                                    context,
+                                                    CustomerRoutes
+                                                        .forgotPassword,
+                                                  ),
+                                              child: const Text(
+                                                'Forgot password?',
+                                              ),
+                                            ),
+                                          ),
+                                          AuthErrorBanner(
+                                            errorMessage:
+                                                viewModel!.errorMessage,
+                                          ),
+                                          const SizedBox(height: 8),
+                                          TalaButton(
+                                            label: 'Sign in',
+                                            loading: submitBusy,
+                                            enabled: !submitBusy,
+                                            onPressed: submit,
+                                          ),
+                                          const SizedBox(height: 18),
+                                          const _LoginDivider(),
+                                          const SizedBox(height: 14),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: _LoginSocialButton(
+                                                  letter: 'G',
+                                                  label: 'Google',
+                                                  onTap: () => message(
+                                                    context,
+                                                    'Google sign in is coming soon.',
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: _LoginSocialButton(
+                                                  letter: 'f',
+                                                  label: 'Facebook',
+                                                  onTap: () => message(
+                                                    context,
+                                                    'Facebook sign in is coming soon.',
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 18),
+                                          Wrap(
+                                            alignment: WrapAlignment.center,
+                                            crossAxisAlignment:
+                                                WrapCrossAlignment.center,
+                                            children: [
+                                              const Text('New to Tala?'),
+                                              TextButton(
+                                                onPressed: () =>
+                                                    Navigator.pushNamed(
+                                                      context,
+                                                      CustomerRoutes.register,
+                                                    ),
+                                                child: const Text(
+                                                  'Create account',
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          if (continueAsRider != null)
+                                            TextButton.icon(
+                                              onPressed: continueAsRider,
+                                              icon: const Icon(
+                                                Icons.delivery_dining_rounded,
+                                                size: 18,
+                                              ),
+                                              label: const Text(
+                                                'Continue as rider',
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
-                              SizedBox(
-                                height:
-                                    MediaQuery.paddingOf(context).bottom + 14,
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                ),
+                  TalaLoginSuccessReveal(
+                    trigger: showReveal,
+                    onComplete: _completeRevealNavigation,
+                  ),
+                ],
               ),
-              TalaLoginSuccessReveal(
-                trigger: showReveal,
-                onComplete: _completeRevealNavigation,
-              ),
-            ],
+            ),
           ),
         );
       },
@@ -543,6 +445,156 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+class _TalaLoginHero extends StatelessWidget {
+  const _TalaLoginHero({required this.compact});
+
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      final useCompact =
+          compact || constraints.maxHeight < 285 || constraints.maxWidth < 360;
+      return Padding(
+        padding: EdgeInsets.fromLTRB(
+          24,
+          MediaQuery.paddingOf(context).top + (useCompact ? 12 : 20),
+          24,
+          12,
+        ),
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Semantics(
+                image: true,
+                label: 'TalaDelivery logo',
+                child: SizedBox(
+                  key: const Key('login-brand-logo'),
+                  width: useCompact ? 56 : 92,
+                  height: useCompact ? 56 : 92,
+                  child: Image.asset(
+                    'assets/images/tala_rider.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              SizedBox(height: useCompact ? 4 : 8),
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(text: 'Tala'),
+                      TextSpan(
+                        text: 'Delivery',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: useCompact ? 26 : 34,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -.7,
+                  ),
+                ),
+              ),
+              SizedBox(height: useCompact ? 4 : 8),
+              Text(
+                'Delivered by starlight',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: .7),
+                  fontSize: useCompact ? 11 : 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _LoginDivider extends StatelessWidget {
+  const _LoginDivider();
+
+  @override
+  Widget build(BuildContext context) => Row(
+    children: [
+      const Expanded(child: Divider()),
+      Flexible(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(
+            'or continue with',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
+      ),
+      const Expanded(child: Divider()),
+    ],
+  );
+}
+
+class _LoginSocialButton extends StatelessWidget {
+  const _LoginSocialButton({
+    required this.letter,
+    required this.label,
+    required this.onTap,
+  });
+
+  final String letter;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        minimumSize: const Size.fromHeight(48),
+        foregroundColor: palette.text,
+        backgroundColor: palette.surface,
+        side: BorderSide(color: palette.line, width: 1.5),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            letter,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Legacy composition retained temporarily for the registration visual family.
+// ignore: unused_element
 class _LoginHero extends StatelessWidget {
   const _LoginHero();
 
@@ -862,6 +914,7 @@ class _LoginMapPainter extends CustomPainter {
 }
 
 /// Rounded floating sheet that overlaps the hero art.
+// ignore: unused_element
 class _LoginSheet extends StatelessWidget {
   const _LoginSheet({required this.child, required this.topOffset});
 
@@ -893,6 +946,7 @@ class _LoginSheet extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _LoginSheetHandle extends StatelessWidget {
   const _LoginSheetHandle();
 

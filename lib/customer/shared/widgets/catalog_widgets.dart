@@ -162,28 +162,45 @@ class _ProductArtworkState extends State<ProductArtwork> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final fallback = StoreArtwork(
-      icon: widget.product.icon,
-      color: widget.product.color,
-      large: widget.large,
-      height: widget.height,
-      width: widget.width,
-    );
-    if (bytes == null) return fallback;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(widget.large ? 0 : 17),
-      child: Image.memory(
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) {
+      // Resolve the box from the parent constraints so a food picture always
+      // fills the space reserved for it instead of shrink-wrapping its own
+      // aspect ratio.
+      final width =
+          widget.width ??
+          (constraints.hasBoundedWidth ? constraints.maxWidth : null);
+      final height =
+          widget.height ??
+          (constraints.hasBoundedHeight
+              ? constraints.maxHeight
+              : (widget.large ? 220 : 92));
+      final fallback = StoreArtwork(
+        icon: widget.product.icon,
+        color: widget.product.color,
+        large: widget.large,
+        height: height,
+        width: width ?? double.infinity,
+      );
+      if (bytes == null) return fallback;
+      final dpr = MediaQuery.devicePixelRatioOf(context);
+      final cacheWidth = width == null ? null : (width * dpr).ceil();
+      final cacheHeight = (height * dpr).ceil();
+      final picture = Image.memory(
         bytes!,
         key: ValueKey('product-image-${widget.product.id}'),
-        width: widget.width,
-        height: widget.height ?? (widget.large ? 220 : 92),
+        width: width,
+        height: height,
+        cacheWidth: cacheWidth,
+        cacheHeight: cacheHeight,
         fit: BoxFit.cover,
         semanticLabel: widget.product.name,
         errorBuilder: (_, _, _) => fallback,
-      ),
-    );
-  }
+      );
+      if (widget.large) return picture;
+      return ClipRRect(borderRadius: BorderRadius.circular(17), child: picture);
+    },
+  );
 }
 
 class StoreCard extends StatelessWidget {
@@ -242,7 +259,7 @@ class StoreCard extends StatelessWidget {
                       icon: Icons.schedule_rounded,
                       value: store.openingTime == null
                           ? 'Hours not provided'
-                          : '${store.openingTime} – ${store.closingTime ?? ''}',
+                          : '${_talaShortHour(store.openingTime!)} – ${_talaShortHour(store.closingTime ?? '')}',
                       color: palette.quiet,
                     ),
                   ],
@@ -298,71 +315,159 @@ class ProductRow extends StatelessWidget {
   final ProductData product;
   final VoidCallback onOpen;
   final VoidCallback? onAdd;
+
   @override
   Widget build(BuildContext context) {
     final palette = appPaletteOf(context);
+    final primary = Theme.of(context).colorScheme.primary;
+    final canAdd = onAdd != null;
     return Material(
       color: palette.surface,
-      borderRadius: BorderRadius.circular(19),
+      borderRadius: BorderRadius.circular(28),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(19),
+        borderRadius: BorderRadius.circular(28),
         onTap: onOpen,
-        child: Padding(
-          padding: const EdgeInsets.all(13),
-          child: Row(
-            children: [
-              Hero(
-                tag: product.name,
-                child: SizedBox(
-                  width: 76,
-                  child: ProductArtwork(product: product, height: 76),
-                ),
-              ),
-              const SizedBox(width: 13),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      product.name,
-                      style: TextStyle(
-                        color: palette.text,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      product.description ?? 'No description provided.',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: palette.quiet, fontSize: 12),
-                    ),
-                    const SizedBox(height: 7),
-                    Text(
-                      peso(product.price),
-                      style: const TextStyle(
-                        color: sky,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 7),
-              FilledButton(
-                onPressed: onAdd,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size(48, 42),
-                  padding: EdgeInsets.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                ),
-                child: onAdd == null
-                    ? const Icon(Icons.block_rounded, size: 18)
-                    : const Text('Add'),
+        child: Ink(
+          decoration: BoxDecoration(
+            color: palette.surface,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: palette.line),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).colorScheme.shadow
+                    .withValues(alpha: .05),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
               ),
             ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Hero(
+                  tag: product.name,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: ProductArtwork(
+                      product: product,
+                      width: 96,
+                      height: 112,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        product.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: palette.text,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 17,
+                          height: 1.18,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(
+                        product.description ?? 'No description provided.',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: palette.quiet,
+                          fontSize: 13,
+                          height: 1.4,
+                        ),
+                      ),
+                      const SizedBox(height: 7),
+                      if (product.available)
+                        Text(
+                          '${product.stock} available',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: palette.quiet,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        )
+                      else
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: StatusPill(label: 'SOLD OUT', color: danger),
+                        ),
+                      const SizedBox(height: 14),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  peso(product.price),
+                                  style: TextStyle(
+                                    color: palette.text,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 18,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Tooltip(
+                            message: canAdd
+                                ? 'Add ${product.name}'
+                                : '${product.name} is unavailable',
+                            child: Semantics(
+                              button: true,
+                              enabled: canAdd,
+                              label: canAdd
+                                  ? 'Add ${product.name}'
+                                  : '${product.name} is unavailable',
+                              child: FilledButton(
+                                key: Key('product-add-${product.id}'),
+                                onPressed: onAdd,
+                                style: FilledButton.styleFrom(
+                                  minimumSize: const Size(48, 48),
+                                  maximumSize: const Size(48, 48),
+                                  padding: EdgeInsets.zero,
+                                  elevation: 0,
+                                  backgroundColor: canAdd
+                                      ? primary
+                                      : palette.line,
+                                  foregroundColor: canAdd
+                                      ? Colors.white
+                                      : palette.quiet,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                ),
+                                child: Icon(
+                                  canAdd
+                                      ? Icons.add_rounded
+                                      : Icons.block_rounded,
+                                  size: 25,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

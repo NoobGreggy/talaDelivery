@@ -185,7 +185,6 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
   Future<CustomerOrder>? future;
   CustomerRealtimeController? realtime;
   int seenOrderVersion = 0;
-  int seenLocationVersion = 0;
   int loadVersion = 0;
 
   int get id => widget.order?.id ?? widget.orderId!;
@@ -198,7 +197,6 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       realtime?.removeListener(onRealtimeEvent);
       realtime = nextRealtime;
       seenOrderVersion = nextRealtime.orderVersion;
-      seenLocationVersion = nextRealtime.locationVersion;
       nextRealtime.addListener(onRealtimeEvent);
     }
     future ??= loadOrder();
@@ -220,17 +218,12 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       realtime?.watchDelivery(
         delivery?.isTrackable == true ? delivery!.id : null,
       );
-      seenLocationVersion = realtime?.locationVersion ?? seenLocationVersion;
     }
     return order;
   }
 
   void onRealtimeEvent() {
     final source = realtime!;
-    if (source.locationVersion != seenLocationVersion) {
-      seenLocationVersion = source.locationVersion;
-      if (mounted) setState(() {});
-    }
     if (source.orderVersion == seenOrderVersion) return;
     seenOrderVersion = source.orderVersion;
     if (source.lastOrderId == null || source.lastOrderId == id) reload();
@@ -286,10 +279,6 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
         final order = snapshot.data!;
         final stage = stageForStatus(order.status);
         final delivery = order.delivery;
-        final pushedLocation = realtime?.lastRiderLocation;
-        final liveLocation = pushedLocation?.deliveryId == delivery?.id
-            ? pushedLocation
-            : delivery?.riderLocation;
         const timeline = [
           OrderStage.placed,
           OrderStage.confirmed,
@@ -312,22 +301,10 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
               TrackingHero(stage: stage),
               if (delivery != null) ...[
                 const SizedBox(height: 14),
-                CustomerDeliveryMap(
+                if (realtime case final live?) _LiveRiderTrackingSection(
                   delivery: delivery,
-                  liveRiderLocation: liveLocation,
+                  realtime: live,
                 ),
-                if (delivery.isTrackable) ...[
-                  const SizedBox(height: 8),
-                  Text(
-                    liveLocation?.recordedAt == null
-                        ? 'Waiting for the rider’s live location…'
-                        : 'Rider location updated ${_trackingAge(liveLocation!.recordedAt!)}',
-                    style: TextStyle(
-                      color: appPaletteOf(context).quiet,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
               ],
               const SizedBox(height: 14),
               InfoCard(
@@ -389,6 +366,86 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
       },
     ),
   );
+}
+
+/// Renders only the live rider section of the tracking page. Rebuilds map and
+/// timestamp solely on realtime location updates, so rider pings never rebuild
+/// the timeline, hero, or info cards around it.
+class _LiveRiderTrackingSection extends StatefulWidget {
+  const _LiveRiderTrackingSection({
+    required this.delivery,
+    required this.realtime,
+  });
+
+  final CustomerDelivery delivery;
+  final CustomerRealtimeController realtime;
+
+  @override
+  State<_LiveRiderTrackingSection> createState() =>
+      _LiveRiderTrackingSectionState();
+}
+
+class _LiveRiderTrackingSectionState extends State<_LiveRiderTrackingSection> {
+  late int seenLocationVersion;
+
+  @override
+  void initState() {
+    super.initState();
+    seenLocationVersion = widget.realtime.locationVersion;
+    widget.realtime.addListener(_onLocationUpdate);
+  }
+
+  @override
+  void didUpdateWidget(_LiveRiderTrackingSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.realtime != widget.realtime) {
+      oldWidget.realtime.removeListener(_onLocationUpdate);
+      seenLocationVersion = widget.realtime.locationVersion;
+      widget.realtime.addListener(_onLocationUpdate);
+    }
+  }
+
+  @override
+  void dispose() {
+    widget.realtime.removeListener(_onLocationUpdate);
+    super.dispose();
+  }
+
+  void _onLocationUpdate() {
+    final version = widget.realtime.locationVersion;
+    if (version == seenLocationVersion) return;
+    seenLocationVersion = version;
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pushed = widget.realtime.lastRiderLocation;
+    final live = pushed?.deliveryId == widget.delivery.id
+        ? pushed
+        : widget.delivery.riderLocation;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        CustomerDeliveryMap(
+          delivery: widget.delivery,
+          liveRiderLocation: live,
+        ),
+        if (widget.delivery.isTrackable) ...[
+          const SizedBox(height: 8),
+          Text(
+            live?.recordedAt == null
+                ? 'Waiting for the rider’s live location…'
+                : 'Rider location updated ${_trackingAge(live!.recordedAt!)}',
+            style: TextStyle(
+              color: appPaletteOf(context).quiet,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 }
 
 class OrdersPage extends StatefulWidget {
@@ -508,7 +565,12 @@ class _OrdersPageState extends State<OrdersPage> {
                   await future;
                 },
                 child: ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    12,
+                    20,
+                    _customerScrollClearance(context),
+                  ),
                   itemCount: orders.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 11),
                   itemBuilder: (context, index) {

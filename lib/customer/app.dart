@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
+import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kDebugMode, kProfileMode;
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
@@ -29,6 +32,7 @@ part 'shared/widgets/ui_widgets.dart';
 part 'shared/widgets/catalog_widgets.dart';
 part 'shared/widgets/feedback_widgets.dart';
 part 'shared/widgets/tala_widgets.dart';
+part 'shared/widgets/dusk_widgets.dart';
 part 'core/routing/customer_router.dart';
 part 'features/catalog/data/catalog_repository.dart';
 part 'features/cart/logic/cart_controller.dart';
@@ -57,6 +61,54 @@ part 'features/profile/view_models/customer_profile_view_model.dart';
 part 'core/notifications/data/notification_models.dart';
 part 'core/notifications/data/notification_repository.dart';
 part 'core/notifications/notifications_screen.dart';
+
+/// Distance-bounded timing telemetry for the performance plan. Enabled only in
+/// debug/profile builds and compiled out of release. Logs never include
+/// tokens, API keys, addresses, or precise coordinates.
+const bool customerPerfTelemetry = kDebugMode || kProfileMode;
+
+/// Opt-in performance overlay: `flutter run --dart-define=TALA_PERF_OVERLAY=true`.
+/// Never renders in release builds regardless of the define.
+const bool customerPerfOverlayEnabled =
+    bool.fromEnvironment('TALA_PERF_OVERLAY') && (kDebugMode || kProfileMode);
+
+void _customerPerfTrace(String label, DateTime startedAt) {
+  if (customerPerfTelemetry) {
+    debugPrint(
+      'TalaPerf: $label in '
+      '${DateTime.now().difference(startedAt).inMilliseconds}ms',
+    );
+  }
+}
+
+void _customerPerfEvent(String label) {
+  if (customerPerfTelemetry) debugPrint('TalaPerf: $label');
+}
+
+/// Reduces a store-hour value to "HH:mm". The backend may send a full
+/// timestamp ("2026-09-28T08:00:00.000Z"), "2026-09-28 08:00:00", or a bare
+/// "08:00:00"/"08:00"; the date part is never shown.
+String _talaShortHour(String value) {
+  final time = DateTime.tryParse(value);
+  if (time != null) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+  final parts = value.split(':');
+  return parts.length >= 2 ? '${parts[0]}:${parts[1]}' : value;
+}
+
+/// Trailing clearance a scrollable needs so its last container is never hidden
+/// behind the floating bottom navigation. The customer shell uses
+/// `extendBody`, so content would otherwise end underneath the floating bar.
+double _customerScrollClearance(BuildContext context) {
+  const navHeight = 68.0;
+  const navBottomMargin = 12.0;
+  const breathingRoom = 16.0;
+  final bottomInset = MediaQuery.paddingOf(context).bottom;
+  return navHeight + math.max(bottomInset, navBottomMargin) + breathingRoom;
+}
 
 Future<TalaCustomerApp> createCustomerApp({
   CustomerAppDependencies? dependencies,
@@ -147,6 +199,19 @@ class _TalaCustomerAppState extends State<TalaCustomerApp>
               themeMode: themeController.mode,
               theme: buildAppTheme(AppPalette.light),
               darkTheme: buildAppTheme(AppPalette.dark),
+              builder: (context, child) {
+                if (!customerPerfOverlayEnabled) {
+                  return child ?? const SizedBox.shrink();
+                }
+                return Stack(
+                  children: [
+                    child ?? const SizedBox.shrink(),
+                    const Positioned.fill(
+                      child: IgnorePointer(child: PerformanceOverlay()),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -193,58 +258,20 @@ class _CustomerShellState extends State<CustomerShell> {
 
   @override
   Widget build(BuildContext context) {
-    const pages = [HomePage(), OrdersPage(), ProfilePage()];
-    final palette = appPaletteOf(context);
+    const pages = [
+      HomePage(),
+      SafeArea(bottom: false, child: OrdersPage()),
+      SafeArea(bottom: false, child: ProfilePage()),
+    ];
     return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: IndexedStack(index: tab, children: pages),
-      ),
-      bottomNavigationBar: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: palette.surface.withValues(alpha: .97),
-              borderRadius: BorderRadius.circular(25),
-              border: Border.all(color: palette.cardBorder),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: .08),
-                  blurRadius: 30,
-                  offset: const Offset(0, -6),
-                ),
-              ],
-            ),
-            child: NavigationBar(
-              selectedIndex: tab,
-              onDestinationSelected: (value) => setState(() => tab = value),
-              height: 68,
-              backgroundColor: Colors.transparent,
-              surfaceTintColor: Colors.transparent,
-              indicatorColor: palette.navIndicator,
-              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.home_outlined),
-                  selectedIcon: Icon(Icons.home_rounded),
-                  label: 'Home',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.receipt_long_outlined),
-                  selectedIcon: Icon(Icons.receipt_long_rounded),
-                  label: 'Orders',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.person_outline_rounded),
-                  selectedIcon: Icon(Icons.person_rounded),
-                  label: 'Profile',
-                ),
-              ],
-            ),
-          ),
-        ),
+      extendBody: true,
+      body: IndexedStack(index: tab, children: pages),
+      bottomNavigationBar: TalaCustomerBottomNav(
+        selectedIndex: tab,
+        onHome: () => setState(() => tab = 0),
+        onOrders: () => setState(() => tab = 1),
+        onSaved: () => message(context, 'Saved stores are coming soon.'),
+        onAccount: () => setState(() => tab = 2),
       ),
     );
   }
