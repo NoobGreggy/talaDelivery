@@ -21,9 +21,20 @@ class DeliveryUpdated implements ShouldBroadcast, ShouldDispatchAfterCommit
      */
     public function broadcastOn(): array
     {
-        return $this->delivery->rider_id !== null
-            ? [new PrivateChannel('user.'.$this->delivery->rider_id)]
-            : [];
+        $channels = [];
+
+        if ($this->delivery->rider_id !== null) {
+            $channels[] = new PrivateChannel('user.'.$this->delivery->rider_id);
+        }
+
+        $order = $this->delivery->order;
+
+        if ($order !== null) {
+            $channels[] = new PrivateChannel('user.'.$order->customer_id);
+            $channels[] = new PrivateChannel('store.'.$order->store_id);
+        }
+
+        return $channels;
     }
 
     public function broadcastAs(): string

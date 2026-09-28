@@ -26,7 +26,7 @@ class DeliveryUpdatedTest extends ApiTestCase
         $this->seed(RolePermissionSeeder::class);
     }
 
-    public function test_delivery_updated_broadcasts_to_the_assigned_riders_private_channel(): void
+    public function test_delivery_updated_reaches_the_rider_customer_and_store(): void
     {
         $rider = $this->makeActiveRider();
         $delivery = Delivery::factory()->create([
@@ -36,21 +36,28 @@ class DeliveryUpdatedTest extends ApiTestCase
 
         $event = new DeliveryUpdated($delivery);
 
-        $this->assertEquals([new PrivateChannel('user.'.$rider->id)], $event->broadcastOn());
+        $this->assertEquals([
+            new PrivateChannel('user.'.$rider->id),
+            new PrivateChannel('user.'.$delivery->order->customer_id),
+            new PrivateChannel('store.'.$delivery->order->store_id),
+        ], $event->broadcastOn());
         $this->assertSame('delivery.updated', $event->broadcastAs());
         $this->assertSame($delivery->id, $event->broadcastWith()['id']);
         $this->assertSame($delivery->status->value, $event->broadcastWith()['status']);
         $this->assertSame($rider->id, $event->broadcastWith()['rider_id']);
     }
 
-    public function test_delivery_updated_has_no_channels_when_no_rider_is_assigned(): void
+    public function test_unassigned_delivery_still_updates_the_customer_and_store(): void
     {
         $delivery = Delivery::factory()->create([
             'rider_id' => null,
             'status' => DeliveryStatus::Unassigned,
         ]);
 
-        $this->assertSame([], (new DeliveryUpdated($delivery))->broadcastOn());
+        $this->assertEquals([
+            new PrivateChannel('user.'.$delivery->order->customer_id),
+            new PrivateChannel('store.'.$delivery->order->store_id),
+        ], (new DeliveryUpdated($delivery))->broadcastOn());
     }
 
     public function test_delivery_updated_is_dispatched_on_delivery_transitions(): void
