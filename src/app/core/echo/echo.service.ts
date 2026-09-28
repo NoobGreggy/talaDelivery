@@ -14,6 +14,13 @@ export interface OrderUpdatedPayload {
   updated_at: string;
 }
 
+export interface DeliveryUpdatedPayload {
+  id: number;
+  order_id: number;
+  status: string;
+  updated_at: string;
+}
+
 declare global {
   interface Window {
     Pusher: typeof Pusher;
@@ -31,12 +38,14 @@ export class EchoService {
   private loading = signal(false);
   private orderUpdated = signal<OrderUpdatedPayload | null>(null);
   private connectionVersion = signal(0);
+  private deliveryUpdated = signal<DeliveryUpdatedPayload | null>(null);
 
   readonly notifications$ = this.notifications.asReadonly();
   readonly unreadCount$ = this.unread.asReadonly();
   readonly loadingNotifications = this.loading.asReadonly();
   readonly orderUpdated$ = this.orderUpdated.asReadonly();
   readonly connectionVersion$ = this.connectionVersion.asReadonly();
+  readonly deliveryUpdated$ = this.deliveryUpdated.asReadonly();
 
   connect(): void {
     if (this.echo) return;
@@ -74,12 +83,7 @@ export class EchoService {
 
     // `PusherConnector` is not exported by laravel-echo, so narrow structurally.
     const pusher = (this.echo.connector as { pusher?: Pusher }).pusher;
-    pusher?.connection.bind('connected', () => {
-      // Reverb does not replay messages missed while the browser was offline.
-      // Consumers use this monotonic version to reconcile from the REST API.
-      this.connectionVersion.update((version) => version + 1);
-    });
-    pusher?.connection.bind('pusher:error', (error: unknown) => {
+    pusher?.connection.bind('error', (error: unknown) => {
       console.error('[Echo] Realtime connection error:', error);
     });
 
@@ -89,7 +93,7 @@ export class EchoService {
         this.notifications.update((current) => [payload, ...current].slice(0, 50));
         this.unread.update((count) => count + 1);
       })
-      .listen('.error', (error: unknown) => {
+      .error((error: unknown) => {
         // Raised when /broadcasting/auth rejects the subscription (CORS, 401, 403).
         console.error('[Echo] Channel subscription error:', error);
       });
@@ -97,8 +101,19 @@ export class EchoService {
     if (storeId) {
       this.echo
         .private(`store.${storeId}`)
+        .subscribed(() => {
+          // Reconcile after authorization, closing the gap between the socket
+          // connecting and the private store subscription becoming active.
+          this.connectionVersion.update((version) => version + 1);
+        })
         .listen('.order.updated', (payload: OrderUpdatedPayload) => {
           this.orderUpdated.set(payload);
+        })
+        .listen('.delivery.updated', (payload: DeliveryUpdatedPayload) => {
+          this.deliveryUpdated.set(payload);
+        })
+        .error((error: unknown) => {
+          console.error('[Echo] Store subscription failed:', error);
         });
     }
   }

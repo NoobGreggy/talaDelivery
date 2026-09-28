@@ -35,7 +35,8 @@ export class StoreOrderService {
   constructor() {
     effect(() => {
       const update = this.echoService.orderUpdated$();
-      if (update) {
+      const delivery = this.echoService.deliveryUpdated$();
+      if (update || delivery) {
         this.refresh();
       }
     });

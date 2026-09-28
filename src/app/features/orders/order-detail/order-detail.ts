@@ -57,6 +57,12 @@ export class OrderDetailComponent {
       }
     });
     effect(() => {
+      const update = this.echoService.deliveryUpdated$();
+      if (update && update.order_id === Number(this.route.snapshot.paramMap.get('id'))) {
+        untracked(() => this.loadOrder(update.order_id));
+      }
+    });
+    effect(() => {
       if (this.echoService.connectionVersion$() > 0) {
         const id = Number(this.route.snapshot.paramMap.get('id'));
         if (id > 0) untracked(() => this.loadOrder(id));
