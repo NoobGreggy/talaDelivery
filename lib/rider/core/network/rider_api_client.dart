@@ -132,28 +132,33 @@ class RiderApiClient {
     final uri = _config.baseUri.resolve(
       path.startsWith('/') ? path.substring(1) : path,
     );
-    final response = switch (method) {
-      'GET' => await _client.get(uri, headers: headers),
-      'POST' => await _client.post(
-        uri,
-        headers: headers,
-        body: body == null ? null : jsonEncode(body),
-      ),
-      _ => throw ArgumentError.value(method, 'method', 'Unsupported method'),
-    };
-    final payload = _decode(response.body);
-    if (response.statusCode >= 200 &&
-        response.statusCode < 300 &&
-        payload['success'] != false) {
-      return payload;
+    final startedAt = DateTime.now();
+    try {
+      final response = switch (method) {
+        'GET' => await _client.get(uri, headers: headers),
+        'POST' => await _client.post(
+          uri,
+          headers: headers,
+          body: body == null ? null : jsonEncode(body),
+        ),
+        _ => throw ArgumentError.value(method, 'method', 'Unsupported method'),
+      };
+      final payload = _decode(response.body);
+      if (response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          payload['success'] != false) {
+        return payload;
+      }
+      throw RiderApiException(
+        payload['message'] is String
+            ? payload['message'] as String
+            : 'The request could not be completed.',
+        statusCode: response.statusCode,
+        fieldErrors: _fieldErrors(payload['errors']),
+      );
+    } finally {
+      _riderPerfTrace('rider.api $method $path', startedAt);
     }
-    throw RiderApiException(
-      payload['message'] is String
-          ? payload['message'] as String
-          : 'The request could not be completed.',
-      statusCode: response.statusCode,
-      fieldErrors: _fieldErrors(payload['errors']),
-    );
   }
 
   Map<String, dynamic> _decode(String body) {

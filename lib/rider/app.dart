@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kProfileMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
@@ -39,6 +39,29 @@ part 'features/deliveries/widgets/rider_delivery_map.dart';
 part 'features/history/rider_history_screen.dart';
 part 'features/notifications/rider_notifications_screen.dart';
 part 'features/profile/rider_profile_screen.dart';
+
+/// Distance-bounded timing telemetry for the performance plan. Enabled only in
+/// debug/profile builds and compiled out of release. Logs never include
+/// tokens, API keys, addresses, or precise coordinates.
+const bool riderPerfTelemetry = kDebugMode || kProfileMode;
+
+/// Opt-in performance overlay: `flutter run --dart-define=TALA_PERF_OVERLAY=true`.
+/// Never renders in release builds regardless of the define.
+const bool riderPerfOverlayEnabled =
+    bool.fromEnvironment('TALA_PERF_OVERLAY') && (kDebugMode || kProfileMode);
+
+void _riderPerfTrace(String label, DateTime startedAt) {
+  if (riderPerfTelemetry) {
+    debugPrint(
+      'TalaPerf: $label in '
+      '${DateTime.now().difference(startedAt).inMilliseconds}ms',
+    );
+  }
+}
+
+void _riderPerfEvent(String label) {
+  if (riderPerfTelemetry) debugPrint('TalaPerf: $label');
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -91,6 +114,8 @@ class _TalaDeliveryAppState extends State<TalaDeliveryApp>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       dependencies.controller.handleAppResumed();
+    } else if (state == AppLifecycleState.paused) {
+      dependencies.controller.handleAppPaused();
     }
   }
 
@@ -121,6 +146,17 @@ class _TalaDeliveryAppState extends State<TalaDeliveryApp>
               themeMode: themeController.mode,
               theme: buildRiderTheme(RiderPalette.light),
               darkTheme: buildRiderTheme(RiderPalette.dark),
+              builder: (context, child) {
+                if (!riderPerfOverlayEnabled) return child ?? const SizedBox.shrink();
+                return Stack(
+                  children: [
+                    child ?? const SizedBox.shrink(),
+                    const Positioned.fill(
+                      child: IgnorePointer(child: PerformanceOverlay()),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
@@ -158,6 +194,60 @@ class RiderShell extends StatefulWidget {
 
 class _RiderShellState extends State<RiderShell> {
   late int tab;
+  RiderAppController? _controller;
+  RiderRouteController? _routes;
+  late final List<_RiderPage> _pages = _buildPages();
+
+  List<_RiderPage> _buildPages() => [
+    _RiderPage(
+      selector: _dashboardSelector,
+      builder: (context, controller) => DashboardScreen(
+        controller: controller,
+        onOffer: () => Navigator.of(context).pushNamed(
+          RiderRoutes.offer,
+          arguments: controller.offers.firstOrNull,
+        ),
+        onEarnings: () => setState(() => tab = 1),
+      ),
+    ),
+    _RiderPage(
+      selector: _historySelector,
+      builder: (context, controller) =>
+          HistoryScreen(controller: controller),
+    ),
+    _RiderPage(
+      selector: _profileSelector,
+      builder: (context, controller) =>
+          ProfileScreen(controller: controller),
+    ),
+  ];
+
+  static Object? _dashboardSelector(RiderAppController controller) => (
+    controller.user,
+    controller.profile,
+    controller.offers,
+    controller.activeDelivery,
+    controller.earningsSummary,
+    controller.isLoading,
+    controller.isSubmitting,
+    controller.unreadNotificationCount,
+    controller.errorMessage,
+  );
+
+  static Object? _historySelector(RiderAppController controller) => (
+    controller.user,
+    controller.deliveries,
+    controller.earningsSummary,
+    controller.isLoading,
+    controller.errorMessage,
+  );
+
+  static Object? _profileSelector(RiderAppController controller) => (
+    controller.user,
+    controller.profile,
+    controller.isLoading,
+    controller.errorMessage,
+  );
 
   @override
   void initState() {
@@ -166,51 +256,115 @@ class _RiderShellState extends State<RiderShell> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    final routes = RiderRouteScope.of(context);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     final controller = RiderDependencyScope.of(context).controller;
-    return ListenableBuilder(
-      listenable: controller,
-      builder: (context, _) {
-        routes.sync(controller);
-        final pages = [
-          DashboardScreen(
-            controller: controller,
-            onOffer: () => Navigator.of(context).pushNamed(
-              RiderRoutes.offer,
-              arguments: controller.offers.firstOrNull,
-            ),
-            onEarnings: () => setState(() => tab = 1),
+    final routes = RiderRouteScope.of(context);
+    if (_controller != controller) {
+      _controller?.removeListener(_syncRoutes);
+      _controller = controller;
+      _controller?.addListener(_syncRoutes);
+    }
+    _routes = routes;
+    _syncRoutes();
+  }
+
+  void _syncRoutes() {
+    final controller = _controller;
+    final routes = _routes;
+    if (controller == null || routes == null || !mounted) return;
+    routes.sync(controller);
+  }
+
+  @override
+  void dispose() {
+    _controller?.removeListener(_syncRoutes);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(index: tab, children: _pages),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: tab,
+        height: 72,
+        onDestinationSelected: (index) => setState(() => tab = index),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Home',
           ),
-          HistoryScreen(controller: controller),
-          ProfileScreen(controller: controller),
-        ];
-        return Scaffold(
-          body: IndexedStack(index: tab, children: pages),
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: tab,
-            height: 72,
-            onDestinationSelected: (index) => setState(() => tab = index),
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home_rounded),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.receipt_long_outlined),
-                selectedIcon: Icon(Icons.receipt_long_rounded),
-                label: 'History',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline_rounded),
-                selectedIcon: Icon(Icons.person_rounded),
-                label: 'Profile',
-              ),
-            ],
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            selectedIcon: Icon(Icons.receipt_long_rounded),
+            label: 'History',
           ),
-        );
-      },
+          NavigationDestination(
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
+          ),
+        ],
+      ),
     );
+  }
+}
+
+/// Runs a single page inside its own controller listener so one controller
+/// notification does not rebuild the whole shell, the navigation bar, or every
+/// tab. An optional [selector] narrows rebuilds to the page's relevant state.
+class _RiderPage extends StatefulWidget {
+  const _RiderPage({required this.selector, required this.builder});
+
+  final Object? Function(RiderAppController controller)? selector;
+  final Widget Function(BuildContext context, RiderAppController controller)
+  builder;
+
+  @override
+  State<_RiderPage> createState() => _RiderPageState();
+}
+
+class _RiderPageState extends State<_RiderPage> {
+  RiderAppController? _controller;
+  Object? _last;
+  bool usedSelector = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final controller = RiderDependencyScope.of(context).controller;
+    if (_controller == controller) return;
+    _controller?.removeListener(_onControllerChanged);
+    _controller = controller;
+    _last = widget.selector?.call(controller);
+    usedSelector = widget.selector != null;
+    _controller?.addListener(_onControllerChanged);
+  }
+
+  void _onControllerChanged() {
+    if (!mounted) return;
+    final selector = widget.selector;
+    if (selector == null) {
+      setState(() {});
+      return;
+    }
+    final current = selector(_controller!);
+    if (usedSelector && current == _last) return;
+    _last = current;
+    usedSelector = true;
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _controller?.removeListener(_onControllerChanged);
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return widget.builder(context, _controller!);
   }
 }

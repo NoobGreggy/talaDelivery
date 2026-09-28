@@ -633,7 +633,9 @@ void _realtimeControllerChecks() {
     expect(controller.offers, isEmpty);
 
     repository.offerAvailable = true;
-    await tester.pump(const Duration(seconds: 16));
+    // While the private channel is healthy the fallback poll is intentionally
+    // slow (90s), so the offer is found after the slower safety reconciliation.
+    await tester.pump(const Duration(seconds: 91));
     await tester.pump();
 
     expect(controller.offers, hasLength(1));

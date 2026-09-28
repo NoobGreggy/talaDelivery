@@ -17,7 +17,7 @@ extension _RiderShiftLifecycle on RiderAppController {
         if (profile?.isOnline ?? false) await reconcileOffers();
       case 'delivery.updated':
         if ((profile?.isOnline ?? false) || activeDelivery != null) {
-          await _resync();
+          await _targetedDeliveryRefresh();
         }
       case 'notification.created':
         await _reloadNotifications();
@@ -47,7 +47,7 @@ extension _RiderShiftLifecycle on RiderAppController {
     final location = _location;
     if (location == null) return;
     unawaited(_handleLocationReport(location.reportOnce()));
-    location.start(reportImmediately: false);
+    location.restart();
   }
 
   Future<void> _handleLocationReport(Future<RiderLocationReport> report) async {
@@ -91,7 +91,7 @@ extension _RiderShiftLifecycle on RiderAppController {
   void _startOfferPoll() {
     _offerPollTimer?.cancel();
     _offerPollTimer = Timer.periodic(
-      RiderAppController._offerFallbackPollInterval,
+      offerPollInterval,
       (_) => unawaited(_pollForOffers()),
     );
   }

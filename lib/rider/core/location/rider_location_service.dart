@@ -149,6 +149,7 @@ class RiderLocationService {
 
   Timer? _timer;
   bool _running = false;
+  bool _reportInFlight = false;
   int? _activeDeliveryId;
   RiderLatLng? _lastPostedPosition;
   DateTime? _lastPostedAt;
@@ -165,8 +166,21 @@ class RiderLocationService {
   }
 
   /// Reports once and returns the outcome so the caller can surface
-  /// permission problems.
+  /// permission problems. Skips the tick while a previous report is still in
+  /// flight so slow GPS/network calls can never overlap.
   Future<RiderLocationReport> reportOnce() async {
+    if (_reportInFlight) return RiderLocationReport.unchanged;
+    _reportInFlight = true;
+    final startedAt = DateTime.now();
+    try {
+      return await _reportOnceInner();
+    } finally {
+      _reportInFlight = false;
+      _riderPerfTrace('rider.location.report', startedAt);
+    }
+  }
+
+  Future<RiderLocationReport> _reportOnceInner() async {
     if (!await source.isLocationServiceEnabled()) {
       return RiderLocationReport.locationUnavailable;
     }
@@ -193,20 +207,20 @@ class RiderLocationService {
         _distanceMeters(previous, position) < minimumDistanceMeters) {
       return RiderLocationReport.unchanged;
     }
+    final deliveryId = _activeDeliveryId;
+    final trackedPost = postTrackedLocation;
     try {
-      final deliveryId = _activeDeliveryId;
-      final trackedPost = postTrackedLocation;
       if (deliveryId != null && trackedPost != null) {
         await trackedPost(position, deliveryId);
       } else {
         await postLocation(position);
       }
-      _lastPostedPosition = position;
-      _lastPostedAt = _clock();
-      return RiderLocationReport.posted;
     } catch (_) {
       return RiderLocationReport.failed;
     }
+    _lastPostedPosition = position;
+    _lastPostedAt = _clock();
+    return RiderLocationReport.posted;
   }
 
   static double _distanceMeters(RiderLatLng from, RiderLatLng to) {
@@ -244,5 +258,13 @@ class RiderLocationService {
     _running = false;
     _timer?.cancel();
     _timer = null;
+  }
+
+  /// Reschedules reporting after the OS suspended the process during app
+  /// pause. Bypasses the `start` guard exactly once so timers are restored
+  /// even when the old run was never explicitly stopped.
+  void restart() {
+    _running = false;
+    start(reportImmediately: false);
   }
 }

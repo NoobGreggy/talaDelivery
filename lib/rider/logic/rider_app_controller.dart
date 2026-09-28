@@ -18,15 +18,31 @@ class RiderAppController extends ChangeNotifier {
 
   static const _offerFallbackPollInterval = Duration(seconds: 15);
 
+  /// Slow safety reconciliation used while the private realtime channel is
+  /// healthy; the fast fallback poll only applies while it is disconnected.
+  static const _offerConnectedPollInterval = Duration(seconds: 90);
+
   RiderRealtimeService? _realtime;
   StreamSubscription<RiderRealtimeEvent>? _realtimeSubscription;
   RiderLocationService? _location;
   bool _locationNoticeShown = false;
   Timer? _offerPollTimer;
+  bool _reconcilingOffers = false;
+  bool _resyncing = false;
+  bool _loadingDeliveries = false;
+  RiderRealtimeState _lastRealtimeState = RiderRealtimeState.idle;
 
   bool _disposed = false;
 
   RiderRealtimeService? get realtime => _realtime;
+
+  /// Offer poll interval chosen from socket health: fast (15s) only while the
+  /// private channel is disconnected, slow safety reconciliation (90s) while
+  /// it is healthy.
+  Duration get offerPollInterval =>
+      _realtime?.state == RiderRealtimeState.connected
+      ? _offerConnectedPollInterval
+      : _offerFallbackPollInterval;
 
   List<RiderDelivery> get completedDeliveries => deliveries
       .where((delivery) => delivery.isDelivered)
@@ -38,10 +54,24 @@ class RiderAppController extends ChangeNotifier {
   void attachRealtime(RiderRealtimeService? service) {
     _realtimeSubscription?.cancel();
     _realtimeSubscription = null;
+    _realtime?.removeListener(_onRealtimeStateChanged);
     _realtime = service;
     if (service != null) {
+      service.addListener(_onRealtimeStateChanged);
+      _lastRealtimeState = service.state;
       _realtimeSubscription = service.events.listen(_handleRealtimeEvent);
+    } else {
+      _lastRealtimeState = RiderRealtimeState.idle;
     }
+  }
+
+  void _onRealtimeStateChanged() {
+    final state = _realtime?.state ?? RiderRealtimeState.idle;
+    if (state == _lastRealtimeState) return;
+    _lastRealtimeState = state;
+    _riderPerfEvent('rider.realtime.state $state');
+    // The offer reconciliation cadence adapts to socket health.
+    if (user != null && (profile?.isOnline ?? false)) _startOfferPoll();
   }
 
   void attachLocation(RiderLocationService? service) {
@@ -52,6 +82,7 @@ class RiderAppController extends ChangeNotifier {
   /// socket/location wiring without showing a spinner.
   Future<void> handleAppResumed() async {
     if (_disposed || user == null) return;
+    final startedAt = DateTime.now();
     await _realtime?.reconnect();
     await _resync();
     if (profile?.isOnline ?? false) {
@@ -59,6 +90,15 @@ class RiderAppController extends ChangeNotifier {
     } else {
       _stopShift();
     }
+    _riderPerfTrace('rider.resume', startedAt);
+  }
+
+  /// Called when the app leaves the foreground: stop background GPS and the
+  /// offer poll exactly once. The socket stays open and is re-synced on
+  /// resume.
+  void handleAppPaused() {
+    if (_disposed || user == null) return;
+    _stopShift();
   }
 
   Future<bool> restore() async {
@@ -142,11 +182,19 @@ class RiderAppController extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    if (_reconcilingOffers) return;
+    _reconcilingOffers = true;
+    final startedAt = DateTime.now();
+    String? error;
     try {
       offers = await _repository.offers();
-    } catch (error) {
-      errorMessage = _messageFor(error);
+    } catch (errorObject) {
+      error = _messageFor(errorObject);
+    } finally {
+      _reconcilingOffers = false;
+      _riderPerfTrace('rider.reconcileOffers', startedAt);
     }
+    if (error != null) errorMessage = error;
     notifyListeners();
   }
 
@@ -236,7 +284,9 @@ class RiderAppController extends ChangeNotifier {
   }
 
   Future<void> _resync() async {
-    if (_disposed) return;
+    if (_disposed || _resyncing) return;
+    _resyncing = true;
+    final startedAt = DateTime.now();
     try {
       profile = await _repository.profile();
       await _reloadDeliveries();
@@ -245,6 +295,27 @@ class RiderAppController extends ChangeNotifier {
       notifyListeners();
     } catch (_) {
       // Foreground resync is best-effort; the user can pull-to-refresh.
+    } finally {
+      _resyncing = false;
+      _riderPerfTrace('rider.resync', startedAt);
+    }
+  }
+
+  /// Targeted refresh for a single `delivery.updated` event. Fetches only the
+  /// resources the event can affect (profile, deliveries, earnings) instead of
+  /// a full resync that also reloads notifications and offers.
+  Future<void> _targetedDeliveryRefresh() async {
+    if (_disposed || _resyncing) return;
+    _resyncing = true;
+    final startedAt = DateTime.now();
+    try {
+      await _reloadProfileAndDeliveries();
+      notifyListeners();
+    } catch (_) {
+      // Best-effort; realtime remains the source of truth on the next event.
+    } finally {
+      _resyncing = false;
+      _riderPerfTrace('rider.delivery.refresh', startedAt);
     }
   }
 
@@ -254,15 +325,21 @@ class RiderAppController extends ChangeNotifier {
   }
 
   Future<void> _reloadDeliveries() async {
-    final results = await Future.wait<Object>([
-      _repository.deliveries(),
-      _repository.earningsSummary(),
-    ]);
-    deliveries = results[0] as List<RiderDelivery>;
-    earningsSummary = results[1] as RiderEarningsSummary;
-    activeDelivery = profile?.currentDelivery;
-    activeDelivery ??= deliveries.where((item) => item.isActive).firstOrNull;
-    _location?.setActiveDelivery(activeDelivery?.id);
+    if (_loadingDeliveries) return;
+    _loadingDeliveries = true;
+    try {
+      final results = await Future.wait<Object>([
+        _repository.deliveries(),
+        _repository.earningsSummary(),
+      ]);
+      deliveries = results[0] as List<RiderDelivery>;
+      earningsSummary = results[1] as RiderEarningsSummary;
+      activeDelivery = profile?.currentDelivery;
+      activeDelivery ??= deliveries.where((item) => item.isActive).firstOrNull;
+      _location?.setActiveDelivery(activeDelivery?.id);
+    } finally {
+      _loadingDeliveries = false;
+    }
   }
 
   Future<void> _reloadNotifications() async {

@@ -271,6 +271,7 @@ class RiderRealtimeService extends ChangeNotifier {
         _reconnectAttempts = 0;
         _setState(RiderRealtimeState.connected);
         _log('Subscribed to rider channel.');
+        _riderPerfEvent('rider.realtime.connected');
         _events.add(
           RiderRealtimeEvent('realtime.connected', {'channel': channel}),
         );
@@ -292,6 +293,7 @@ class RiderRealtimeService extends ChangeNotifier {
           return;
         }
         if (event == 'delivery.offered') _log('Delivery offer event received.');
+        _riderPerfEvent('rider.realtime.dispatch $event');
         _events.add(RiderRealtimeEvent(event, data));
     }
   }
