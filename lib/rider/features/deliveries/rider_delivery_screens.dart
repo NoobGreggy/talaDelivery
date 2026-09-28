@@ -10,10 +10,41 @@ class ActiveDeliveryScreen extends StatefulWidget {
 
 class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
   bool cashReceived = false;
+  RiderAppController? _controller;
 
-  RiderDelivery? get delivery =>
-      RiderDependencyScope.of(context).controller.activeDelivery ??
-      widget.delivery;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final next = RiderDependencyScope.of(context).controller;
+    if (_controller == next) return;
+    _controller?.removeListener(_onDeliveryChanged);
+    _controller = next;
+    next.addListener(_onDeliveryChanged);
+  }
+
+  void _onDeliveryChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _controller?.removeListener(_onDeliveryChanged);
+    super.dispose();
+  }
+
+  RiderDelivery? get delivery {
+    final controller = _controller!;
+    final initial = widget.delivery;
+    if (initial == null) return controller.activeDelivery;
+    // Completed/cancelled deliveries leave activeDelivery but remain in history.
+    return controller.deliveries
+            .where((item) => item.id == initial.id)
+            .firstOrNull ??
+        (controller.activeDelivery?.id == initial.id
+            ? controller.activeDelivery
+            : null) ??
+        initial;
+  }
 
   String _status(String status) => switch (status) {
     'ASSIGNED' => 'Heading to pickup',

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tala_delivery_rider/main.dart';
 
@@ -398,6 +399,7 @@ void main() {
 }
 
 class _EventControllerRepository implements RiderRepository {
+  List<RiderDelivery> currentDeliveries = const [];
   int offersCalls = 0;
   int notificationsCalls = 0;
   bool offerAvailable = true;
@@ -503,7 +505,7 @@ class _EventControllerRepository implements RiderRepository {
   Future<void> rejectOffer(int offerId) async {}
 
   @override
-  Future<List<RiderDelivery>> deliveries() async => const [];
+  Future<List<RiderDelivery>> deliveries() async => currentDeliveries;
 
   @override
   Future<RiderDelivery> updateDelivery(int deliveryId, String action) async =>
@@ -530,6 +532,73 @@ class _EventControllerRepository implements RiderRepository {
 }
 
 void _realtimeControllerChecks() {
+  testWidgets('open delivery reflects pushed updates and cancellation', (
+    tester,
+  ) async {
+    RiderDelivery deliveryWithStatus(String status) => RiderDelivery(
+      id: 8,
+      status: status,
+      pickupAddress: 'Store',
+      deliveryAddress: 'Customer',
+      distanceKm: 2,
+      deliveryFee: 50,
+      createdAt: DateTime(2026, 9, 28),
+    );
+    final original = deliveryWithStatus('ASSIGNED');
+    final repository = _EventControllerRepository()
+      ..currentDeliveries = [original];
+    final controller = RiderAppController(repository);
+    final socket = _FakeRealtimeSocket();
+    final realtime = RiderRealtimeService(
+      config: _config(),
+      authenticator: _RecordingAuthenticator(),
+      opener: (_) => socket,
+    );
+    controller.attachRealtime(realtime);
+    await controller.login(email: 'rider@example.com', password: 'password');
+    await tester.pump();
+    socket.emit({
+      'event': 'pusher:connection_established',
+      'data': {'socket_id': 'abc.1'},
+    });
+    await tester.pump();
+    socket.emit({
+      'event': 'pusher_internal:subscription_succeeded',
+      'channel': 'private-user.9',
+      'data': {},
+    });
+    await tester.pump();
+    expect(realtime.state, RiderRealtimeState.connected);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RiderDependencyScope(
+          dependencies: RiderAppDependencies(repository, controller),
+          child: ActiveDeliveryScreen(delivery: original),
+        ),
+      ),
+    );
+    expect(find.text('Heading to pickup'), findsOneWidget);
+
+    for (final status in ['ACCEPTED', 'CANCELLED']) {
+      repository.currentDeliveries = [deliveryWithStatus(status)];
+      socket.emit({
+        'event': 'delivery.updated',
+        'channel': 'private-user.9',
+        'data': {'id': 8, 'status': status},
+      });
+      await tester.pump();
+      await tester.pump();
+      expect(
+        find.text(status == 'ACCEPTED' ? 'At pickup' : 'cancelled'),
+        findsOneWidget,
+      );
+    }
+    expect(find.text('Heading to pickup'), findsNothing);
+    await tester.pumpWidget(const SizedBox.shrink());
+    controller.dispose();
+    realtime.dispose();
+  });
+
   testWidgets('online rider finds an offer missed by a connected socket', (
     tester,
   ) async {
