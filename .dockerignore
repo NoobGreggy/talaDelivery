@@ -1,0 +1,65 @@
+# ============================================================
+# Docker build context exclusions
+#
+# Purpose: keep secrets and host-only artefacts out of the
+# image. Previously `COPY . .` shipped the local .env
+# (DB password, APP api key, Reverb secret) into /app/.env
+# inside the image.
+#
+# NOTE: public/build is deliberately NOT excluded.
+# This image has no Node/Vite stage (see Dockerfile header),
+# so the compiled frontend assets must come in via the
+# build context. If you ever add a Vite build stage, move
+# this exclusion to that stage instead.
+# ============================================================
+
+# --- Secrets / local environment ---
+.env
+.env.*
+!.env.example
+*.key
+/auth.json
+
+# --- Dependencies (installed inside the image) ---
+/vendor
+/node_modules
+
+# --- VCS & tooling metadata ---
+/.git
+/.github
+/.gitignore
+/.gitattributes
+/.idea
+/.vscode
+/.junie
+/.agents
+/.ai
+/.claude
+/.zed
+/.nova
+/.cursor
+/.codex
+
+# --- Test / cache artefacts ---
+/.phpunit.result.cache
+/.phpunit.cache
+/.phpactor.json
+_ide_helper.php
+.phpunit.xml
+
+# --- Runtime state (must NOT leak between builds) ---
+/storage/logs/*
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/pail
+/bootstrap/cache/*.php
+/public/hot
+/public/storage
+
+# --- Docs & local notes ---
+/README.md
+/CLAUDE.md
+/AGENTS.md
+/summary.md
+/*.md
