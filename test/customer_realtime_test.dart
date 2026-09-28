@@ -90,15 +90,18 @@ class _FakeSecureStorage implements FlutterSecureStorage {
 class _TrackingOrders extends FakeCustomerOrderRepository {
   int fetches = 0;
   String status = 'PENDING';
+  Completer<void>? pending;
 
   @override
   Future<CustomerOrder> get(int id) async {
     fetches++;
+    final fetchedStatus = status;
+    await pending?.future;
     return CustomerOrder(
       id: id,
       orderNumber: 'TLD-TEST-31',
-      status: status,
-      statusLabel: status,
+      status: fetchedStatus,
+      statusLabel: fetchedStatus,
       paymentMethod: 'COD',
       subtotal: 100,
       deliveryFee: 20,
@@ -122,6 +125,60 @@ class _ChangingNotifications extends FakeCustomerNotificationRepository {
 }
 
 void main() {
+  testWidgets('retries when a socket connects but never subscribes', (
+    tester,
+  ) async {
+    final tokens = MemoryCustomerTokenStore();
+    await tokens.save('customer-token');
+    final sockets = <_FakeSocket>[];
+    final client = MockClient(
+      (_) async => http.Response('{"auth":"signature"}', 200),
+    );
+    final realtime = CustomerRealtimeController(
+      config: CustomerRealtimeConfig(
+        socketUrl: 'ws://localhost:6001',
+        appKey: 'public-key',
+        authUri: Uri.parse('https://api.test/broadcasting/auth'),
+      ),
+      tokenStore: tokens,
+      authClient: client,
+      socketFactory: (_) {
+        final socket = _FakeSocket();
+        sockets.add(socket);
+        return socket;
+      },
+    );
+    await realtime.start(7);
+    sockets.single.emit(
+      'pusher:connection_established',
+      data: {'socket_id': '1.1'},
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 15));
+    expect(sockets.single.fakeSink.closed, isTrue);
+    await tester.pump(const Duration(seconds: 1));
+    expect(sockets, hasLength(2));
+    sockets.last.emit(
+      'pusher:connection_established',
+      data: {'socket_id': '1.2'},
+    );
+    await tester.pump();
+    sockets.last.emit(
+      'pusher_internal:subscription_succeeded',
+      channel: 'private-user.7',
+    );
+    final version = realtime.orderVersion;
+    await tester.pump(const Duration(seconds: 16));
+    expect(realtime.isSubscribed, isTrue);
+    expect(sockets, hasLength(2));
+    expect(version, 1);
+    realtime.dispose();
+    client.close();
+    for (final socket in sockets) {
+      await socket.incoming.close();
+    }
+  });
+
   test(
     'secure token store survives repository recreation and clears',
     () async {
@@ -351,20 +408,55 @@ void main() {
     await tester.pump(const Duration(seconds: 45));
     expect(orders.fetches, 1);
 
-    orders.status = 'CONFIRMED';
+    for (final status in [
+      'CONFIRMED',
+      'PREPARING',
+      'READY',
+      'RIDER_ASSIGNED',
+    ]) {
+      final before = orders.fetches;
+      orders.status = status;
+      orders.pending = Completer<void>();
+      socket.emit(
+        'order.updated',
+        channel: 'private-user.7',
+        data: {
+          'id': 31,
+          'status': status,
+          'updated_at': '2026-09-18T01:00:00Z',
+        },
+      );
+      await tester.pump();
+      expect(find.byType(TrackingHero), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      orders.pending!.complete();
+      orders.pending = null;
+      await tester.pump();
+      await tester.pump();
+      expect(orders.fetches, before + 1);
+      expect(
+        tester.widget<TrackingHero>(find.byType(TrackingHero)).stage,
+        stageForStatus(status),
+      );
+    }
+
+    final beforeDelivery = orders.fetches;
     socket.emit(
-      'order.updated',
+      'delivery.updated',
       channel: 'private-user.7',
-      data: {
-        'id': 31,
-        'status': 'CONFIRMED',
-        'updated_at': '2026-09-18T01:00:00Z',
-      },
+      data: {'id': 12, 'order_id': 31, 'status': 'ACCEPTED'},
     );
     await tester.pump();
-    expect(orders.fetches, 2);
     await tester.pump();
-    expect(find.text('Store confirmed'), findsWidgets);
+    expect(orders.fetches, beforeDelivery + 1);
+
+    socket.emit(
+      'delivery.updated',
+      channel: 'private-user.7',
+      data: {'id': 99, 'order_id': 44, 'status': 'ACCEPTED'},
+    );
+    await tester.pump();
+    expect(orders.fetches, beforeDelivery + 1);
 
     await tester.pumpWidget(const SizedBox.shrink());
     dependencies.dispose();

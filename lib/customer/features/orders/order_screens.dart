@@ -186,6 +186,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
   CustomerRealtimeController? realtime;
   int seenOrderVersion = 0;
   int seenLocationVersion = 0;
+  int loadVersion = 0;
 
   int get id => widget.order?.id ?? widget.orderId!;
 
@@ -211,9 +212,10 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
   }
 
   Future<CustomerOrder> loadOrder() async {
+    final version = ++loadVersion;
     final order = await CustomerDependencyScope.of(context).orderRepository
         .get(id);
-    if (mounted) {
+    if (mounted && version == loadVersion) {
       final delivery = order.delivery;
       realtime?.watchDelivery(
         delivery?.isTrackable == true ? delivery!.id : null,
@@ -271,7 +273,8 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
     body: FutureBuilder<CustomerOrder>(
       future: future,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
+        if (!snapshot.hasData &&
+            snapshot.connectionState != ConnectionState.done) {
           return const Center(child: CircularProgressIndicator());
         }
         if (snapshot.hasError) {

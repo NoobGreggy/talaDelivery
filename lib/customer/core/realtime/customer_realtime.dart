@@ -69,6 +69,7 @@ class CustomerRealtimeController extends ChangeNotifier {
   StreamSubscription<dynamic>? _subscription;
   Timer? _reconnectTimer;
   Timer? _heartbeatTimer;
+  Timer? _subscriptionDeadline;
   int? _userId;
   String? _token;
   int _generation = 0;
@@ -118,7 +119,13 @@ class CustomerRealtimeController extends ChangeNotifier {
 
   Future<void> start(int userId) async {
     stop();
-    if (!enabled || _disposed) return;
+    if (_disposed) return;
+    if (!enabled) {
+      debugPrint(
+        'Customer realtime: missing or invalid WebSocket configuration.',
+      );
+      return;
+    }
     _userId = userId;
     final generation = _generation;
     try {
@@ -178,6 +185,14 @@ class CustomerRealtimeController extends ChangeNotifier {
         onError: (_) => _disconnected(generation),
         onDone: () => _disconnected(generation),
       );
+      _subscriptionDeadline = Timer(const Duration(seconds: 15), () {
+        if (_socket == socket && !_subscribed) {
+          debugPrint(
+            'Customer realtime: private channel subscription timed out; reconnecting.',
+          );
+          _disconnected(generation);
+        }
+      });
       await socket.ready.timeout(const Duration(seconds: 8));
       if ((!_current(generation) || !_foreground) && _socket == socket) {
         _closeSocket();
@@ -233,6 +248,9 @@ class CustomerRealtimeController extends ChangeNotifier {
       return;
     }
     if (event == 'pusher:error' || event == 'pusher:subscription_error') {
+      debugPrint(
+        'Customer realtime: server rejected the connection or subscription.',
+      );
       _disconnected(generation);
       return;
     }
@@ -241,7 +259,9 @@ class CustomerRealtimeController extends ChangeNotifier {
       final channel = message['channel'];
       if (channel is String) _subscribedChannels.add(channel);
       if (channel == _channelName) {
+        _subscriptionDeadline?.cancel();
         _subscribed = true;
+        debugPrint('Customer realtime: private user channel subscribed.');
         _retry = 0;
         _startHeartbeat(generation);
         // Events can be missed during a disconnected interval.
@@ -276,10 +296,13 @@ class CustomerRealtimeController extends ChangeNotifier {
       return;
     }
     if (!_subscribed || message['channel'] != _channelName) return;
-    if (event == 'order.updated') {
-      final id = _jsonInt(data['id']);
+    if (event == 'order.updated' || event == 'delivery.updated') {
+      final id = _jsonInt(
+        event == 'delivery.updated' ? data['order_id'] : data['id'],
+      );
       if (id <= 0) return;
-      final signature = '$id:${data['status']}:${data['updated_at']}';
+      final signature =
+          '$event:$id:${data['id']}:${data['status']}:${data['updated_at']}';
       if (!_remember(_seenOrderEvents, signature)) return;
       lastOrderId = id;
       orderVersion++;
@@ -333,6 +356,11 @@ class CustomerRealtimeController extends ChangeNotifier {
           )
           .timeout(const Duration(seconds: 8));
       if (!_current(generation) || !_foreground || _socket != source) return;
+      if (response.statusCode != 200) {
+        debugPrint(
+          'Customer realtime: channel authorization failed (HTTP ${response.statusCode}).',
+        );
+      }
       if (response.statusCode == 401 ||
           (response.statusCode == 403 && channel == _channelName)) {
         stop();
@@ -393,6 +421,7 @@ class CustomerRealtimeController extends ChangeNotifier {
     _socketId = null;
     _subscribedChannels.clear();
     _heartbeatTimer?.cancel();
+    _subscriptionDeadline?.cancel();
     _subscription?.cancel();
     _subscription = null;
     _socket?.sink.close();
