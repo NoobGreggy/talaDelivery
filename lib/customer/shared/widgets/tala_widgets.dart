@@ -232,6 +232,10 @@ class _TalaPrimaryFieldState extends State<TalaPrimaryField> {
           key: widget.key,
           controller: widget.controller,
           focusNode: _focusNode,
+          contextMenuBuilder: (context, editableTextState) =>
+              AdaptiveTextSelectionToolbar.editableText(
+                editableTextState: editableTextState,
+              ),
           obscureText: widget.obscureText,
           validator: widget.validator,
           keyboardType: widget.keyboardType,
@@ -266,8 +270,7 @@ class _TalaPrimaryFieldState extends State<TalaPrimaryField> {
                     size: 19,
                     color: focused ? sky : palette.quiet,
                   ),
-            suffixIcon:
-                widget.obscureText && widget.onToggleVisibility != null
+            suffixIcon: widget.obscureText && widget.onToggleVisibility != null
                 ? IconButton(
                     onPressed: widget.onToggleVisibility,
                     tooltip: widget.obscureText ? 'Show password' : 'Hide',

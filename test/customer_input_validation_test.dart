@@ -5,6 +5,32 @@ import 'package:tala_delivery_customer/main.dart';
 import 'support/customer_fakes.dart';
 
 void main() {
+  testWidgets('login fields use a stable adaptive text context menu', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      TalaCustomerApp(dependencies: fakeCustomerDependencies()),
+    );
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+
+    final emailField = find.descendant(
+      of: find.byKey(const Key('login-email')),
+      matching: find.byType(TextFormField),
+    );
+    final editable = find.descendant(
+      of: emailField,
+      matching: find.byType(EditableText),
+    );
+    final editor = tester.widget<EditableText>(editable);
+    final menu = editor.contextMenuBuilder!(
+      tester.element(editable),
+      tester.state<EditableTextState>(editable),
+    );
+
+    expect(menu, isA<AdaptiveTextSelectionToolbar>());
+  });
+
   testWidgets('login validation waits for the first submit attempt', (
     WidgetTester tester,
   ) async {
