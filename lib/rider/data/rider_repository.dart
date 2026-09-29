@@ -196,4 +196,21 @@ class ApiRiderRepository implements RiderRepository {
   Future<void> markNotificationRead(int notificationId) async {
     await _api.post('notifications/$notificationId/read');
   }
+
+  Future<List<RiderStore>> nearbyStores() async {
+    const perPage = 100;
+    var page = 1;
+    final stores = <RiderStore>[];
+    while (true) {
+      final paged = _riderPayloadPaged(
+        await _api.get('stores?per_page=$perPage&page=$page'),
+      );
+      stores.addAll(
+        paged.items.whereType<Map<String, dynamic>>().map(RiderStore.fromJson),
+      );
+      if (paged.lastPage <= page) break;
+      page += 1;
+    }
+    return List<RiderStore>.unmodifiable(stores);
+  }
 }

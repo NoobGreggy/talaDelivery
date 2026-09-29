@@ -1,204 +1,229 @@
 part of '../../app.dart';
 
-class OfferScreen extends StatefulWidget {
-  const OfferScreen({super.key, this.offer});
-  final RiderOffer? offer;
+class RiderIncomingOfferSheet extends StatefulWidget {
+  const RiderIncomingOfferSheet({
+    super.key,
+    required this.offer,
+    required this.busy,
+    required this.onAccept,
+    required this.onReject,
+    required this.onExpired,
+  });
+
+  static const countdownDuration = Duration(seconds: 12);
+
+  final RiderOffer offer;
+  final bool busy;
+  final VoidCallback onAccept;
+  final VoidCallback onReject;
+  final VoidCallback onExpired;
 
   @override
-  State<OfferScreen> createState() => _OfferScreenState();
+  State<RiderIncomingOfferSheet> createState() =>
+      _RiderIncomingOfferSheetState();
 }
 
-class _OfferScreenState extends State<OfferScreen> {
-  Timer? timer;
-  late int seconds;
-  int? _handledExpiryForId;
-
-  RiderOffer? get offer {
-    final controller = RiderDependencyScope.of(context).controller;
-    final requested = widget.offer;
-    if (requested != null) {
-      for (final candidate in controller.offers) {
-        if (candidate.id == requested.id) return candidate;
-      }
-    }
-    return controller.offers.firstOrNull;
-  }
-
-  static int _countdownWindow(RiderOffer offer) {
-    final expiresAt = offer.expiresAt;
-    final offeredAt = offer.offeredAt;
-    if (expiresAt != null && offeredAt != null) {
-      final window = expiresAt.difference(offeredAt).inSeconds;
-      if (window > 0) return window;
-    }
-    return offer.durationSeconds ?? math.max(offer.secondsRemaining, 1);
-  }
+class _RiderIncomingOfferSheetState extends State<RiderIncomingOfferSheet>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _countdown;
+  bool _expired = false;
 
   @override
   void initState() {
     super.initState();
-    seconds = widget.offer?.secondsRemaining ?? 0;
-    timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      final current = offer;
-      final next = current?.secondsRemaining ?? 0;
-      final currentId = current?.id;
-      if (currentId != null && currentId != _handledExpiryForId && next == 0) {
-        _handledExpiryForId = currentId;
-        RiderDependencyScope.of(context).controller.reconcileOffers();
-      }
-      setState(() => seconds = next);
-    });
+    _countdown =
+        AnimationController(
+            vsync: this,
+            duration: RiderIncomingOfferSheet.countdownDuration,
+            value: 1,
+          )
+          ..addStatusListener((status) {
+            if (status != AnimationStatus.dismissed || _expired) return;
+            _expired = true;
+            widget.onExpired();
+          })
+          ..reverse();
+  }
+
+  @override
+  void didUpdateWidget(RiderIncomingOfferSheet oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.offer.id == widget.offer.id) return;
+    _expired = false;
+    _countdown
+      ..stop()
+      ..value = 1
+      ..reverse();
   }
 
   @override
   void dispose() {
-    timer?.cancel();
+    _countdown.dispose();
     super.dispose();
-  }
-
-  Future<void> _accept(RiderOffer value) async {
-    final controller = RiderDependencyScope.of(context).controller;
-    final delivery = await controller.accept(value);
-    if (!mounted) return;
-    if (delivery == null) {
-      showMessage(
-        context,
-        controller.errorMessage ?? 'Offer could not be accepted.',
-      );
-      return;
-    }
-    final routes = RiderRouteScope.of(context)..startDelivery();
-    routes.sync(controller);
-    Navigator.of(context)
-        .pushReplacementNamed(RiderRoutes.activeDelivery, arguments: delivery);
-  }
-
-  Future<void> _reject(RiderOffer value) async {
-    final confirmed = await confirmRiderAction(
-      context,
-      title: 'Reject this offer?',
-      body: 'The delivery will be offered to another nearby rider.',
-      confirmLabel: 'Reject offer',
-      destructive: true,
-    );
-    if (!confirmed || !mounted) return;
-    final controller = RiderDependencyScope.of(context).controller;
-    final success = await controller.reject(value);
-    if (!mounted) return;
-    if (success) {
-      Navigator.pop(context);
-    } else {
-      showMessage(
-        context,
-        controller.errorMessage ?? 'Offer could not be rejected.',
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final controller = RiderDependencyScope.of(context).controller;
-    final value = offer;
-    if (value == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Delivery offers')),
-        body: RiderEmptyState(
-          icon: Icons.inbox_outlined,
-          title: 'No live offers',
-          message:
-              'New offers from the backend will appear while you are online.',
-          action: 'Refresh',
-          onAction: () async {
-            await controller.refresh();
-            if (mounted) setState(() {});
-          },
-        ),
-      );
-    }
-    final delivery = value.delivery;
-    final expired = seconds <= 0;
-    return Scaffold(
-      appBar: AppBar(title: const Text('New delivery')),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 28),
-        children: [
-          Center(
-            child: SizedBox.square(
-              dimension: 106,
-              child: Stack(
-                fit: StackFit.expand,
+    final delivery = widget.offer.delivery;
+    final palette = riderPaletteOf(context);
+    final scheme = Theme.of(context).colorScheme;
+    return Material(
+      color: palette.surface,
+      elevation: 18,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      clipBehavior: Clip.antiAlias,
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedBuilder(
+              animation: _countdown,
+              builder: (context, _) => LinearProgressIndicator(
+                minHeight: 5,
+                value: _countdown.value,
+                color: palette.urgent,
+                backgroundColor: palette.line,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircularProgressIndicator(
-                    value: seconds == 0
-                        ? 0
-                        : (seconds / _countdownWindow(value)).clamp(0.0, 1.0),
-                    strokeWidth: 8,
-                    color: expired ? riderPaletteOf(context).muted : blue,
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'NEW DELIVERY OFFER',
+                              style: Theme.of(context).textTheme.labelSmall
+                                  ?.copyWith(
+                                    color: scheme.primary,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: .8,
+                                  ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              delivery.displayNumber,
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        riderMoney(delivery.riderCommission),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(color: palette.ratingStar),
+                      ),
+                    ],
                   ),
-                  Center(
-                    child: Text(
-                      expired ? 'Expired' : '${seconds}s',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
+                  const SizedBox(height: 18),
+                  _OfferStop(
+                    icon: Icons.storefront_rounded,
+                    color: scheme.primary,
+                    title: delivery.store?.name ?? 'Pickup store',
+                    subtitle:
+                        'Pickup · ${delivery.distanceKm.toStringAsFixed(1)} km route',
+                  ),
+                  const SizedBox(height: 13),
+                  _OfferStop(
+                    icon: Icons.location_on_rounded,
+                    color: palette.ratingStar,
+                    title: delivery.order?.customerName ?? 'Customer',
+                    subtitle:
+                        'Drop-off · ${delivery.deliveryAddress.isEmpty ? 'Address unavailable' : delivery.deliveryAddress}',
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Semantics(
+                          button: true,
+                          label:
+                              'Reject ${riderMoney(delivery.riderCommission)} offer from ${delivery.store?.name ?? 'store'}',
+                          child: OutlinedButton(
+                            onPressed: widget.busy ? null : widget.onReject,
+                            style: OutlinedButton.styleFrom(
+                              minimumSize: const Size.fromHeight(52),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: const Text('Reject'),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Semantics(
+                          button: true,
+                          label:
+                              'Accept ${riderMoney(delivery.riderCommission)} offer from ${delivery.store?.name ?? 'store'}',
+                          child: RiderGradientButton(
+                            label: widget.busy ? 'Accepting…' : 'Accept',
+                            onPressed: widget.busy ? null : widget.onAccept,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 22),
-          Text(
-            '${riderMoney(delivery.riderCommission)} estimated commission',
-            style: Theme.of(context).textTheme.headlineMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '${delivery.distanceKm.toStringAsFixed(1)} km delivery distance',
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 22),
-          RouteCard(delivery: delivery),
-          const SizedBox(height: 14),
-          Row(
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OfferStop extends StatelessWidget {
+  const _OfferStop({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = riderPaletteOf(context);
+    return Row(
+      children: [
+        IconTile(icon: icon, color: color, size: 44),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: MiniInfo(
-                  icon: Icons.route_rounded,
-                  label: 'Distance',
-                  value: '${delivery.distanceKm.toStringAsFixed(1)} km',
-                ),
+              Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: MiniInfo(
-                  icon: Icons.payments_outlined,
-                  label: 'Payment',
-                  value:
-                      '${delivery.order?.paymentMethod ?? 'COD'} ${riderMoney(delivery.order?.total ?? 0)}',
-                ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall
+                    ?.copyWith(color: palette.muted),
               ),
             ],
           ),
-          const SizedBox(height: 26),
-          if (!expired) ...[
-            PrimaryButton(
-              label: controller.isSubmitting ? 'Accepting…' : 'Accept delivery',
-              icon: Icons.check_rounded,
-              onPressed: controller.isSubmitting ? null : () => _accept(value),
-            ),
-            const SizedBox(height: 10),
-            OutlinedButton(
-              onPressed: controller.isSubmitting ? null : () => _reject(value),
-              child: const Text('Reject'),
-            ),
-          ] else
-            PrimaryButton(
-              label: 'Back to dashboard',
-              onPressed: () => Navigator.pop(context),
-            ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

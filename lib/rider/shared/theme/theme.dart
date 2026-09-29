@@ -20,6 +20,11 @@ class RiderPalette extends ThemeExtension<RiderPalette> {
     required this.splashStart,
     required this.splashMid,
     required this.splashEnd,
+    required this.urgent,
+    required this.ratingStar,
+    required this.success,
+    required this.duskDeep,
+    required this.duskMid,
   });
 
   final Color text;
@@ -34,6 +39,11 @@ class RiderPalette extends ThemeExtension<RiderPalette> {
   final Color splashStart;
   final Color splashMid;
   final Color splashEnd;
+  final Color urgent;
+  final Color ratingStar;
+  final Color success;
+  final Color duskDeep;
+  final Color duskMid;
 
   static const light = RiderPalette(
     text: Color(0xFF142033),
@@ -48,6 +58,11 @@ class RiderPalette extends ThemeExtension<RiderPalette> {
     splashStart: Colors.white,
     splashMid: Color(0xFFE8F5FF),
     splashEnd: Color(0xFFCFEAFF),
+    urgent: Color(0xFFFF6F4A),
+    ratingStar: Color(0xFFFFB82E),
+    success: green,
+    duskDeep: navy,
+    duskMid: Color(0xFF144C8C),
   );
 
   static const dark = RiderPalette(
@@ -63,6 +78,11 @@ class RiderPalette extends ThemeExtension<RiderPalette> {
     splashStart: Color(0xFF13233A),
     splashMid: Color(0xFF0F1E33),
     splashEnd: Color(0xFF081424),
+    urgent: Color(0xFFFF8061),
+    ratingStar: Color(0xFFFFC94D),
+    success: Color(0xFF36C98B),
+    duskDeep: Color(0xFF07182B),
+    duskMid: Color(0xFF123E70),
   );
 
   @override
@@ -79,6 +99,11 @@ class RiderPalette extends ThemeExtension<RiderPalette> {
     Color? splashStart,
     Color? splashMid,
     Color? splashEnd,
+    Color? urgent,
+    Color? ratingStar,
+    Color? success,
+    Color? duskDeep,
+    Color? duskMid,
   }) => RiderPalette(
     text: text ?? this.text,
     muted: muted ?? this.muted,
@@ -92,6 +117,11 @@ class RiderPalette extends ThemeExtension<RiderPalette> {
     splashStart: splashStart ?? this.splashStart,
     splashMid: splashMid ?? this.splashMid,
     splashEnd: splashEnd ?? this.splashEnd,
+    urgent: urgent ?? this.urgent,
+    ratingStar: ratingStar ?? this.ratingStar,
+    success: success ?? this.success,
+    duskDeep: duskDeep ?? this.duskDeep,
+    duskMid: duskMid ?? this.duskMid,
   );
 
   @override
@@ -110,6 +140,11 @@ class RiderPalette extends ThemeExtension<RiderPalette> {
       splashStart: Color.lerp(splashStart, other.splashStart, t)!,
       splashMid: Color.lerp(splashMid, other.splashMid, t)!,
       splashEnd: Color.lerp(splashEnd, other.splashEnd, t)!,
+      urgent: Color.lerp(urgent, other.urgent, t)!,
+      ratingStar: Color.lerp(ratingStar, other.ratingStar, t)!,
+      success: Color.lerp(success, other.success, t)!,
+      duskDeep: Color.lerp(duskDeep, other.duskDeep, t)!,
+      duskMid: Color.lerp(duskMid, other.duskMid, t)!,
     );
   }
 }
@@ -128,8 +163,16 @@ ThemeData buildRiderTheme(RiderPalette palette) {
         brightness: brightness,
       ).copyWith(
         surface: palette.surface,
+        // Rider heroes and gradient actions use the brand-blue primary as
+        // their background in both brightness modes. The generated dark
+        // scheme can otherwise choose a dark foreground for this bright blue,
+        // making operational text almost invisible on the dusk gradient.
+        onPrimary: Colors.white,
         onSurface: palette.text,
+        onSurfaceVariant: palette.muted,
         outline: palette.line,
+        outlineVariant: palette.line,
+        tertiary: palette.urgent,
       );
   return ThemeData(
     useMaterial3: true,

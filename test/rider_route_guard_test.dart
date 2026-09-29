@@ -29,6 +29,10 @@ void main() {
       routes.setOnline(true);
       expect(routes.guardLocation(RiderRoutes.offer), RiderRoutes.offer);
       expect(
+        routes.guardLocation(RiderRoutes.searching),
+        RiderRoutes.searching,
+      );
+      expect(
         routes.guardLocation(RiderRoutes.activeDelivery),
         RiderRoutes.dashboard,
       );

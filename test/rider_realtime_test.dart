@@ -577,7 +577,7 @@ void _realtimeControllerChecks() {
         ),
       ),
     );
-    expect(find.text('Heading to pickup'), findsOneWidget);
+    expect(find.text('Heading to store'), findsOneWidget);
 
     for (final status in ['ACCEPTED', 'CANCELLED']) {
       repository.currentDeliveries = [deliveryWithStatus(status)];
@@ -589,11 +589,11 @@ void _realtimeControllerChecks() {
       await tester.pump();
       await tester.pump();
       expect(
-        find.text(status == 'ACCEPTED' ? 'At pickup' : 'cancelled'),
+        find.text(status == 'ACCEPTED' ? 'At the store' : 'cancelled'),
         findsOneWidget,
       );
     }
-    expect(find.text('Heading to pickup'), findsNothing);
+    expect(find.text('Heading to store'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
     controller.dispose();
     realtime.dispose();

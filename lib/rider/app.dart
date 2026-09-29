@@ -2,18 +2,22 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show kDebugMode, kProfileMode;
+import 'package:flutter/foundation.dart'
+    show ValueListenable, ValueNotifier, kDebugMode, kProfileMode;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mapbox;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import 'core/config/rider_api_config.dart';
 import 'core/config/rider_map_config.dart';
+import 'shared/models/delivery_stage.dart';
 import 'shared/theme/theme.dart';
 
 export 'core/config/rider_api_config.dart';
@@ -34,6 +38,7 @@ part 'core/routing/rider_router.dart';
 part 'features/auth/rider_auth_screens.dart';
 part 'features/dashboard/rider_dashboard_screen.dart';
 part 'features/offers/rider_offer_screen.dart';
+part 'features/searching/rider_searching_screen.dart';
 part 'features/deliveries/rider_delivery_screens.dart';
 part 'features/deliveries/widgets/rider_delivery_map.dart';
 part 'features/history/rider_history_screen.dart';
@@ -147,7 +152,9 @@ class _TalaDeliveryAppState extends State<TalaDeliveryApp>
               theme: buildRiderTheme(RiderPalette.light),
               darkTheme: buildRiderTheme(RiderPalette.dark),
               builder: (context, child) {
-                if (!riderPerfOverlayEnabled) return child ?? const SizedBox.shrink();
+                if (!riderPerfOverlayEnabled) {
+                  return child ?? const SizedBox.shrink();
+                }
                 return Stack(
                   children: [
                     child ?? const SizedBox.shrink(),
@@ -203,22 +210,16 @@ class _RiderShellState extends State<RiderShell> {
       selector: _dashboardSelector,
       builder: (context, controller) => DashboardScreen(
         controller: controller,
-        onOffer: () => Navigator.of(context).pushNamed(
-          RiderRoutes.offer,
-          arguments: controller.offers.firstOrNull,
-        ),
         onEarnings: () => setState(() => tab = 1),
       ),
     ),
     _RiderPage(
       selector: _historySelector,
-      builder: (context, controller) =>
-          HistoryScreen(controller: controller),
+      builder: (context, controller) => HistoryScreen(controller: controller),
     ),
     _RiderPage(
       selector: _profileSelector,
-      builder: (context, controller) =>
-          ProfileScreen(controller: controller),
+      builder: (context, controller) => ProfileScreen(controller: controller),
     ),
   ];
 

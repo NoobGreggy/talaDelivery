@@ -102,6 +102,146 @@ class SkyBackdrop extends StatelessWidget {
   }
 }
 
+class RiderDuskHero extends StatelessWidget {
+  const RiderDuskHero({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = riderPaletteOf(context);
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              palette.duskDeep,
+              palette.duskMid,
+              Theme.of(context).colorScheme.primary,
+            ],
+          ),
+        ),
+        child: Stack(
+          children: [
+            const Positioned.fill(
+              child: ExcludeSemantics(
+                child: CustomPaint(painter: _RiderStarFieldPainter()),
+              ),
+            ),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RiderStarFieldPainter extends CustomPainter {
+  const _RiderStarFieldPainter();
+
+  static const stars = <Offset>[
+    Offset(.08, .18),
+    Offset(.17, .42),
+    Offset(.29, .13),
+    Offset(.38, .34),
+    Offset(.52, .18),
+    Offset(.64, .39),
+    Offset(.76, .14),
+    Offset(.88, .31),
+    Offset(.94, .1),
+    Offset(.47, .52),
+  ];
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.white.withValues(alpha: .28);
+    for (var index = 0; index < stars.length; index++) {
+      final star = stars[index];
+      canvas.drawCircle(
+        Offset(star.dx * size.width, star.dy * size.height),
+        index.isEven ? 1.4 : .9,
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RiderStarFieldPainter oldDelegate) => false;
+}
+
+class RiderGradientButton extends StatelessWidget {
+  const RiderGradientButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = riderPaletteOf(context);
+    final enabled = onPressed != null;
+    return Opacity(
+      opacity: enabled ? 1 : .48,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Theme.of(context).colorScheme.primary, palette.duskMid],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: enabled
+              ? [
+                  BoxShadow(
+                    color: Theme.of(context).colorScheme.primary
+                        .withValues(alpha: .28),
+                    blurRadius: 20,
+                    offset: const Offset(0, 9),
+                  ),
+                ]
+              : null,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(16),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 54),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Text(
+                    label,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class SectionTitle extends StatelessWidget {
   const SectionTitle({
     super.key,
@@ -237,7 +377,7 @@ class DeliveryRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const IconTile(icon: Icons.check_rounded, color: green),
+          IconTile(icon: Icons.check_rounded, color: palette.success),
           const SizedBox(width: 13),
           Expanded(
             child: Column(
@@ -248,15 +388,29 @@ class DeliveryRow extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 Text(
-                  '${delivery.displayNumber} • ${riderDate(delivery.deliveredAt ?? delivery.createdAt)}',
+                  '${delivery.deliveryAddress.isEmpty ? delivery.displayNumber : delivery.deliveryAddress} · ${delivery.distanceKm.toStringAsFixed(1)} km · ${riderDate(delivery.deliveredAt ?? delivery.createdAt)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
             ),
           ),
-          Text(
-            riderMoney(delivery.riderCommission),
-            style: Theme.of(context).textTheme.titleMedium,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                riderMoney(delivery.riderCommission),
+                style: Theme.of(context).textTheme.titleMedium
+                    ?.copyWith(color: palette.success),
+              ),
+              Text(
+                delivery.order?.paymentMethod.toUpperCase() == 'COD'
+                    ? 'Cash'
+                    : 'Prepaid',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
           ),
         ],
       ),

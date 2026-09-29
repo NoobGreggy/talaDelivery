@@ -1,1 +1,1 @@
-enum DeliveryStage { accepted, arrived, pickedUp, inTransit }
+enum DeliveryStage { toStore, atStore, toCustomer, atCustomer }

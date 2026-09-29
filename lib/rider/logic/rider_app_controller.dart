@@ -10,7 +10,9 @@ class RiderAppController extends ChangeNotifier {
   List<RiderDelivery> deliveries = const [];
   RiderEarningsSummary? earningsSummary;
   List<RiderNotification> notifications = const [];
+  List<RiderStore> nearbyStores = const [];
   RiderDelivery? activeDelivery;
+  DateTime? onlineSince;
   bool isLoading = false;
   bool isSubmitting = false;
   String? errorMessage;
@@ -50,6 +52,12 @@ class RiderAppController extends ChangeNotifier {
 
   int get unreadNotificationCount =>
       notifications.where((notification) => !notification.isRead).length;
+
+  ValueListenable<RiderLatLng?>? get riderPosition => _location?.position;
+
+  double get todayEarnings => earningsSummary?.today.earnings ?? 0;
+
+  int get todayDeliveries => earningsSummary?.today.completedDeliveries ?? 0;
 
   void attachRealtime(RiderRealtimeService? service) {
     _realtimeSubscription?.cancel();
@@ -110,8 +118,10 @@ class RiderAppController extends ChangeNotifier {
       if (user == null) return false;
       await _loadData();
       if (profile?.isOnline ?? false) {
+        onlineSince ??= DateTime.now();
         _startShift();
       } else {
+        onlineSince = null;
         _startRealtime();
       }
       return true;
@@ -132,7 +142,13 @@ class RiderAppController extends ChangeNotifier {
     try {
       user = await _repository.login(email: email, password: password);
       await _loadData();
-      _startShift();
+      if (profile?.isOnline ?? false) {
+        onlineSince ??= DateTime.now();
+        _startShift();
+      } else {
+        onlineSince = null;
+        _startRealtime();
+      }
       return true;
     } on RiderApiException catch (error) {
       errorMessage = error.message;
@@ -168,8 +184,10 @@ class RiderAppController extends ChangeNotifier {
     });
     if (succeeded) {
       if (value) {
+        onlineSince ??= DateTime.now();
         _startShift();
       } else {
+        onlineSince = null;
         _stopShift();
       }
     }
@@ -261,7 +279,9 @@ class RiderAppController extends ChangeNotifier {
       deliveries = const [];
       earningsSummary = null;
       notifications = const [];
+      nearbyStores = const [];
       activeDelivery = null;
+      onlineSince = null;
       errorMessage = null;
       notifyListeners();
     }
@@ -280,6 +300,7 @@ class RiderAppController extends ChangeNotifier {
     profile = await _repository.profile();
     await _reloadDeliveries();
     offers = profile!.isOnline ? await _repository.offers() : const [];
+    await _reloadNearbyStores();
     await _reloadNotifications();
   }
 
@@ -292,6 +313,7 @@ class RiderAppController extends ChangeNotifier {
       await _reloadDeliveries();
       await _reloadNotifications();
       offers = profile!.isOnline ? await _repository.offers() : const [];
+      await _reloadNearbyStores();
       notifyListeners();
     } catch (_) {
       // Foreground resync is best-effort; the user can pull-to-refresh.
@@ -334,8 +356,11 @@ class RiderAppController extends ChangeNotifier {
       ]);
       deliveries = results[0] as List<RiderDelivery>;
       earningsSummary = results[1] as RiderEarningsSummary;
-      activeDelivery = profile?.currentDelivery;
-      activeDelivery ??= deliveries.where((item) => item.isActive).firstOrNull;
+      // The deliveries endpoint includes order items and the store relation,
+      // while the compact profile relation may not. Prefer the fully loaded
+      // record so restored deliveries retain their checklist and contacts.
+      activeDelivery = deliveries.where((item) => item.isActive).firstOrNull;
+      activeDelivery ??= profile?.currentDelivery;
       _location?.setActiveDelivery(activeDelivery?.id);
     } finally {
       _loadingDeliveries = false;
@@ -347,6 +372,19 @@ class RiderAppController extends ChangeNotifier {
       notifications = await _repository.notifications();
     } catch (_) {
       // Notifications are secondary; don't block the main data load on them.
+    }
+  }
+
+  Future<void> _reloadNearbyStores() async {
+    final repository = _repository;
+    if (repository is! ApiRiderRepository) {
+      nearbyStores = const [];
+      return;
+    }
+    try {
+      nearbyStores = await repository.nearbyStores();
+    } catch (_) {
+      // Nearby-store pins are secondary to the shift and offer workflow.
     }
   }
 

@@ -31,19 +31,21 @@ void main() {
       'password',
     );
     await tester.tap(find.text('Log in'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
 
     expect(find.text('API Rider'), findsOneWidget);
-    expect(find.text('Go online'), findsOneWidget);
+    expect(find.byKey(const Key('rider-power-button')), findsOneWidget);
+    expect(find.text('You’re offline'), findsOneWidget);
     expect(find.text('₱0'), findsOneWidget);
 
-    await tester.tap(find.text('Go online'));
-    await tester.pumpAndSettle();
-    expect(find.text('1 delivery offer'), findsOneWidget);
-
-    await tester.tap(find.text('1 delivery offer'));
-    await tester.pumpAndSettle();
-    expect(find.text('₱13.80 estimated commission'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('rider-power-button')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(find.text('Searching for deliveries…'), findsOneWidget);
+    expect(find.text('NEW DELIVERY OFFER'), findsOneWidget);
+    expect(find.text('₱13.80'), findsOneWidget);
     expect(find.text('API Mini Mart'), findsOneWidget);
   });
 }

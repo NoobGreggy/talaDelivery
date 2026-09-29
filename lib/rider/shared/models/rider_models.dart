@@ -98,18 +98,76 @@ class RiderUser {
 }
 
 class RiderStore {
-  const RiderStore({required this.id, required this.name, this.address});
+  const RiderStore({
+    required this.id,
+    required this.name,
+    this.address,
+    this.phone,
+    this.latitude,
+    this.longitude,
+  });
   final int id;
   final String name;
   final String? address;
+  final String? phone;
+  final double? latitude;
+  final double? longitude;
+
+  bool get hasCoordinates => latitude != null && longitude != null;
 
   factory RiderStore.fromJson(Map<String, dynamic> json) => RiderStore(
     id: _riderInt(json['id']),
     name: _riderString(json['name']) ?? 'Store',
     address: _riderString(json['address']),
+    phone: _riderString(json['phone']),
+    latitude: json['latitude'] == null ? null : _riderDouble(json['latitude']),
+    longitude: json['longitude'] == null
+        ? null
+        : _riderDouble(json['longitude']),
   );
 
-  Map<String, dynamic> toJson() => {'id': id, 'name': name, 'address': address};
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'address': address,
+    'phone': phone,
+    'latitude': latitude,
+    'longitude': longitude,
+  };
+}
+
+class RiderOrderItem {
+  const RiderOrderItem({
+    required this.id,
+    required this.name,
+    required this.quantity,
+    required this.unitPrice,
+    required this.subtotal,
+  });
+
+  final int id;
+  final String name;
+  final int quantity;
+  final double unitPrice;
+  final double subtotal;
+
+  String get checklistLabel => '$quantity× $name';
+
+  factory RiderOrderItem.fromJson(Map<String, dynamic> json) => RiderOrderItem(
+    id: _riderInt(json['id']),
+    name: _riderString(json['product_name']) ?? 'Order item',
+    quantity: math.max(_riderInt(json['quantity']), 1),
+    unitPrice: _riderDouble(json['unit_price']),
+    subtotal: _riderDouble(json['subtotal']),
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'product_name': name,
+    'quantity': quantity,
+    'unit_price': unitPrice,
+    'subtotal': subtotal,
+  };
 }
 
 class RiderOrder {
@@ -120,6 +178,7 @@ class RiderOrder {
     this.customerName,
     this.customerPhone,
     this.notes,
+    this.items = const [],
   });
   final String number;
   final double total;
@@ -127,6 +186,7 @@ class RiderOrder {
   final String? customerName;
   final String? customerPhone;
   final String? notes;
+  final List<RiderOrderItem> items;
 
   factory RiderOrder.fromJson(Map<String, dynamic> json) => RiderOrder(
     number: _riderString(json['order_number']) ?? '#${_riderInt(json['id'])}',
@@ -135,6 +195,10 @@ class RiderOrder {
     customerName: _riderString(json['customer_name']),
     customerPhone: _riderString(json['customer_phone']),
     notes: _riderString(json['notes']),
+    items: (json['items'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(RiderOrderItem.fromJson)
+        .toList(growable: false),
   );
 
   Map<String, dynamic> toJson() => {
@@ -144,6 +208,7 @@ class RiderOrder {
     'customer_name': customerName,
     'customer_phone': customerPhone,
     'notes': notes,
+    'items': items.map((item) => item.toJson()).toList(growable: false),
   };
 }
 
@@ -330,6 +395,11 @@ class RiderProfile {
     this.vehiclePlate,
     this.licenseNumber,
     this.currentDelivery,
+    this.rating,
+    this.acceptanceRate,
+    this.onTimeRate,
+    this.currentLatitude,
+    this.currentLongitude,
   });
 
   final int id;
@@ -342,6 +412,11 @@ class RiderProfile {
   final int completedDeliveries;
   final double totalEarnings;
   final RiderDelivery? currentDelivery;
+  final double? rating;
+  final double? acceptanceRate;
+  final double? onTimeRate;
+  final double? currentLatitude;
+  final double? currentLongitude;
 
   bool get canGoOnline =>
       !const {'PENDING', 'REJECTED', 'SUSPENDED'}.contains(status);
@@ -365,6 +440,19 @@ class RiderProfile {
       currentDelivery: current is Map<String, dynamic>
           ? RiderDelivery.fromJson(current)
           : null,
+      rating: json['rating'] == null ? null : _riderDouble(json['rating']),
+      acceptanceRate: json['acceptance_rate'] == null
+          ? null
+          : _riderDouble(json['acceptance_rate']),
+      onTimeRate: json['on_time_rate'] == null
+          ? null
+          : _riderDouble(json['on_time_rate']),
+      currentLatitude: json['current_latitude'] == null
+          ? null
+          : _riderDouble(json['current_latitude']),
+      currentLongitude: json['current_longitude'] == null
+          ? null
+          : _riderDouble(json['current_longitude']),
     );
   }
 
@@ -379,6 +467,11 @@ class RiderProfile {
     'completed_deliveries': completedDeliveries,
     'total_earnings': totalEarnings,
     'current_delivery': currentDelivery?.toJson(),
+    'rating': rating,
+    'acceptance_rate': acceptanceRate,
+    'on_time_rate': onTimeRate,
+    'current_latitude': currentLatitude,
+    'current_longitude': currentLongitude,
   };
 }
 

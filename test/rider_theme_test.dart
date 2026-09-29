@@ -4,6 +4,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tala_delivery_rider/main.dart';
 
 void main() {
+  test('brand primary content stays readable in both themes', () {
+    final light = buildRiderTheme(RiderPalette.light).colorScheme;
+    final dark = buildRiderTheme(RiderPalette.dark).colorScheme;
+
+    expect(light.onPrimary, Colors.white);
+    expect(dark.onPrimary, Colors.white);
+  });
+
   test('rider theme restores light, dark, and system choices', () async {
     SharedPreferences.setMockInitialValues({
       RiderThemeController.preferenceKey: 'dark',

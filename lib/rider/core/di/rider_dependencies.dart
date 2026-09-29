@@ -72,7 +72,7 @@ class RiderAppDependencies {
   final http.Client? _ownedClient;
 
   void dispose() {
-    location?.stop();
+    location?.dispose();
     realtime?.dispose();
     controller.dispose();
     _ownedClient?.close();

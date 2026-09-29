@@ -26,6 +26,7 @@ class RiderRoutes {
   static const splash = '/';
   static const login = '/auth/login';
   static const dashboard = '/dashboard';
+  static const searching = '/searching';
   static const offer = '/offers/current';
   static const activeDelivery = '/deliveries/active';
   static const deliveryComplete = '/deliveries/complete';
@@ -39,6 +40,7 @@ class RiderRoutes {
     splash,
     login,
     dashboard,
+    searching,
     offer,
     activeDelivery,
     deliveryComplete,
@@ -127,7 +129,14 @@ class RiderRouteController {
     }
     final destination = _pendingRoute;
     _pendingRoute = null;
-    return destination ?? const RouteSettings(name: RiderRoutes.dashboard);
+    if (destination != null) return destination;
+    if (session.hasActiveDelivery) {
+      return const RouteSettings(name: RiderRoutes.activeDelivery);
+    }
+    if (session.isOnline) {
+      return const RouteSettings(name: RiderRoutes.searching);
+    }
+    return const RouteSettings(name: RiderRoutes.dashboard);
   }
 
   String guardLocation(String? requestedName, {Object? arguments}) {
@@ -152,7 +161,9 @@ class RiderRouteController {
     if (session.role != RiderUserRole.rider) {
       return RiderRoutes.accessDenied;
     }
-    if (requested == RiderRoutes.offer && !session.isOnline) {
+    if ((requested == RiderRoutes.offer ||
+            requested == RiderRoutes.searching) &&
+        !session.isOnline) {
       return RiderRoutes.dashboard;
     }
     if (requested == RiderRoutes.activeDelivery && !session.hasActiveDelivery) {
@@ -176,9 +187,45 @@ class RiderRouteController {
       name: guardedName,
       arguments: guardedName == settings.name ? settings.arguments : null,
     );
-    return MaterialPageRoute<dynamic>(
+    final operational = {
+      RiderRoutes.searching,
+      RiderRoutes.offer,
+      RiderRoutes.activeDelivery,
+      RiderRoutes.deliveryComplete,
+    }.contains(guardedName);
+    if (!operational) {
+      return MaterialPageRoute<dynamic>(
+        settings: guardedSettings,
+        builder: (_) => _pageFor(guardedSettings),
+      );
+    }
+    final reduceMotion = WidgetsBinding
+        .instance
+        .platformDispatcher
+        .accessibilityFeatures
+        .disableAnimations;
+    return PageRouteBuilder<dynamic>(
       settings: guardedSettings,
-      builder: (_) => _pageFor(guardedSettings),
+      transitionDuration: Duration(milliseconds: reduceMotion ? 120 : 400),
+      reverseTransitionDuration: Duration(
+        milliseconds: reduceMotion ? 120 : 380,
+      ),
+      pageBuilder: (_, animation, secondaryAnimation) =>
+          _pageFor(guardedSettings),
+      transitionsBuilder: (_, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+          reverseCurve: Curves.easeInCubic,
+        );
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(1, 0),
+            end: Offset.zero,
+          ).animate(curved),
+          child: child,
+        );
+      },
     );
   }
 
@@ -190,12 +237,14 @@ class RiderRouteController {
         return const LoginScreen();
       case RiderRoutes.dashboard:
         return const RiderShell();
+      case RiderRoutes.searching:
+        return const SearchingScreen();
       case RiderRoutes.history:
         return const RiderShell(initialTab: 1);
       case RiderRoutes.profile:
         return const RiderShell(initialTab: 2);
       case RiderRoutes.offer:
-        return OfferScreen(offer: settings.arguments as RiderOffer?);
+        return SearchingScreen(initialOffer: settings.arguments as RiderOffer?);
       case RiderRoutes.activeDelivery:
         return ActiveDeliveryScreen(
           delivery: settings.arguments as RiderDelivery?,

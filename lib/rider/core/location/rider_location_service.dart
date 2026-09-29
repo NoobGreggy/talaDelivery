@@ -153,9 +153,11 @@ class RiderLocationService {
   int? _activeDeliveryId;
   RiderLatLng? _lastPostedPosition;
   DateTime? _lastPostedAt;
+  final ValueNotifier<RiderLatLng?> _position = ValueNotifier(null);
 
   bool get isRunning => _running;
   int? get activeDeliveryId => _activeDeliveryId;
+  ValueListenable<RiderLatLng?> get position => _position;
 
   void setActiveDelivery(int? deliveryId) {
     if (_activeDeliveryId == deliveryId) return;
@@ -199,6 +201,7 @@ class RiderLocationService {
         position.accuracy! > maximumAccuracyMeters) {
       return RiderLocationReport.lowAccuracy;
     }
+    _position.value = position;
     final previous = _lastPostedPosition;
     final lastPostedAt = _lastPostedAt;
     if (previous != null &&
@@ -258,6 +261,11 @@ class RiderLocationService {
     _running = false;
     _timer?.cancel();
     _timer = null;
+  }
+
+  void dispose() {
+    stop();
+    _position.dispose();
   }
 
   /// Reschedules reporting after the OS suspended the process during app

@@ -11,6 +11,11 @@ void main() {
       'status': 'ONLINE',
       'completed_deliveries': 12,
       'total_earnings': '840.50',
+      'rating': '4.9',
+      'acceptance_rate': '92',
+      'on_time_rate': 96,
+      'current_latitude': '14.5995',
+      'current_longitude': '120.9842',
       'user': {
         'id': 8,
         'name': 'Rider One',
@@ -22,6 +27,10 @@ void main() {
     expect(profile.user.name, 'Rider One');
     expect(profile.totalEarnings, 840.5);
     expect(profile.isOnline, isTrue);
+    expect(profile.rating, 4.9);
+    expect(profile.acceptanceRate, 92);
+    expect(profile.onTimeRate, 96);
+    expect(profile.currentLatitude, 14.5995);
     expect(profile.toJson()['vehicle_type'], 'MOTORCYCLE');
   });
 
@@ -40,18 +49,36 @@ void main() {
       'delivery_longitude': '120.9900000',
       'created_at': '2026-09-23T01:00:00Z',
       'delivered_at': '2026-09-23T02:00:00Z',
-      'store': {'id': 2, 'name': 'Live Store'},
+      'store': {
+        'id': 2,
+        'name': 'Live Store',
+        'phone': '09170000000',
+        'latitude': '14.6000000',
+        'longitude': '120.9800000',
+      },
       'order': {
         'id': 15,
         'order_number': 'TD-15',
         'total': '399.00',
         'payment_method': 'COD',
+        'items': [
+          {
+            'id': 31,
+            'product_name': 'Fresh milk',
+            'quantity': 2,
+            'unit_price': '75.00',
+            'subtotal': '150.00',
+          },
+        ],
       },
     });
 
     expect(delivery.isActive, isTrue);
     expect(delivery.store?.name, 'Live Store');
+    expect(delivery.store?.phone, '09170000000');
+    expect(delivery.store?.hasCoordinates, isTrue);
     expect(delivery.order?.total, 399);
+    expect(delivery.order?.items.single.checklistLabel, '2× Fresh milk');
     expect(delivery.riderCommission, 11.8);
     expect(delivery.pickupLatitude, 14.6);
     expect(delivery.deliveryLongitude, 120.99);

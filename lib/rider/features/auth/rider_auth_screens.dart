@@ -22,9 +22,14 @@ class _SplashScreenState extends State<SplashScreen> {
       routes.signInAsRider();
       routes.sync(controller);
     }
-    Navigator.of(context).pushReplacementNamed(
-      authenticated ? RiderRoutes.dashboard : RiderRoutes.login,
-    );
+    if (!authenticated) {
+      Navigator.of(context).pushReplacementNamed(RiderRoutes.login);
+      return;
+    }
+    final destination = routes.destinationAfterSignIn();
+    Navigator.of(
+      context,
+    ).pushReplacementNamed(destination.name!, arguments: destination.arguments);
   }
 
   @override
