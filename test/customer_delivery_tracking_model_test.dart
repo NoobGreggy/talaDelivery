@@ -1,7 +1,36 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tala_delivery_customer/main.dart';
 
 void main() {
+  testWidgets(
+    'customer map waits for the rider instead of showing endpoint pins',
+    (tester) async {
+      const delivery = CustomerDelivery(
+        id: 22,
+        status: 'ASSIGNED',
+        pickupLatitude: 14.6,
+        pickupLongitude: 120.98,
+        deliveryLatitude: 14.61,
+        deliveryLongitude: 120.99,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: buildAppTheme(AppPalette.light),
+          home: const Scaffold(body: CustomerDeliveryMap(delivery: delivery)),
+        ),
+      );
+
+      expect(
+        find.text(
+          'The rider’s live location will appear here once it is available.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
+
   test('customer order parses delivery pins and latest rider location', () {
     final order = CustomerOrder.fromJson({
       'id': 1,

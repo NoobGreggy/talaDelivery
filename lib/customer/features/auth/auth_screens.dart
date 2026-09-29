@@ -446,9 +446,10 @@ class _LoginPageState extends State<LoginPage> {
 }
 
 class _TalaLoginHero extends StatelessWidget {
-  const _TalaLoginHero({required this.compact});
+  const _TalaLoginHero({required this.compact, this.leading});
 
   final bool compact;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
@@ -468,6 +469,10 @@ class _TalaLoginHero extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (leading != null) ...[
+                leading!,
+                SizedBox(height: useCompact ? 6 : 12),
+              ],
               Semantics(
                 image: true,
                 label: 'TalaDelivery logo',
@@ -1195,45 +1200,117 @@ class AuthScaffold extends StatelessWidget {
   final GlobalKey<FormState>? formKey;
   final AutovalidateMode autovalidateMode;
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: canPop
-        ? AppBar(backgroundColor: appPaletteOf(context).background)
-        : null,
-    body: SafeArea(
-      child: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 440),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Image.asset('assets/images/tala_rider.png', height: 94),
-                const SizedBox(height: 10),
-                const Brand(size: 28, centered: true),
-                const SizedBox(height: 38),
-                Text(title, style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(height: 7),
-                Text(subtitle),
-                const SizedBox(height: 24),
-                if (formKey == null)
-                  ...children
-                else
-                  Form(
-                    key: formKey,
-                    autovalidateMode: autovalidateMode,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: children,
+  Widget build(BuildContext context) {
+    final palette = appPaletteOf(context);
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light,
+      child: Scaffold(
+        resizeToAvoidBottomInset: true,
+        body: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+          child: TalaDuskSky(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final heroHeight = keyboardOpen
+                    ? 160.0
+                    : (constraints.maxHeight * .32).clamp(230.0, 300.0);
+                return Column(
+                  children: [
+                    AnimatedContainer(
+                      duration: MediaQuery.disableAnimationsOf(context)
+                          ? const Duration(milliseconds: 150)
+                          : const Duration(milliseconds: 300),
+                      curve: Curves.easeOutCubic,
+                      height: heroHeight,
+                      child: _TalaLoginHero(
+                        compact: keyboardOpen,
+                        leading: canPop
+                            ? IconButton(
+                                tooltip: 'Back',
+                                onPressed: () =>
+                                    Navigator.of(context).maybePop(),
+                                icon: const Icon(
+                                  Icons.arrow_back_rounded,
+                                  color: Colors.white,
+                                ),
+                                style: IconButton.styleFrom(
+                                  backgroundColor:
+                                      Colors.white.withValues(alpha: .12),
+                                ),
+                              )
+                            : null,
+                      ),
                     ),
-                  ),
-              ],
+                    Expanded(
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: palette.surface,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(36),
+                          ),
+                          border: Border(
+                            top: BorderSide(
+                              color: palette.line.withValues(alpha: .65),
+                            ),
+                          ),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: SingleChildScrollView(
+                          padding: EdgeInsets.fromLTRB(
+                            24,
+                            28,
+                            24,
+                            26 + MediaQuery.paddingOf(context).bottom,
+                          ),
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          child: Center(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 440),
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .headlineMedium,
+                                  ),
+                                  const SizedBox(height: 7),
+                                  Text(subtitle),
+                                  const SizedBox(height: 24),
+                                  if (formKey == null)
+                                    ...children
+                                  else
+                                    Form(
+                                      key: formKey,
+                                      autovalidateMode: autovalidateMode,
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.stretch,
+                                        children: children,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class AuthErrorBanner extends StatelessWidget {

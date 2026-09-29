@@ -602,17 +602,21 @@ class _TalaMarketCardState extends State<TalaMarketCard> {
                               cacheWidth: (constraints.maxWidth * dpr).ceil(),
                               cacheHeight: (constraints.maxHeight * dpr).ceil(),
                               gaplessPlayback: true,
-                              frameBuilder: (
-                                context,
-                                child,
-                                frame,
-                                wasSynchronouslyLoaded,
-                              ) {
-                                if (wasSynchronouslyLoaded) return child;
-                                if (frame == null) return const SizedBox.shrink();
-                                return child;
-                              },
-                              errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                              frameBuilder:
+                                  (
+                                    context,
+                                    child,
+                                    frame,
+                                    wasSynchronouslyLoaded,
+                                  ) {
+                                    if (wasSynchronouslyLoaded) return child;
+                                    if (frame == null) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return child;
+                                  },
+                              errorBuilder: (_, _, _) =>
+                                  const SizedBox.shrink(),
                             );
                           },
                         ),

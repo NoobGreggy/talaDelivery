@@ -122,6 +122,7 @@ void main() {
       greaterThan(59),
     );
     expect(find.textContaining('Test'), findsOneWidget);
+    expect(find.text('What would you like to order?'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -140,13 +141,11 @@ void main() {
       find.text('Store categories will appear here when available.'),
       findsOneWidget,
     );
-    final categoriesCard = tester.widget<Container>(
-      find.byKey(const Key('dashboard-categories-card')),
-    );
     expect(
-      (categoriesCard.decoration! as BoxDecoration).borderRadius,
-      BorderRadius.circular(26),
+      find.byKey(const Key('dashboard-categories-section')),
+      findsOneWidget,
     );
+    expect(find.byKey(const Key('dashboard-categories-card')), findsNothing);
   });
 
   testWidgets('dashboard uses a floating four-item navigation bar', (

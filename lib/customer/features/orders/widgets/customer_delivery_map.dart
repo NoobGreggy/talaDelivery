@@ -32,8 +32,6 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
 
   mapbox.MapboxMap? controller;
   mapbox.CircleAnnotationManager? circleManager;
-  mapbox.CircleAnnotation? pickupCircle;
-  mapbox.CircleAnnotation? destinationCircle;
   mapbox.CircleAnnotation? riderCircle;
   bool styleLoaded = false;
 
@@ -51,10 +49,7 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
   void initState() {
     super.initState();
     _trackedDeliveryId = widget.delivery.id;
-    _riderSlide = AnimationController(
-      vsync: this,
-      duration: _riderMoveDuration,
-    )
+    _riderSlide = AnimationController(vsync: this, duration: _riderMoveDuration)
       ..addListener(_onRiderTick)
       ..addStatusListener(_onRiderStatus);
   }
@@ -103,22 +98,7 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
   }
 
   Future<void> _syncAnnotations() async {
-    final map = controller;
-    if (map == null || !styleLoaded) return;
-    pickupCircle = await _upsertCircle(
-      map,
-      pickupCircle,
-      widget.delivery.pickupPoint,
-      0xFF2563EB,
-      8,
-    );
-    destinationCircle = await _upsertCircle(
-      map,
-      destinationCircle,
-      widget.delivery.deliveryPoint,
-      0xFF16A34A,
-      9,
-    );
+    if (controller == null || !styleLoaded) return;
     final rider = riderLocation;
     if (rider != null && rider.hasCoordinates) {
       await _moveRider(rider);
@@ -147,12 +127,14 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
       _riderShown = target;
       _riderSlide.value = 1;
       await _updateRiderCircle(target);
+      await _focusRider(target, animate: false);
       return;
     }
 
     _currentFrom = from;
     _currentTo = target;
     _riderSlide.forward(from: 0);
+    await _focusRider(target, animate: true);
   }
 
   bool _shouldSnap(CustomerRiderLocation next, CustomerMapPoint from) {
@@ -183,39 +165,27 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
       riderCircle = await manager.create(options);
       return;
     }
-    riderCircle
-      ?.geometry = options.geometry;
+    riderCircle?.geometry = options.geometry;
     await manager.update(riderCircle!);
   }
 
-  Future<mapbox.CircleAnnotation?> _upsertCircle(
-    mapbox.MapboxMap map,
-    mapbox.CircleAnnotation? circle,
-    CustomerMapPoint? point,
-    int color,
-    double radius,
-  ) async {
-    if (point == null) return circle;
-    final options = mapbox.CircleAnnotationOptions(
-      geometry: mapbox.Point(
-        coordinates: mapbox.Position(point.longitude, point.latitude),
+  Future<void> _focusRider(
+    CustomerMapPoint point, {
+    required bool animate,
+  }) async {
+    final map = controller;
+    if (map == null) return;
+    await map.easeTo(
+      mapbox.CameraOptions(
+        center: mapbox.Point(
+          coordinates: mapbox.Position(point.longitude, point.latitude),
+        ),
+        zoom: 15,
       ),
-      circleColor: color,
-      circleRadius: radius,
-      circleStrokeColor: 0xFFFFFFFF,
-      circleStrokeWidth: 3,
+      mapbox.MapAnimationOptions(
+        duration: animate ? _riderMoveDuration.inMilliseconds : 0,
+      ),
     );
-    final manager = circleManager;
-    if (manager == null) return circle;
-    if (circle == null) return manager.create(options);
-    circle
-      ..geometry = options.geometry
-      ..circleColor = options.circleColor
-      ..circleRadius = options.circleRadius
-      ..circleStrokeColor = options.circleStrokeColor
-      ..circleStrokeWidth = options.circleStrokeWidth;
-    await manager.update(circle);
-    return circle;
   }
 
   CustomerMapPoint _interpolate(
@@ -239,8 +209,8 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
     final lat2 = _toRadians(b.latitude);
     final dLat = _toRadians(b.latitude - a.latitude);
     final dLng = _toRadians(b.longitude - a.longitude);
-    final h = _sin2(dLat / 2) +
-        math.cos(lat1) * math.cos(lat2) * _sin2(dLng / 2);
+    final h =
+        _sin2(dLat / 2) + math.cos(lat1) * math.cos(lat2) * _sin2(dLng / 2);
     return 2 * earthRadius * math.asin(math.sqrt(h));
   }
 
@@ -250,25 +220,15 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
 
   @override
   Widget build(BuildContext context) {
-    final points = [
-      widget.delivery.pickupPoint,
-      widget.delivery.deliveryPoint,
-      if (riderLocation case final rider?)
-        if (rider.hasCoordinates)
-          CustomerMapPoint(rider.latitude!, rider.longitude!),
-    ].whereType<CustomerMapPoint>().toList(growable: false);
-    if (points.isEmpty) {
+    final rider = riderLocation;
+    if (rider == null || !rider.hasCoordinates) {
       return const InfoBanner(
         icon: Icons.location_off_outlined,
-        text: 'Map coordinates are not available for this delivery.',
+        text:
+            'The rider’s live location will appear here once it is available.',
       );
     }
-    final center = CustomerMapPoint(
-      points.map((point) => point.latitude).reduce((a, b) => a + b) /
-          points.length,
-      points.map((point) => point.longitude).reduce((a, b) => a + b) /
-          points.length,
-    );
+    final center = CustomerMapPoint(rider.latitude!, rider.longitude!);
     final mapConfig = CustomerMapConfig.fromEnvironment();
     if (!mapConfig.isConfigured) {
       return const InfoBanner(
@@ -292,7 +252,7 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
                     center.latitude,
                   ),
                 ),
-                zoom: 13,
+                zoom: 15,
               ),
               onMapCreated: (value) async {
                 controller = value;
@@ -316,7 +276,7 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
                 child: const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                   child: Text(
-                    'Blue: store  •  Green: you  •  Orange: rider',
+                    'Live rider location',
                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
                   ),
                 ),

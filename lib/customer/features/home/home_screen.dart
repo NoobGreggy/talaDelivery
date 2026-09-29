@@ -381,7 +381,20 @@ class _DashboardHero extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 22),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'What would you like to order?',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 21,
+                fontWeight: FontWeight.w800,
+                height: 1.2,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           Container(
             height: 48,
             decoration: BoxDecoration(
@@ -451,75 +464,63 @@ class _DashboardCategories extends StatelessWidget {
     final palette = appPaletteOf(context);
     final entries = <String?>[null, ...categories];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 20, 12, 0),
-      child: Container(
-        key: const Key('dashboard-categories-card'),
-        padding: const EdgeInsets.only(top: 4, bottom: 10),
-        decoration: BoxDecoration(
-          color: palette.surface,
-          borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: palette.line),
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Categories',
-                      style: Theme.of(context).textTheme.titleMedium
-                          ?.copyWith(fontSize: 16, fontWeight: FontWeight.w700),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () => onSelected(null),
-                    child: const Text('See all'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 5),
-            SizedBox(
-              height:
-                  112 +
-                  (MediaQuery.textScalerOf(context).scale(12) - 12).clamp(
-                    0,
-                    28,
-                  ),
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(20, 2, 20, 4),
-                itemCount: entries.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 12),
-                itemBuilder: (context, index) {
-                  final name = entries[index];
-                  final style = _categoryStyle(context, name);
-                  return TalaCategoryChip(
-                    label: name == null ? 'All' : _titleCase(name),
-                    icon: style.icon,
-                    color: style.color,
-                    selected: selected == name,
-                    onTap: () => onSelected(name),
-                  );
-                },
-              ),
-            ),
-            if (categories.isEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.only(top: 20),
+      child: Column(
+        key: const Key('dashboard-categories-section'),
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Expanded(
                   child: Text(
-                    'Store categories will appear here when available.',
-                    style: TextStyle(color: palette.quiet, fontSize: 12),
+                    'Categories',
+                    style: Theme.of(context).textTheme.titleMedium
+                        ?.copyWith(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ),
+                TextButton(
+                  onPressed: () => onSelected(null),
+                  child: const Text('See all'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 5),
+          SizedBox(
+            height:
+                112 +
+                (MediaQuery.textScalerOf(context).scale(12) - 12).clamp(0, 28),
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(20, 2, 20, 4),
+              itemCount: entries.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final name = entries[index];
+                final style = _categoryStyle(context, name);
+                return TalaCategoryChip(
+                  label: name == null ? 'All' : _titleCase(name),
+                  icon: style.icon,
+                  color: style.color,
+                  selected: selected == name,
+                  onTap: () => onSelected(name),
+                );
+              },
+            ),
+          ),
+          if (categories.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Store categories will appear here when available.',
+                  style: TextStyle(color: palette.quiet, fontSize: 12),
+                ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
