@@ -20,7 +20,9 @@
     "laravel-echo": "^2.5.0",
     "pusher-js": "^8.6.0",
     "rxjs": "~7.8.0",
+    "sweetalert2": "^11.26.25",
     "tailwindcss": "^4.3.3",
+    "tala-icons": "^1.1.0",
     "tslib": "^2.3.0"
   },
   "devDependencies": {

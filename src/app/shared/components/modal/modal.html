@@ -1,31 +1,36 @@
 @if (open()) {
-  <div
-    class="fixed inset-0 z-50 flex items-center justify-center"
-    (click)="close()"
-  >
-    <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm"></div>
-    <div
-      class="relative mx-4 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl"
-      (click)="$event.stopPropagation()"
+  <div class="merchant-side-modal-shell">
+    <button
+      type="button"
+      class="merchant-side-modal__overlay"
+      aria-label="Close dialog"
+      (click)="close()"
+    ></button>
+    <section
+      class="merchant-side-modal"
+      role="dialog"
+      aria-modal="true"
+      [attr.aria-label]="title() || 'Dialog'"
     >
-      <div class="flex items-start justify-between gap-4">
+      <div class="merchant-side-modal__header">
         @if (title()) {
-          <h2 class="text-lg font-semibold text-slate-900">{{ title() }}</h2>
+          <div>
+            <span class="merchant-side-modal__eyebrow">TalaDelivery Merchant</span>
+            <h2>{{ title() }}</h2>
+          </div>
         }
         <button
           type="button"
-          class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+          class="merchant-side-modal__close"
           (click)="close()"
           aria-label="Close"
         >
-          <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-          </svg>
+          <i data-tala="x" class="tala-x tala-sm" aria-hidden="true"></i>
         </button>
       </div>
-      <div class="mt-4">
+      <div class="merchant-side-modal__body">
         <ng-content></ng-content>
       </div>
-    </div>
+    </section>
   </div>
 }

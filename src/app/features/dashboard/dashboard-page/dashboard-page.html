@@ -1,83 +1,357 @@
-<div class="space-y-4">
-  <!-- Header -->
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+<section
+  class="merchant-dashboard min-h-full rounded-[28px] border max-md:rounded-[22px] max-md:p-[18px] max-[430px]:rounded-[18px] max-[430px]:p-[15px]"
+>
+  <header class="dashboard-header mb-7 flex items-start justify-between gap-6 max-md:flex-col">
     <div>
-      <h1 class="text-2xl font-semibold text-slate-900">{{ greeting() }}! {{ profile()?.name ?? '' }}</h1>
-      <p class="mt-1 text-sm text-slate-500">Here's what's happening with your store today.</p>
+      <p class="dashboard-eyebrow">Merchant dashboard</p>
+      <h1>{{ greeting() }}, {{ profile()?.name ?? 'Merchant' }}!</h1>
+      <p class="dashboard-subtitle">Here’s what’s happening with your store today.</p>
     </div>
-    <div class="flex items-center gap-2">
-      <app-button variant="primary" size="sm" (clicked)="goToProducts()">Add Product</app-button>
-      <app-button variant="secondary" size="sm" (clicked)="goToOrders()">View Orders</app-button>
+
+    <div
+      class="dashboard-actions flex shrink-0 gap-2.5 max-md:w-full max-[430px]:flex-col-reverse"
+      aria-label="Dashboard actions"
+    >
+      <button
+        type="button"
+        class="inline-flex min-h-9 items-center justify-center rounded-[10px] border border-[var(--app-border)] bg-[var(--app-surface)] px-3 text-xs font-bold text-[var(--app-ink)] transition-colors hover:bg-[var(--app-hover)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sky-bright)]"
+        (click)="goToOrders()"
+      >
+        View orders
+      </button>
+      <button
+        type="button"
+        class="inline-flex min-h-9 min-w-[118px] items-center justify-center gap-2 whitespace-nowrap rounded-[11px] bg-[var(--app-ink)] px-4 text-[11px] font-extrabold tracking-[0.01em] text-[var(--app-surface)] shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sky-bright)]"
+        (click)="goToProducts()"
+      >
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+        Add product
+      </button>
     </div>
-  </div>
+  </header>
 
-  <!-- Stats -->
-  <div class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-    <app-stat-card label="Orders" [value]="stats().total" />
-    <app-stat-card label="Pending" [value]="stats().pending" trend="needs attention" [trendUp]="false" />
-    <app-stat-card label="Preparing" [value]="stats().preparing" />
-    <app-stat-card label="Delivered" [value]="stats().delivered" />
-  </div>
-
-  <!-- Loading / content -->
   @if (profileLoading() || ordersLoading()) {
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      @for (row of [1, 2, 3]; track row) {
-        <div class="h-40 animate-pulse rounded-lg bg-slate-200"></div>
-      }
+    <div class="flex flex-col gap-[22px]" aria-label="Loading dashboard">
+      <div class="grid grid-cols-1 gap-[18px] md:grid-cols-3 xl:w-[73%]">
+        @for (row of [1, 2, 3]; track row) {
+          <div class="h-44 animate-pulse rounded-[23px] bg-slate-200"></div>
+        }
+      </div>
+      <div class="grid grid-cols-1 gap-[22px] xl:grid-cols-[2.25fr_0.82fr]">
+        <div class="min-h-96 animate-pulse rounded-[23px] bg-slate-200"></div>
+        <div class="min-h-96 animate-pulse rounded-[23px] bg-slate-200"></div>
+      </div>
     </div>
   } @else {
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      <!-- Recent orders -->
-      <div class="lg:col-span-2 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400">Recent Orders</h3>
-        <div class="mt-3 divide-y divide-slate-100 text-sm">
+    <div
+      class="dashboard-layout grid grid-cols-1 gap-[22px] xl:grid-cols-[minmax(0,2.25fr)_minmax(270px,0.82fr)]"
+    >
+      <div class="dashboard-main-column flex min-w-0 flex-col gap-[22px]">
+        <div class="dashboard-metrics grid grid-cols-1 gap-[18px] md:grid-cols-3">
+          <article class="metric-card min-h-44 rounded-[23px] p-5">
+            <div class="metric-card__topline mb-[22px] flex items-center justify-between gap-2.5">
+              <span
+                class="metric-card__icon metric-card__icon--blue grid size-[42px] place-items-center rounded-[14px]"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M6 3h12l2 4-2 4H6L4 7l2-4Z" />
+                  <path d="M7 11v9m10-9v9M5 20h14" />
+                </svg>
+              </span>
+              <span class="metric-card__hint">Today</span>
+            </div>
+            <strong>{{ stats().total }}</strong>
+            <p>Total orders</p>
+          </article>
+
+          <article class="metric-card min-h-44 rounded-[23px] p-5">
+            <div class="metric-card__topline mb-[22px] flex items-center justify-between gap-2.5">
+              <span
+                class="metric-card__icon metric-card__icon--amber grid size-[42px] place-items-center rounded-[14px]"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <circle cx="12" cy="12" r="8.5" />
+                  <path d="M12 7.5V12l3 2" />
+                </svg>
+              </span>
+              <span class="metric-card__hint metric-card__hint--attention">Needs attention</span>
+            </div>
+            <strong>{{ stats().pending }}</strong>
+            <p>Pending orders</p>
+          </article>
+
+          <article class="metric-card min-h-44 rounded-[23px] p-5">
+            <div class="metric-card__topline mb-[22px] flex items-center justify-between gap-2.5">
+              <span
+                class="metric-card__icon metric-card__icon--violet grid size-[42px] place-items-center rounded-[14px]"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M5 19h14M7 19V9.5a5 5 0 0 1 10 0V19" />
+                  <path d="M9.5 4.5 8 2.5m6.5 2L16 2.5M12 4V2" />
+                </svg>
+              </span>
+              <span class="metric-card__hint">In progress</span>
+            </div>
+            <strong>{{ stats().preparing }}</strong>
+            <p>Preparing orders</p>
+          </article>
+        </div>
+
+        @if (pendingOrders().length > 0) {
+          <button
+            type="button"
+            class="pending-notice flex w-full items-center gap-3 rounded-[18px] border px-4 py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sky-bright)]"
+            (click)="goToOrders()"
+          >
+            <span
+              class="pending-notice__icon grid size-10 shrink-0 place-items-center rounded-[13px]"
+              aria-hidden="true"
+            >
+              <svg
+                class="size-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <circle cx="12" cy="12" r="8.5" />
+                <path d="M12 7.5V12l3 2" />
+              </svg>
+            </span>
+            <span class="min-w-0 flex-1">
+              <strong class="block text-sm font-extrabold">
+                {{ pendingOrders().length }} pending
+                {{ pendingOrders().length === 1 ? 'order' : 'orders' }}
+              </strong>
+              <span class="mt-0.5 block truncate text-xs text-[var(--app-muted)]">
+                Waiting for your review and confirmation.
+              </span>
+            </span>
+            <span class="hidden shrink-0 items-center gap-1 text-xs font-extrabold sm:flex">
+              Review orders
+              <svg
+                class="size-4"
+                aria-hidden="true"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+              >
+                <path d="m7 4 6 6-6 6" />
+              </svg>
+            </span>
+          </button>
+        }
+
+        <section
+          class="dashboard-card recent-orders overflow-hidden rounded-[23px]"
+          aria-labelledby="recent-orders-title"
+        >
+          <div
+            class="dashboard-card__header flex items-center justify-between gap-4 px-6 pt-[22px] pb-[18px] max-[430px]:px-[18px]"
+          >
+            <div>
+              <p class="dashboard-card__eyebrow">Activity</p>
+              <h2 id="recent-orders-title">Recent orders</h2>
+            </div>
+            <button type="button" class="dashboard-text-button" (click)="goToOrders()">
+              View all
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+              >
+                <path d="m7 4 6 6-6 6" />
+              </svg>
+            </button>
+          </div>
+
           @if (orders().length === 0) {
-            <p class="py-6 text-center text-slate-500">No orders yet.</p>
-          }
-          @for (order of orders().slice(0, 5); track order.id) {
-            <div class="flex items-center justify-between gap-3 py-3">
-              <div>
-                <p class="font-medium text-slate-900">{{ order.order_number }}</p>
-                <p class="text-xs text-slate-500">{{ order.customer?.name ?? '—' }}</p>
+            <div class="recent-orders__empty">
+              <span>
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                >
+                  <path d="M6 3h12l2 4-2 4H6L4 7l2-4Z" />
+                  <path d="M7 11v9m10-9v9M5 20h14" />
+                </svg>
+              </span>
+              <h3>No orders yet</h3>
+              <p>New customer orders will appear here.</p>
+            </div>
+          } @else {
+            <div class="orders-table" role="table" aria-label="Recent merchant orders">
+              <div class="orders-table__header" role="row">
+                <span role="columnheader">Order</span>
+                <span role="columnheader">Customer</span>
+                <span role="columnheader">Status</span>
+                <span role="columnheader">Total</span>
               </div>
-              <div class="text-right">
-                <p class="font-medium text-slate-900">₱{{ order.total.toFixed(2) }}</p>
-                <p class="text-xs text-slate-500">{{ order.status.replace('_', ' ') }}</p>
-              </div>
+              @for (order of orders().slice(0, 5); track order.id) {
+                <div class="orders-table__row" role="row">
+                  <div class="order-number" role="cell">
+                    <span class="order-number__mark" aria-hidden="true">{{
+                      order.order_number.charAt(0)
+                    }}</span>
+                    <div>
+                      <strong>{{ order.order_number }}</strong>
+                      <small>{{ order.payment_method }}</small>
+                    </div>
+                  </div>
+                  <span class="order-customer" role="cell">{{ order.customer?.name ?? '—' }}</span>
+                  <span class="order-status" [attr.data-status]="order.status" role="cell">
+                    {{ formatStatus(order.status) }}
+                  </span>
+                  <strong class="order-total" role="cell">{{ formatMoney(order.total) }}</strong>
+                </div>
+              }
             </div>
           }
-        </div>
+        </section>
       </div>
 
-      <!-- Store summary -->
-      <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400">Store</h3>
-        <div class="mt-3 space-y-3 text-sm">
-          <div>
-            <p class="text-slate-500">Status</p>
-            <p class="font-medium text-slate-900">{{ profile()?.status === 'ACTIVE' ? 'Active' : 'Inactive' }}</p>
+      <aside
+        class="dashboard-side-column grid min-w-0 grid-cols-1 gap-[22px] md:grid-cols-2 xl:flex xl:flex-col"
+      >
+        <section class="store-status-card" [attr.data-status]="profile()?.status ?? 'INACTIVE'">
+          <div class="store-status-card__header">
+            <span>Store status</span>
+            <span class="store-status-card__dot" aria-hidden="true"></span>
           </div>
-          <div>
-            <p class="text-slate-500">Address</p>
-            <p class="font-medium text-slate-900">{{ profile()?.address ?? '—' }}</p>
+          <h2>{{ formatStatus(profile()?.status) }}</h2>
+          <p>
+            Your store is
+            {{
+              profile()?.status === 'ACTIVE'
+                ? 'visible to customers'
+                : 'currently not visible to customers'
+            }}.
+          </p>
+
+          <div class="store-status-card__figures">
+            <div>
+              <span>Delivered</span>
+              <strong>{{ stats().delivered }}</strong>
+            </div>
+            <div>
+              <span>Revenue</span>
+              <strong>{{ formatMoney(stats().revenue) }}</strong>
+            </div>
           </div>
-          <div>
-            <p class="text-slate-500">Phone</p>
-            <p class="font-medium text-slate-900">{{ profile()?.phone ?? '—' }}</p>
+
+          <button type="button" (click)="goToOrders()">View orders</button>
+        </section>
+
+        <section
+          class="dashboard-card store-details overflow-hidden rounded-[23px]"
+          aria-labelledby="store-details-title"
+        >
+          <div
+            class="dashboard-card__header flex items-center justify-between gap-4 px-6 pt-[22px] pb-[18px] max-[430px]:px-[18px]"
+          >
+            <div>
+              <p class="dashboard-card__eyebrow">Workspace</p>
+              <h2 id="store-details-title">Store details</h2>
+            </div>
           </div>
-          <div>
-            <p class="text-slate-500">Hours</p>
-            <p class="font-medium text-slate-900">
-              {{ profile()?.opening_time ? profile()!.opening_time + ' – ' + profile()!.closing_time : '—' }}
-            </p>
-          </div>
-          <div>
-            <p class="text-slate-500">Revenue (delivered)</p>
-            <p class="font-medium text-slate-900">₱{{ stats().revenue.toFixed(2) }}</p>
-          </div>
-        </div>
-      </div>
+
+          <dl>
+            <div>
+              <dt>
+                <span class="store-details__icon">
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <path d="M12 21s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z" />
+                    <circle cx="12" cy="9" r="2.2" />
+                  </svg>
+                </span>
+                <span>Address</span>
+              </dt>
+              <dd>{{ profile()?.address ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>
+                <span class="store-details__icon">
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <path
+                      d="M7 3h3l1.5 4-2 1.5a15 15 0 0 0 6 6l1.5-2L21 14v3a4 4 0 0 1-4 4C9.3 21 3 14.7 3 7a4 4 0 0 1 4-4Z"
+                    />
+                  </svg>
+                </span>
+                <span>Phone</span>
+              </dt>
+              <dd>{{ profile()?.phone ?? '—' }}</dd>
+            </div>
+            <div>
+              <dt>
+                <span class="store-details__icon">
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.8"
+                  >
+                    <circle cx="12" cy="12" r="8.5" />
+                    <path d="M12 7.5V12l3 2" />
+                  </svg>
+                </span>
+                <span>Store hours</span>
+              </dt>
+              <dd>
+                {{
+                  profile()?.opening_time
+                    ? profile()!.opening_time + ' – ' + profile()!.closing_time
+                    : '—'
+                }}
+              </dd>
+            </div>
+          </dl>
+        </section>
+      </aside>
     </div>
   }
-</div>
+</section>

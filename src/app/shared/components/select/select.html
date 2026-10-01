@@ -3,7 +3,7 @@
     <label class="mb-1.5 block text-sm font-medium text-slate-700">{{ label() }}</label>
   }
   <select
-    class="block w-full rounded-lg border border-slate-300 bg-white py-2 px-3 text-sm text-slate-900 shadow-sm transition-colors focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+    class="block min-h-11 w-full rounded-[12px] border border-[var(--app-border)] bg-[var(--app-field)] px-3 py-2 text-sm text-[var(--app-ink)] transition-colors focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
     [value]="value()"
     (change)="onSelect($event)"
   >

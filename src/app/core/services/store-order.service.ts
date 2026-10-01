@@ -2,7 +2,7 @@ import { Injectable, inject, signal, effect } from '@angular/core';
 import { ApiClientService } from '../api/api-client.service';
 import { EchoService } from '../echo/echo.service';
 import { Order, PaginatedResponse } from '../models';
-import { Observable } from 'rxjs';
+import { map, Observable } from 'rxjs';
 
 export interface OrderFilters {
   status?: string;
@@ -61,14 +61,15 @@ export class StoreOrderService {
 
     this.api.get<PaginatedResponse<Order>>('/store/orders', params).subscribe({
       next: (result) => {
-        this._orders.set(result.data);
+        const orders = result.data.map((order) => this.normalizeOrder(order));
+        this._orders.set(orders);
         this._total.set(result.meta?.total ?? result.data.length);
         this._currentPage.set(result.meta?.current_page ?? 1);
         this._lastPage.set(result.meta?.last_page ?? 1);
         this._loading.set(false);
       },
       error: () => {
-        this._error.set('We couldn\'t load orders.');
+        this._error.set("We couldn't load orders.");
         this._loading.set(false);
       },
     });
@@ -79,22 +80,60 @@ export class StoreOrderService {
   }
 
   getOrder(id: number): Observable<Order> {
-    return this.api.get<Order>(`/store/orders/${id}`);
+    return this.api
+      .get<Order>(`/store/orders/${id}`)
+      .pipe(map((order) => this.normalizeOrder(order)));
   }
 
   confirm(id: number): Observable<Order> {
-    return this.api.post<Order>(`/store/orders/${id}/confirm`, {});
+    return this.api
+      .post<Order>(`/store/orders/${id}/confirm`, {})
+      .pipe(map((order) => this.normalizeOrder(order)));
   }
 
   preparing(id: number): Observable<Order> {
-    return this.api.post<Order>(`/store/orders/${id}/preparing`, {});
+    return this.api
+      .post<Order>(`/store/orders/${id}/preparing`, {})
+      .pipe(map((order) => this.normalizeOrder(order)));
   }
 
   ready(id: number): Observable<Order> {
-    return this.api.post<Order>(`/store/orders/${id}/ready`, {});
+    return this.api
+      .post<Order>(`/store/orders/${id}/ready`, {})
+      .pipe(map((order) => this.normalizeOrder(order)));
   }
 
   cancel(id: number, reason: string): Observable<Order> {
-    return this.api.post<Order>(`/store/orders/${id}/cancel`, { reason });
+    return this.api
+      .post<Order>(`/store/orders/${id}/cancel`, { reason })
+      .pipe(map((order) => this.normalizeOrder(order)));
+  }
+
+  private normalizeOrder(order: Order): Order {
+    return {
+      ...order,
+      subtotal: this.toFiniteNumber(order.subtotal),
+      delivery_fee: this.toFiniteNumber(order.delivery_fee),
+      total: this.toFiniteNumber(order.total),
+      items: Array.isArray(order.items)
+        ? order.items.map((item) => ({
+            ...item,
+            quantity: this.toFiniteNumber(item.quantity),
+            price: this.toFiniteNumber(item.price),
+          }))
+        : [],
+      delivery: order.delivery
+        ? {
+            ...order.delivery,
+            distance: this.toFiniteNumber(order.delivery.distance),
+            delivery_fee: this.toFiniteNumber(order.delivery.delivery_fee),
+          }
+        : order.delivery,
+    };
+  }
+
+  private toFiniteNumber(value: unknown): number {
+    const parsed = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(parsed) ? parsed : 0;
   }
 }

@@ -7,6 +7,7 @@ import { ModalComponent } from '../../../shared/components/modal/modal';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state';
+import { IconButtonComponent } from '../../../shared/components/icon-button/icon-button';
 import { Category } from '../../../core/models';
 
 @Component({
@@ -19,6 +20,7 @@ import { Category } from '../../../core/models';
     ConfirmDialogComponent,
     EmptyStateComponent,
     ErrorStateComponent,
+    IconButtonComponent,
   ],
   templateUrl: './category-list.html',
   styleUrl: './category-list.css',
@@ -118,6 +120,7 @@ export class CategoryListComponent {
       },
       error: () => {
         this.acting.set(false);
+        this.deleteTarget.set(null);
         this.toastService.show('Unable to delete category', 'error');
       },
     });

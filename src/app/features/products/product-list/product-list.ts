@@ -10,6 +10,7 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
 import { SearchInputComponent } from '../../../shared/components/search-input/search-input';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state';
+import { IconButtonComponent } from '../../../shared/components/icon-button/icon-button';
 import { Product } from '../../../core/models';
 
 @Component({
@@ -24,6 +25,7 @@ import { Product } from '../../../core/models';
     SearchInputComponent,
     EmptyStateComponent,
     ErrorStateComponent,
+    IconButtonComponent,
   ],
   templateUrl: './product-list.html',
   styleUrl: './product-list.css',
@@ -234,6 +236,7 @@ export class ProductListComponent {
       },
       error: () => {
         this.acting.set(false);
+        this.deleteTarget.set(null);
         this.toastService.show('Unable to delete product', 'error');
       },
     });

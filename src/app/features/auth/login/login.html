@@ -1,73 +1,60 @@
-<div class="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-  <div class="w-full max-w-5xl overflow-hidden rounded-2xl shadow-sm lg:grid lg:grid-cols-2">
-    <!-- Brand side (desktop) -->
-    <div class="hidden bg-sky-600 p-12 lg:flex lg:flex-col lg:justify-between">
-      <div class="flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20 text-white">
-          <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2-1h2m10 1l2-1V8a1 1 0 00-1-1h-4m-4 5h.01M17 16h.01" />
-          </svg>
-        </div>
-        <span class="text-xl font-bold text-white">TalaDelivery</span>
-      </div>
-
-      <div>
-        <h2 class="text-3xl font-semibold leading-tight text-white">Operations made simple.</h2>
-        <p class="mt-3 text-sky-100">
-          Monitor deliveries, assign riders, and keep every order moving — all from one control center.
-        </p>
-      </div>
-
-      <ul class="space-y-3">
-        @for (item of ['Track live deliveries', 'Assign riders instantly', 'Manage stores & riders']; track item) {
-          <li class="flex items-center gap-2 text-sm text-sky-100">
-            <svg class="h-4 w-4 text-sky-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-            {{ item }}
-          </li>
-        }
-      </ul>
+<main class="merchant-login">
+  <section class="merchant-login__form-panel" aria-labelledby="merchant-login-title">
+    <div class="merchant-login__workspace" title="Current merchant workspace">
+      <span class="merchant-login__mark" aria-hidden="true">★</span>
+      <span>{{ workspaceName() }}</span>
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 20 20"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+      >
+        <path d="m6 8 4 4 4-4" />
+      </svg>
     </div>
 
-    <!-- Form side -->
-    <div class="bg-white p-8 sm:p-12">
-      <div class="mb-8 text-center lg:text-left">
-        <div class="mb-4 flex items-center justify-center gap-2 lg:hidden">
-          <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-600 text-white">
-            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10l2-1h2m10 1l2-1V8a1 1 0 00-1-1h-4m-4 5h.01M17 16h.01" />
-            </svg>
-          </div>
-          <span class="text-xl font-bold text-sky-600">TalaDelivery</span>
-        </div>
+    <div class="merchant-login__form-wrap">
+      <header class="merchant-login__heading">
+        <p class="merchant-login__eyebrow">Tala Delivery Merchant</p>
+        <h1 id="merchant-login-title">Sign in to your store</h1>
+        <p>Enter your merchant email below to continue</p>
+      </header>
 
-        <h1 class="text-2xl font-semibold text-slate-900">Sign in</h1>
-        <p class="mt-1 text-sm text-slate-500">Access the admin control center.</p>
-      </div>
-
-      <form [formGroup]="form" (ngSubmit)="onSubmit()" class="space-y-5">
+      <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
         @if (errorMessage()) {
-          <div class="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-3" role="alert">
-            <svg class="mt-0.5 h-5 w-5 shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <div class="merchant-login__error" role="alert" aria-live="polite">
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+            >
+              <path d="M12 8v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
             </svg>
-            <p class="text-sm text-red-700">{{ errorMessage() }}</p>
+            <span>{{ errorMessage() }}</span>
           </div>
         }
 
-        <div>
-          <label for="email" class="mb-1.5 block text-sm font-medium text-slate-700">Email</label>
+        <div class="merchant-login__field">
+          <label for="merchant-email">Email</label>
           <input
-            id="email"
+            id="merchant-email"
             type="email"
             formControlName="email"
             autocomplete="email"
-            class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-            placeholder="admin@taladelivery.com"
+            inputmode="email"
+            placeholder="you@yourstore.com"
+            [attr.aria-invalid]="form.controls.email.touched && form.controls.email.invalid"
+            [attr.aria-describedby]="
+              form.controls.email.touched && form.controls.email.invalid
+                ? 'merchant-email-error'
+                : null
+            "
           />
           @if (form.controls.email.touched && form.controls.email.invalid) {
-            <p class="mt-1 text-xs text-red-600">
+            <p id="merchant-email-error" class="merchant-login__field-error">
               @if (form.controls.email.hasError('required')) {
                 Email is required.
               } @else if (form.controls.email.hasError('email')) {
@@ -77,18 +64,57 @@
           }
         </div>
 
-        <div>
-          <label for="password" class="mb-1.5 block text-sm font-medium text-slate-700">Password</label>
-          <input
-            id="password"
-            type="password"
-            formControlName="password"
-            autocomplete="current-password"
-            class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-            placeholder="Enter your password"
-          />
+        <div class="merchant-login__field">
+          <label for="merchant-password">Password</label>
+          <div class="merchant-login__password">
+            <input
+              id="merchant-password"
+              [type]="passwordVisible() ? 'text' : 'password'"
+              formControlName="password"
+              autocomplete="current-password"
+              placeholder="Enter your password"
+              [attr.aria-invalid]="form.controls.password.touched && form.controls.password.invalid"
+              [attr.aria-describedby]="
+                form.controls.password.touched && form.controls.password.invalid
+                  ? 'merchant-password-error'
+                  : null
+              "
+            />
+            <button
+              type="button"
+              class="merchant-login__eye"
+              [attr.aria-label]="passwordVisible() ? 'Hide password' : 'Show password'"
+              [attr.aria-pressed]="passwordVisible()"
+              (click)="togglePassword()"
+            >
+              @if (passwordVisible()) {
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path
+                    d="M3 3l18 18M10.6 10.7a2 2 0 0 0 2.7 2.7M9.9 4.2A10.5 10.5 0 0 1 12 4c5.5 0 9 6 9 8a13.8 13.8 0 0 1-2.3 3.5M6.6 6.6C4.2 8.2 3 10.8 3 12c0 2 3.5 8 9 8 1.2 0 2.3-.3 3.3-.7"
+                  />
+                </svg>
+              } @else {
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                >
+                  <path d="M3 12c0-2 3.5-8 9-8s9 6 9 8-3.5 8-9 8-9-6-9-8Z" />
+                  <circle cx="12" cy="12" r="2.6" />
+                </svg>
+              }
+            </button>
+          </div>
           @if (form.controls.password.touched && form.controls.password.invalid) {
-            <p class="mt-1 text-xs text-red-600">
+            <p id="merchant-password-error" class="merchant-login__field-error">
               @if (form.controls.password.hasError('required')) {
                 Password is required.
               } @else {
@@ -98,23 +124,55 @@
           }
         </div>
 
-        <div>
-          <app-button
-            type="submit"
-            variant="primary"
-            size="lg"
-            [loading]="loading()"
-            [disabled]="loading()"
-            class="!w-full"
-          >
-            {{ loading() ? 'Signing in...' : 'Sign in' }}
-          </app-button>
-        </div>
+        <a class="merchant-login__forgot" href="#merchant-login-footer">Forgot password?</a>
+
+        <button
+          class="merchant-login__submit"
+          type="submit"
+          [disabled]="loading()"
+          [attr.aria-busy]="loading()"
+        >
+          @if (loading()) {
+            <span class="merchant-login__spinner" aria-hidden="true"></span>
+            <span class="sr-only">Signing in</span>
+          } @else {
+            <span>Sign In</span>
+          }
+        </button>
       </form>
 
-      <p class="mt-6 text-center text-sm text-slate-500 lg:text-left">
-        Forgot password? Contact your platform administrator.
+      <p class="merchant-login__apply">
+        <span>New to Tala?</span>
+        <a href="#merchant-login-footer">Apply to sell</a>
       </p>
+
+      <footer id="merchant-login-footer" class="merchant-login__footer">
+        <span>© {{ currentYear }} Tala Technologies Inc.</span>
+        <span aria-hidden="true">·</span>
+        <a href="#merchant-login-footer">Terms</a>
+        <span aria-hidden="true">·</span>
+        <a href="#merchant-login-footer">Privacy</a>
+      </footer>
     </div>
-  </div>
-</div>
+  </section>
+
+  <aside class="merchant-login__scene" aria-label="Tala Delivery Merchant">
+    <canvas #starfield aria-hidden="true"></canvas>
+    <span
+      class="merchant-login__shooting-star merchant-login__shooting-star--one"
+      aria-hidden="true"
+    ></span>
+    <span
+      class="merchant-login__shooting-star merchant-login__shooting-star--two"
+      aria-hidden="true"
+    ></span>
+    <div class="merchant-login__vignette" aria-hidden="true"></div>
+
+    <div class="merchant-login__brand-chip">Tala Delivery Merchant</div>
+
+    <blockquote class="merchant-login__quote">
+      <p>“Delivered by starlight, every night of the week.”</p>
+      <footer>— <strong>Tala</strong> · Powering local delivery</footer>
+    </blockquote>
+  </aside>
+</main>

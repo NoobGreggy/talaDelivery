@@ -13,7 +13,6 @@ import { EchoService } from '../../core/echo/echo.service';
 })
 export class TopbarComponent {
   menuToggle = output<void>();
-  sidebarToggle = output<void>();
 
   private router = inject(Router);
   private authService = inject(AuthService);
@@ -22,8 +21,6 @@ export class TopbarComponent {
   protected readonly user = this.authService.user;
   protected readonly profileOpen = signal(false);
   protected readonly notificationsOpen = signal(false);
-  protected readonly pageTitle = 'TalaDelivery';
-
   protected readonly notifications = this.echoService.notifications$;
   protected readonly unreadCount = this.echoService.unreadCount$;
   protected readonly loadingNotifications = this.echoService.loadingNotifications;

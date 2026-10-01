@@ -17,29 +17,29 @@ export class ButtonComponent {
   protected variantClasses = computed(() => {
     switch (this.variant()) {
       case 'secondary':
-        return 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50';
+        return 'bg-[var(--app-surface)] text-[var(--app-ink)] border border-[var(--app-border)] hover:bg-[var(--app-hover)]';
       case 'ghost':
-        return 'bg-transparent text-slate-600 hover:bg-slate-100';
+        return 'bg-transparent text-[var(--app-muted)] hover:bg-[var(--app-hover)] hover:text-[var(--app-ink)]';
       case 'danger':
         return 'bg-red-600 text-white hover:bg-red-700';
       default:
-        return 'bg-sky-600 text-white hover:bg-sky-700';
+        return 'bg-[var(--app-ink)] text-[var(--app-surface)] hover:opacity-90';
     }
   });
 
   protected sizeClasses = computed(() => {
     switch (this.size()) {
       case 'sm':
-        return 'px-2.5 py-1.5 text-xs';
+        return 'min-h-9 px-3 py-1.5 text-xs';
       case 'lg':
-        return 'px-6 py-3 text-base';
+        return 'min-h-12 px-6 py-3 text-base';
       default:
-        return 'px-4 py-2 text-sm';
+        return 'min-h-10 px-4 py-2 text-sm';
     }
   });
 
   protected baseClasses =
-    'inline-flex items-center justify-center gap-2 font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-sky-500 disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap font-bold rounded-[11px] transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500 disabled:opacity-50 disabled:cursor-not-allowed';
 
   protected handleClick(): void {
     if (!this.disabled() && !this.loading()) {

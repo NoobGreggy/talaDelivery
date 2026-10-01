@@ -5,11 +5,18 @@ import { ToastService } from '../../../core/services/toast.service';
 import { ButtonComponent } from '../../../shared/components/button/button';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state';
 import { CardComponent } from '../../../shared/components/card/card';
+import { ThemeSwitcherComponent } from '../../../shared/components/theme-switcher/theme-switcher';
 
 @Component({
   selector: 'app-settings-page',
   standalone: true,
-  imports: [ReactiveFormsModule, ButtonComponent, ErrorStateComponent, CardComponent],
+  imports: [
+    ReactiveFormsModule,
+    ButtonComponent,
+    ErrorStateComponent,
+    CardComponent,
+    ThemeSwitcherComponent,
+  ],
   templateUrl: './settings-page.html',
   styleUrl: './settings-page.css',
 })

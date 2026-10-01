@@ -1,11 +1,11 @@
-<div class="flex items-start justify-between gap-4 mb-6">
+<div class="merchant-page__header">
   <div>
-    <h1 class="text-2xl font-semibold text-slate-900">{{ title() }}</h1>
+    <h1>{{ title() }}</h1>
     @if (subtitle()) {
-      <p class="mt-1 text-sm text-slate-500">{{ subtitle() }}</p>
+      <p>{{ subtitle() }}</p>
     }
   </div>
-  <div class="flex items-center gap-2 shrink-0">
+  <div class="merchant-page__actions shrink-0">
     <ng-content></ng-content>
   </div>
 </div>
