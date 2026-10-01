@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../core/auth/auth.service';
 
@@ -17,9 +17,6 @@ export class LoginComponent {
   protected readonly errorMessage = signal('');
   protected readonly passwordVisible = signal(false);
   protected readonly currentYear = new Date().getFullYear();
-  protected readonly workspaceName = computed(
-    () => this.authService.user()?.stores?.[0]?.name ?? 'Merchant workspace',
-  );
 
   protected readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
