@@ -644,6 +644,7 @@ html[data-theme='dark'] .swal2-container.swal2-backdrop-show {
   position: relative;
   z-index: 2;
   display: flex;
+  order: 2;
   flex: 0 1 46%;
   width: 46%;
   min-width: 420px;
@@ -651,8 +652,9 @@ html[data-theme='dark'] .swal2-container.swal2-backdrop-show {
   align-items: center;
   justify-content: center;
   padding: 112px 48px 46px;
+  border-radius: 0;
   background: var(--panel);
-  box-shadow: 22px 0 64px rgb(0 0 0 / 12%);
+  box-shadow: -22px 0 64px rgb(0 0 0 / 12%);
   transition: background-color 180ms ease;
 }
 
@@ -965,101 +967,115 @@ html[data-theme='dark'] .swal2-container.swal2-backdrop-show {
 
 .merchant-login__scene {
   position: relative;
+  order: 1;
   flex: 1;
   min-width: 0;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 62% 28%, rgb(20 76 140 / 27%), transparent 31%), var(--night);
-  color: white;
+  padding: 16px;
+  background: var(--panel);
 }
 
-.merchant-login__scene canvas,
-.merchant-login__vignette {
+.merchant-login__reels {
   position: absolute;
-  inset: 0;
+  inset: 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.merchant-login__reel {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 24px;
+}
+
+.merchant-login__reel-track {
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+}
+
+.merchant-login__reel-track--up {
+  animation: merchant-reel-up 46s linear infinite;
+}
+
+.merchant-login__reel-track--down {
+  animation: merchant-reel-down 52s linear infinite;
+}
+
+.merchant-login__reel-set {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 16px;
+}
+
+.merchant-login__reel-card {
+  position: relative;
+  flex: none;
+  height: clamp(270px, 38vh, 430px);
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 24px;
+  background: var(--app-field);
+  box-shadow: 0 22px 48px -28px rgb(0 0 0 / 58%);
+}
+
+.merchant-login__reel-card--tall {
+  height: clamp(320px, 48vh, 530px);
+}
+
+.merchant-login__reel-card--short {
+  height: clamp(230px, 31vh, 350px);
+}
+
+.merchant-login__reel-card img {
+  display: block;
   width: 100%;
   height: 100%;
+  object-fit: cover;
+  transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.merchant-login__vignette {
-  background:
-    radial-gradient(
-      circle at 58% 33%,
-      transparent 0 28%,
-      rgb(6 8 9 / 14%) 55%,
-      rgb(6 8 9 / 62%) 100%
-    ),
-    linear-gradient(to bottom, transparent 42%, rgb(6 8 9 / 88%) 100%);
+.merchant-login__reel-card:hover img {
+  transform: scale(1.025);
 }
 
-.merchant-login__brand-chip {
+.merchant-login__scene-shade {
   position: absolute;
-  top: 10%;
-  left: 8%;
-  padding: 9px 14px;
-  border: 1px solid var(--border-hi);
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, var(--panel), transparent 12% 82%, var(--panel)),
+    linear-gradient(90deg, rgb(6 8 9 / 12%), transparent 18% 82%, rgb(6 8 9 / 12%));
+}
+
+.merchant-login__scene-label {
+  position: absolute;
+  z-index: 2;
+  right: 32px;
+  bottom: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border: 1px solid rgb(255 255 255 / 16%);
   border-radius: 999px;
-  background: rgb(15 19 24 / 88%);
-  color: rgb(243 247 250 / 78%);
-  backdrop-filter: blur(10px);
+  background: rgb(6 8 9 / 76%);
+  box-shadow: 0 16px 40px -20px rgb(0 0 0 / 70%);
+  color: rgb(255 255 255 / 88%);
+  backdrop-filter: blur(14px);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 750;
   letter-spacing: 0.04em;
 }
 
-.merchant-login__quote {
-  position: absolute;
-  right: clamp(38px, 8vw, 110px);
-  bottom: clamp(48px, 10vh, 104px);
-  left: clamp(38px, 8vw, 110px);
-  z-index: 1;
-  max-width: 540px;
-  margin: 0;
-}
-
-.merchant-login__quote p {
-  margin: 0;
-  color: white;
-  font-family: 'Sora', 'Inter', system-ui, sans-serif;
-  font-size: clamp(21px, 2.2vw, 29px);
-  font-weight: 800;
-  letter-spacing: -0.035em;
-  line-height: 1.28;
-}
-
-.merchant-login__quote footer {
-  margin-top: 13px;
-  color: rgb(138 151 161 / 88%);
-  font-size: 12px;
-}
-
-.merchant-login__quote strong {
-  color: rgb(243 247 250 / 82%);
-}
-
-.merchant-login__shooting-star {
-  position: absolute;
-  z-index: 1;
-  width: 118px;
-  height: 1.5px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 92%));
-  opacity: 0;
-  filter: drop-shadow(0 0 5px rgb(255 255 255 / 45%));
-  pointer-events: none;
-}
-
-.merchant-login__shooting-star--one {
-  top: 12%;
-  right: 4%;
-  animation: merchant-shoot-one 7.5s 1s ease-out infinite;
-}
-
-.merchant-login__shooting-star--two {
-  top: 36%;
-  left: 34%;
-  width: 108px;
-  animation: merchant-shoot-two 10s 4.5s ease-out infinite;
+.merchant-login__scene-label span {
+  color: var(--gold);
+  font-size: 13px;
 }
 
 @keyframes merchant-button-sweep {
@@ -1095,35 +1111,18 @@ html[data-theme='dark'] .swal2-container.swal2-backdrop-show {
   }
 }
 
-@keyframes merchant-shoot-one {
-  0%,
-  72%,
-  100% {
-    opacity: 0;
-    transform: translate(0, 0) rotate(-36deg);
-  }
-  75% {
-    opacity: 1;
-  }
-  88% {
-    opacity: 0;
-    transform: translate(-360px, 250px) rotate(-36deg);
+@keyframes merchant-reel-up {
+  to {
+    transform: translateY(-50%);
   }
 }
 
-@keyframes merchant-shoot-two {
-  0%,
-  73%,
-  100% {
-    opacity: 0;
-    transform: translate(0, 0) rotate(-28deg);
+@keyframes merchant-reel-down {
+  from {
+    transform: translateY(-50%);
   }
-  76% {
-    opacity: 0.8;
-  }
-  89% {
-    opacity: 0;
-    transform: translate(-310px, 170px) rotate(-28deg);
+  to {
+    transform: translateY(0);
   }
 }
 
@@ -1138,6 +1137,7 @@ html[data-theme='dark'] .swal2-container.swal2-backdrop-show {
     flex: none;
     width: 100%;
     min-height: 340px;
+    padding: 10px;
   }
 
   .merchant-login__form-panel {
@@ -1147,22 +1147,33 @@ html[data-theme='dark'] .swal2-container.swal2-backdrop-show {
     max-width: none;
     box-sizing: border-box;
     padding: 112px 24px 42px;
+    border-radius: 0;
   }
 
-  .merchant-login__brand-chip {
-    display: none;
+  .merchant-login__reels {
+    inset: 10px;
+    gap: 10px;
   }
 
-  .merchant-login__quote {
-    right: 24px;
-    bottom: 54px;
-    left: 24px;
-    max-width: none;
-    text-align: center;
+  .merchant-login__reel,
+  .merchant-login__reel-card {
+    border-radius: 18px;
   }
 
-  .merchant-login__quote p {
-    font-size: clamp(20px, 5vw, 25px);
+  .merchant-login__reel-set {
+    gap: 10px;
+    padding-bottom: 10px;
+  }
+
+  .merchant-login__reel-card,
+  .merchant-login__reel-card--tall,
+  .merchant-login__reel-card--short {
+    height: 250px;
+  }
+
+  .merchant-login__scene-label {
+    right: 20px;
+    bottom: 18px;
   }
 
   .merchant-login__eyebrow {
@@ -1197,9 +1208,21 @@ html[data-theme='dark'] .swal2-container.swal2-backdrop-show {
     scroll-behavior: auto !important;
   }
 
-  .merchant-login__submit::after,
-  .merchant-login__shooting-star {
+  .merchant-login__submit::after {
     display: none;
+  }
+
+  .merchant-login__reel-track--up,
+  .merchant-login__reel-track--down {
+    animation: none;
+  }
+
+  .merchant-login__reel-track--up {
+    transform: translateY(-18%);
+  }
+
+  .merchant-login__reel-track--down {
+    transform: translateY(-34%);
   }
 
   .merchant-login__submit,
