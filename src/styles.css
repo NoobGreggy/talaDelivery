@@ -640,6 +640,46 @@ html[data-theme='dark'] .swal2-container.swal2-backdrop-show {
   color: var(--ink);
 }
 
+.merchant-login__form-panel::before {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 58%;
+  background:
+    radial-gradient(circle at 4% 31%, rgb(255 255 255 / 72%) 0 0.7px, transparent 1.5px),
+    radial-gradient(circle at 8% 17%, rgb(255 255 255 / 96%) 0 1.3px, transparent 2.1px),
+    radial-gradient(circle at 13% 49%, rgb(123 201 255 / 78%) 0 0.8px, transparent 1.6px),
+    radial-gradient(circle at 21% 39%, rgb(255 210 92 / 94%) 0 1.2px, transparent 2px),
+    radial-gradient(circle at 27% 22%, rgb(255 255 255 / 74%) 0 0.7px, transparent 1.5px),
+    radial-gradient(circle at 35% 12%, rgb(255 255 255 / 88%) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 41% 46%, rgb(255 210 92 / 72%) 0 0.8px, transparent 1.6px),
+    radial-gradient(circle at 49% 31%, rgb(123 201 255 / 94%) 0 1.3px, transparent 2.1px),
+    radial-gradient(circle at 56% 8%, rgb(255 255 255 / 76%) 0 0.7px, transparent 1.5px),
+    radial-gradient(circle at 63% 16%, rgb(255 255 255 / 96%) 0 1.3px, transparent 2.1px),
+    radial-gradient(circle at 70% 36%, rgb(123 201 255 / 76%) 0 0.8px, transparent 1.6px),
+    radial-gradient(circle at 78% 43%, rgb(255 255 255 / 82%) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 84% 11%, rgb(255 255 255 / 72%) 0 0.7px, transparent 1.5px),
+    radial-gradient(circle at 92% 20%, rgb(255 210 92 / 94%) 0 1.2px, transparent 2px),
+    radial-gradient(circle at 96% 48%, rgb(123 201 255 / 74%) 0 0.8px, transparent 1.6px),
+    radial-gradient(circle at 17% 7%, rgb(255 255 255 / 64%) 0 0.6px, transparent 1.4px),
+    radial-gradient(circle at 32% 55%, rgb(255 255 255 / 68%) 0 0.7px, transparent 1.5px),
+    radial-gradient(circle at 59% 51%, rgb(255 210 92 / 68%) 0 0.7px, transparent 1.5px),
+    radial-gradient(circle at 88% 57%, rgb(255 255 255 / 66%) 0 0.7px, transparent 1.5px),
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--dusk-2) 72%, var(--panel)) 0%,
+      color-mix(in srgb, var(--sky) 38%, var(--panel)) 58%,
+      var(--panel) 100%
+    );
+  content: '';
+  opacity: 1;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, black 0 70%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 0 70%, transparent 100%);
+}
+
 .merchant-login__form-panel {
   position: relative;
   z-index: 2;
@@ -660,6 +700,7 @@ html[data-theme='dark'] .swal2-container.swal2-backdrop-show {
 
 .merchant-login__workspace {
   position: absolute;
+  z-index: 2;
   top: 28px;
   left: 28px;
   display: flex;
@@ -701,6 +742,8 @@ html[data-theme='dark'] .swal2-container.swal2-backdrop-show {
 }
 
 .merchant-login__form-wrap {
+  position: relative;
+  z-index: 2;
   width: min(100%, 400px);
 }
 
