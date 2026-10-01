@@ -87,7 +87,7 @@ class EmptyState extends StatelessWidget {
 String apiErrorMessage(Object? error) => switch (error) {
   CustomerApiException apiError => apiError.message,
   FormatException _ => 'The server returned data in an unexpected format.',
-  _ => 'Unable to reach TalaDelivery. Please try again.',
+  _ => 'Unable to reach Tala Delivery. Please try again.',
 };
 
 class ApiErrorState extends StatelessWidget {

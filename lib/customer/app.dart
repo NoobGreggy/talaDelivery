@@ -193,7 +193,7 @@ class _TalaCustomerAppState extends State<TalaCustomerApp>
             listenable: themeController,
             builder: (context, _) => MaterialApp(
               debugShowCheckedModeBanner: false,
-              title: 'TalaDelivery',
+              title: 'Tala Delivery',
               initialRoute: CustomerRoutes.splash,
               onGenerateRoute: routes.onGenerateRoute,
               themeMode: themeController.mode,
