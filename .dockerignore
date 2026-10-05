@@ -4,4 +4,7 @@ dist
 .logs
 .env
 .env.local
+.env.docker
+**/*:Zone.Identifier
+*.tsbuildinfo
 coverage

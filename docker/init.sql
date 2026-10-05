@@ -1,42 +1,14 @@
--- TalaDelivery platform databases (mounted into postgres:16 init scripts).
--- Each NestJS service owns exactly one database; no cross-service joins.
-
-DO $$ BEGIN
-  CREATE ROLE tala WITH LOGIN PASSWORD 'tala_dev_password';
-  EXCEPTION WHEN duplicate_object THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE DATABASE taladelivery_identity OWNER tala;
-  EXCEPTION WHEN duplicate_database THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE DATABASE taladelivery_merchant OWNER tala;
-  EXCEPTION WHEN duplicate_database THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE DATABASE taladelivery_catalog OWNER tala;
-  EXCEPTION WHEN duplicate_database THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE DATABASE taladelivery_order OWNER tala;
-  EXCEPTION WHEN duplicate_database THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE DATABASE taladelivery_dispatch OWNER tala;
-  EXCEPTION WHEN duplicate_database THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE DATABASE taladelivery_payment OWNER tala;
-  EXCEPTION WHEN duplicate_database THEN NULL;
-END $$;
-
-DO $$ BEGIN
-  CREATE DATABASE taladelivery_notification OWNER tala;
-  EXCEPTION WHEN duplicate_database THEN NULL;
-END $$;
+-- Each service owns its database. CREATE DATABASE must run outside a transaction.
+-- The official Postgres image creates POSTGRES_USER before this script runs.
+SELECT format('CREATE DATABASE %I OWNER %I', name, current_user)
+FROM (VALUES
+  ('taladelivery_identity'),
+  ('taladelivery_merchant'),
+  ('taladelivery_catalog'),
+  ('taladelivery_order'),
+  ('taladelivery_dispatch'),
+  ('taladelivery_payment'),
+  ('taladelivery_notification')
+) AS databases(name)
+WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = name)
+\gexec

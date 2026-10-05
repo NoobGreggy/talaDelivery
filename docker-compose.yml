@@ -1,230 +1,129 @@
 name: taladelivery-backend
 
+x-service-env: &service-env
+  NODE_ENV: production
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  POSTGRES_HOST: ${DOCKER_POSTGRES_HOST:-host.docker.internal}
+  POSTGRES_PORT: '${POSTGRES_PORT:-5433}'
+  REDIS_HOST: ${DOCKER_REDIS_HOST:-host.docker.internal}
+  REDIS_PORT: '${REDIS_PORT:-6380}'
+  JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+  JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-30d}
+  OFFER_TTL_SECONDS: ${OFFER_TTL_SECONDS:-300}
+  FCM_SERVICE_ACCOUNT_JSON: ${FCM_SERVICE_ACCOUNT_JSON:-}
+  API_GATEWAY_URL: http://api-gateway:3000
+  IDENTITY_SERVICE_URL: http://identity-service:3001
+  MERCHANT_SERVICE_URL: http://merchant-service:3002
+  CATALOG_SERVICE_URL: http://catalog-service:3003
+  ORDER_SERVICE_URL: http://order-service:3004
+  DISPATCH_SERVICE_URL: http://dispatch-service:3005
+  PAYMENT_SERVICE_URL: http://payment-service:3006
+  NOTIFICATION_SERVICE_URL: http://notification-service:3007
+  REALTIME_SERVICE_URL: http://realtime-service:3008
+
+x-app: &app
+  image: taladelivery/backend:local
+  build:
+    context: .
+    dockerfile: docker/Dockerfile
+    target: runtime
+  restart: unless-stopped
+  env_file:
+    - .env
+  extra_hosts:
+    - 'host.docker.internal:host-gateway'
+  logging:
+    driver: json-file
+    options: { max-size: '10m', max-file: '3' }
+
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: taladelivery-postgres
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-tala}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tala_dev_password}
-      POSTGRES_DB: taladelivery_platform
-    ports:
-      - '5432:5432'
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-tala} -d taladelivery_platform']
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  redis:
-    image: redis:7-alpine
-    container_name: taladelivery-redis
-    ports:
-      - '6379:6379'
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ['CMD', 'redis-cli', 'ping']
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
+  # Storage is external: reuse the existing PostgreSQL and Redis connections.
   migrate:
+    image: taladelivery/migrate:local
     build:
       context: .
       dockerfile: docker/Dockerfile
-      target: build
-      args:
-        APP_NAME: api-gateway
-    command: ['npm', 'run', 'migration:run']
-    environment: &service-env
-      NODE_ENV: production
-      LOG_LEVEL: info
-      SERVICE_NAME: taladelivery-backend
-      APP_API_KEY: ${APP_API_KEY:-change-me-dev-api-key}
-      INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-change-me-internal-token}
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: '5432'
-      POSTGRES_USER: ${POSTGRES_USER:-tala}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tala_dev_password}
-      REDIS_HOST: redis
-      REDIS_PORT: '6379'
-      REDIS_PASSWORD: ''
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret-0123456789abcdef}
-      JWT_ACCESS_TTL: 15m
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret-0123456789abcdef}
-      JWT_REFRESH_TTL: 30d
-      BULLMQ_PREFIX: bull
-      OFFER_TTL_SECONDS: ${OFFER_TTL_SECONDS:-300}
-      DB_SSL: 'false'
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      target: migrate
+    profiles: ['maintenance']
+    restart: 'no'
+    env_file:
+      - .env
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    environment:
+      <<: *service-env
+      SERVICE_NAME: migrate
 
   api-gateway:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: runtime
-      args: { APP_NAME: api-gateway }
-    ports: ['3000:3000']
+    <<: *app
     environment:
       <<: *service-env
+      APP_NAME: api-gateway
+      SERVICE_NAME: api-gateway
       PORT: '3000'
-      IDENTITY_SERVICE_URL: http://identity-service:3001
-      MERCHANT_SERVICE_URL: http://merchant-service:3002
-      CATALOG_SERVICE_URL: http://catalog-service:3003
-      ORDER_SERVICE_URL: http://order-service:3004
-      DISPATCH_SERVICE_URL: http://dispatch-service:3005
-      PAYMENT_SERVICE_URL: http://payment-service:3006
-      NOTIFICATION_SERVICE_URL: http://notification-service:3007
-      REALTIME_SERVICE_URL: http://realtime-service:3008
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      postgres: { condition: service_healthy }
-      redis: { condition: service_healthy }
-    healthcheck:
-      test: ['CMD', 'node', '-e', "fetch('http://localhost:3000/health/ready').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+    ports: ['${API_BIND_ADDRESS:-0.0.0.0}:${API_GATEWAY_HOST_PORT:-3000}:3000']
 
   identity-service:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: runtime
-      args: { APP_NAME: identity-service }
-    ports: ['3001:3001']
+    <<: *app
     environment:
       <<: *service-env
+      APP_NAME: identity-service
+      SERVICE_NAME: identity-service
       PORT: '3001'
-      DISPATCH_SERVICE_URL: http://dispatch-service:3005
-    depends_on:
-      migrate: { condition: service_completed_successfully }
-      postgres: { condition: service_healthy }
-      redis: { condition: service_healthy }
 
   merchant-service:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: runtime
-      args: { APP_NAME: merchant-service }
-    ports: ['3002:3002']
+    <<: *app
     environment:
       <<: *service-env
+      APP_NAME: merchant-service
+      SERVICE_NAME: merchant-service
       PORT: '3002'
-      DISPATCH_SERVICE_URL: http://dispatch-service:3005
-    depends_on:
-      migrate: { condition: service_completed_successfully }
-      postgres: { condition: service_healthy }
-      redis: { condition: service_healthy }
 
   catalog-service:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: runtime
-      args: { APP_NAME: catalog-service }
-    ports: ['3003:3003']
+    <<: *app
     environment:
       <<: *service-env
+      APP_NAME: catalog-service
+      SERVICE_NAME: catalog-service
       PORT: '3003'
-      MERCHANT_SERVICE_URL: http://merchant-service:3002
-    depends_on:
-      migrate: { condition: service_completed_successfully }
-      postgres: { condition: service_healthy }
-      redis: { condition: service_healthy }
 
   order-service:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: runtime
-      args: { APP_NAME: order-service }
-    ports: ['3004:3004']
+    <<: *app
     environment:
       <<: *service-env
+      APP_NAME: order-service
+      SERVICE_NAME: order-service
       PORT: '3004'
-      MERCHANT_SERVICE_URL: http://merchant-service:3002
-      CATALOG_SERVICE_URL: http://catalog-service:3003
-      DISPATCH_SERVICE_URL: http://dispatch-service:3005
-      PAYMENT_SERVICE_URL: http://payment-service:3006
-    depends_on:
-      migrate: { condition: service_completed_successfully }
-      postgres: { condition: service_healthy }
-      redis: { condition: service_healthy }
 
   dispatch-service:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: runtime
-      args: { APP_NAME: dispatch-service }
-    ports: ['3005:3005']
+    <<: *app
     environment:
       <<: *service-env
+      APP_NAME: dispatch-service
+      SERVICE_NAME: dispatch-service
       PORT: '3005'
-    depends_on:
-      migrate: { condition: service_completed_successfully }
-      postgres: { condition: service_healthy }
-      redis: { condition: service_healthy }
 
   payment-service:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: runtime
-      args: { APP_NAME: payment-service }
-    ports: ['3006:3006']
+    <<: *app
     environment:
       <<: *service-env
+      APP_NAME: payment-service
+      SERVICE_NAME: payment-service
       PORT: '3006'
-    depends_on:
-      migrate: { condition: service_completed_successfully }
-      postgres: { condition: service_healthy }
-      redis: { condition: service_healthy }
 
   notification-service:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: runtime
-      args: { APP_NAME: notification-service }
-    ports: ['3007:3007']
+    <<: *app
     environment:
       <<: *service-env
+      APP_NAME: notification-service
+      SERVICE_NAME: notification-service
       PORT: '3007'
-    depends_on:
-      migrate: { condition: service_completed_successfully }
-      postgres: { condition: service_healthy }
-      redis: { condition: service_healthy }
 
   realtime-service:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile
-      target: runtime
-      args: { APP_NAME: realtime-service }
-    ports: ['3008:3008']
+    <<: *app
     environment:
       <<: *service-env
+      APP_NAME: realtime-service
+      SERVICE_NAME: realtime-service
       PORT: '3008'
-      MERCHANT_SERVICE_URL: http://merchant-service:3002
-      ORDER_SERVICE_URL: http://order-service:3004
-      DISPATCH_SERVICE_URL: http://dispatch-service:3005
-    depends_on:
-      migrate: { condition: service_completed_successfully }
-      postgres: { condition: service_healthy }
-      redis: { condition: service_healthy }
-
-volumes:
-  postgres_data:
-  redis_data:
+    ports: ['${API_BIND_ADDRESS:-0.0.0.0}:${REALTIME_HOST_PORT:-3008}:3008']

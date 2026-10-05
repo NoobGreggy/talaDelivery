@@ -8,6 +8,8 @@ build/
 # Environment (secrets are never committed)
 .env
 .env.local
+.env.docker
+**/*:Zone.Identifier
 .env.*.local
 
 # Logs

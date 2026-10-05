@@ -25,7 +25,8 @@ Clone each branch into its own sibling directory when running the full workspace
 3. For native development, create the service databases with
    `node test/ensure-databases.mjs`, run `npm run migration:run`, then use
    `scripts/start-dev.ps1`. For containers, see `docker-compose.yml` and
-   [running the backend](docs/RUNNING-AND-REALTIME.md).
+   [running the backend](docs/RUNNING-AND-REALTIME.md). For the Ubuntu
+   Docker installation, see [Docker in WSL](docs/DOCKER-WSL.md).
 4. Connect the clients to the gateway (port 3000) and Socket.IO realtime service
    (port 3008). Configure private Flutter `config/local.json` files separately;
    these files, `.env`, runtime logs and compiled APKs are not committed.
