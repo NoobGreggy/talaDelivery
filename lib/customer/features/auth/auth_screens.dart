@@ -475,7 +475,7 @@ class _TalaLoginHero extends StatelessWidget {
               ],
               Semantics(
                 image: true,
-                label: 'TalaDelivery logo',
+                label: 'Tala Delivery logo',
                 child: SizedBox(
                   key: const Key('login-brand-logo'),
                   width: useCompact ? 56 : 92,
@@ -633,7 +633,7 @@ class _LoginHero extends StatelessWidget {
         );
         final brandHeight = _textHeight(
           context,
-          'TalaDelivery',
+          'Tala Delivery',
           const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
           brandWidth,
         );
@@ -1120,7 +1120,7 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         const SizedBox(height: 12),
         Text(
-          'By creating an account, you agree to TalaDelivery’s terms and privacy policy.',
+          'By creating an account, you agree to Tala Delivery’s terms and privacy policy.',
           textAlign: TextAlign.center,
           style: TextStyle(color: appPaletteOf(context).quiet, fontSize: 12),
         ),

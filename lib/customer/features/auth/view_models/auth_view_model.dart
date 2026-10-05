@@ -46,7 +46,7 @@ class CustomerAuthViewModel extends ChangeNotifier {
       _errorMessage = 'The server returned unexpected account data.';
       return null;
     } catch (_) {
-      _errorMessage = 'Unable to reach TalaDelivery. Please try again.';
+      _errorMessage = 'Unable to reach Tala Delivery. Please try again.';
       return null;
     } finally {
       _isSubmitting = false;

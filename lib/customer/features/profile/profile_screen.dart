@@ -193,7 +193,7 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           const SizedBox(height: 24),
           Text(
-            'TalaDelivery • Version 1.0.0',
+            'Tala Delivery • Version 1.0.0',
             textAlign: TextAlign.center,
             style: TextStyle(color: palette.quiet, fontSize: 12),
           ),
