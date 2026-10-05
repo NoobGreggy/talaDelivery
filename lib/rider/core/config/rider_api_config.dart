@@ -4,17 +4,17 @@ class RiderApiConfig {
     required this.apiKey,
     String? socketUrl,
   }) : baseUri = Uri.parse(baseUrl.endsWith('/') ? baseUrl : '$baseUrl/'),
-       socketUri = Uri.parse(socketUrl ?? 'http://127.0.0.1:3008');
+       socketUri = Uri.parse(socketUrl ?? 'https://realtime.tala-works.online');
 
   factory RiderApiConfig.fromEnvironment() => RiderApiConfig(
     baseUrl: const String.fromEnvironment(
       'TALA_API_BASE_URL',
-      defaultValue: 'http://127.0.0.1:3000/api/v1/',
+      defaultValue: 'https://api.tala-works.online/api/v1/',
     ),
     apiKey: const String.fromEnvironment('TALA_API_KEY'),
     socketUrl: const String.fromEnvironment(
       'TALA_SOCKET_URL',
-      defaultValue: 'http://127.0.0.1:3008',
+      defaultValue: 'https://realtime.tala-works.online',
     ),
   );
   final Uri baseUri;

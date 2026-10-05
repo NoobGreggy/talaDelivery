@@ -35,10 +35,10 @@ void main() {
       }
     },
   );
-  test('Nest gateway defaults do not reference Laravel/Reverb', () {
+  test('Nest gateway defaults use the public HTTPS domains', () {
     final config = RiderApiConfig.fromEnvironment();
-    expect(config.baseUri.port, 3000);
-    expect(config.socketUri.port, 3008);
+    expect(config.baseUri.toString(), 'https://api.tala-works.online/api/v1/');
+    expect(config.socketUri.toString(), 'https://realtime.tala-works.online');
     expect(
       RiderRealtimeConfig(socketUrl: config.socketUri).namespaceUri.path,
       '/realtime',
