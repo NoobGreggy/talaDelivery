@@ -1,0 +1,62 @@
+# TalaDelivery backend monorepo CI
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  verify:
+    name: Install / Lint / Typecheck / Test / Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck (all apps)
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test:all
+
+      - name: Build all services
+        run: npm run build:all
+
+  # Build + smoke-test the container images (no database required).
+  docker:
+    name: Docker image build (all services)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [api-gateway, identity-service, merchant-service, catalog-service, order-service, dispatch-service, payment-service, notification-service, realtime-service]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Build image (${{ matrix.app }})
+        run: |
+          docker build \
+            --build-arg APP_NAME=${{ matrix.app }} \
+            -t taladelivery/${{ matrix.app }}:ci \
+            -f docker/Dockerfile .

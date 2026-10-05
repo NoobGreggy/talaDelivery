@@ -1,0 +1,8 @@
+﻿{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "types": ["jest", "node"]
+  },
+  "include": ["src/**/*.spec.ts", "../../test/jest-stubs/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

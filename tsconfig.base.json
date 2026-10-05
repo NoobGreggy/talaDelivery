@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "declaration": true,
+    "removeComments": true,
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "target": "ES2023",
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": "./",
+    "incremental": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "strict": true,
+    "strictPropertyInitialization": false,
+    "noImplicitAny": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "useDefineForClassFields": false,
+    "paths": {
+      "@taladelivery/contracts": ["libs/contracts/src"],
+      "@taladelivery/contracts/*": ["libs/contracts/src/*"],
+      "@taladelivery/events": ["libs/events/src"],
+      "@taladelivery/events/*": ["libs/events/src/*"],
+      "@taladelivery/auth": ["libs/auth/src"],
+      "@taladelivery/auth/*": ["libs/auth/src/*"],
+      "@taladelivery/common": ["libs/common/src"],
+      "@taladelivery/common/*": ["libs/common/src/*"],
+      "@taladelivery/observability": ["libs/observability/src"],
+      "@taladelivery/observability/*": ["libs/observability/src/*"]
+    }
+  }
+}

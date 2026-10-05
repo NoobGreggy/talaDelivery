@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment (secrets are never committed)
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+.logs/
+*.log
+npm-debug.log*
+
+# Test output
+coverage/
+.nyc_output/
+
+# TypeScript
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+.tmp/
+
+# Local manual login fixtures contain credentials, not source code.
+/test-login.json
+/test/*login*.json
+/test/seed-admin-user.json
