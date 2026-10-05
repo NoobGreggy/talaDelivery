@@ -1,12 +1,12 @@
 {
   "/api": {
-    "target": "http://localhost:3000",
-    "secure": false,
+    "target": "https://api.tala-works.online",
+    "secure": true,
     "changeOrigin": true
   },
   "/socket.io": {
-    "target": "http://localhost:3008",
-    "secure": false,
+    "target": "https://realtime.tala-works.online",
+    "secure": true,
     "ws": true,
     "changeOrigin": true
   }
