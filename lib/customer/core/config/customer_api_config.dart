@@ -5,7 +5,7 @@ class CustomerApiConfig {
   factory CustomerApiConfig.fromEnvironment() => CustomerApiConfig(
     baseUrl: const String.fromEnvironment(
       'TALA_API_BASE_URL',
-      defaultValue: 'http://192.168.100.18:3000/api/v1/',
+      defaultValue: 'https://api.tala-works.online/api/v1/',
     ),
     apiKey: const String.fromEnvironment('TALA_API_KEY'),
   );

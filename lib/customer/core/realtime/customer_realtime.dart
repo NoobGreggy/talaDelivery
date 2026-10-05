@@ -16,7 +16,7 @@ class CustomerRealtimeConfig {
       CustomerRealtimeConfig(
         socketUrl: const String.fromEnvironment(
           'TALA_SOCKET_IO_URL',
-          defaultValue: 'http://192.168.100.18:3008',
+          defaultValue: 'https://realtime.tala-works.online',
         ),
         appKey: '',
         authUri: api.baseUri,

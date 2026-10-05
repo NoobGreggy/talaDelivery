@@ -1,7 +1,7 @@
 {
-  "TALA_API_BASE_URL": "http://192.168.100.18:3000/api/v1/",
+  "TALA_API_BASE_URL": "https://api.tala-works.online/api/v1/",
   "TALA_API_KEY": "replace-with-backend-app-api-key",
-  "TALA_SOCKET_IO_URL": "http://192.168.100.18:3008",
+  "TALA_SOCKET_IO_URL": "https://realtime.tala-works.online",
   "TALA_MAPBOX_ACCESS_TOKEN": "replace-with-mapbox-public-access-token",
   "TALA_MAPBOX_STYLE_URL": "mapbox://styles/mapbox/streets-v12"
 }

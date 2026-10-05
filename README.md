@@ -2,21 +2,21 @@
 
 A new Flutter project.
 
-## Local NestJS API and realtime
+## Public NestJS API and realtime
 
-Configure the PC LAN IP in `config/local.json` (ignored by Git):
-`TALA_API_BASE_URL=http://192.168.100.18:3000/api/v1/` and
-`TALA_SOCKET_IO_URL=http://192.168.100.18:3008`. Set `TALA_API_KEY` to the
+Configure the public endpoints in `config/local.json` (ignored by Git):
+`TALA_API_BASE_URL=https://api.tala-works.online/api/v1/` and
+`TALA_SOCKET_IO_URL=https://realtime.tala-works.online`. Set `TALA_API_KEY` to the
 backend's `APP_API_KEY`; preserve the Mapbox token settings.
 
 ```powershell
 C:\php\flutter\bin\flutter.bat build apk --debug --dart-define-from-file=config/local.json
 ```
 
-Install `build/app/outputs/flutter-apk/app-debug.apk` on an Android phone on the
-same LAN/Wi-Fi. Sign in to the new API, save a geocoded address inside an active
+Rebuild and install `build/app/outputs/flutter-apk/app-debug.apk` on an Android
+phone. Sign in to the new API, save a geocoded address inside an active
 delivery zone, and order from the store open in the merchant console on your PC.
-Windows private-network access to ports 3000 and 3008 must be available.
+The public HTTPS endpoints work without sharing the PC's LAN/Wi-Fi.
 
 Platform categories come from `/store-categories`; the admin-selected stable
 `icon` keys map to constant Flutter Material icons. Merchant product categories
