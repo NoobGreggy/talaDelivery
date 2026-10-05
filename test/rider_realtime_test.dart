@@ -1,400 +1,225 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tala_delivery_rider/main.dart';
 
 class _FakeRealtimeSocket implements RiderRealtimeSocket {
-  final StreamController<dynamic> _controller =
-      StreamController<dynamic>.broadcast();
-  final List<Object> sent = <Object>[];
-  int closes = 0;
-
+  final handlers = <String, void Function(dynamic)>{};
+  final subscriptions = <Object>[];
+  void Function(dynamic)? acknowledge;
+  int closes = 0, connects = 0;
   @override
-  Stream<dynamic> get messages => _controller.stream;
-
+  void on(String event, void Function(dynamic) handler) =>
+      handlers[event] = handler;
   @override
-  void send(Object data) => sent.add(data);
-
-  @override
-  Future<void> close() async {
-    closes += 1;
-    await _controller.close();
+  void emitWithAck(String event, Object data, void Function(dynamic) ack) {
+    expectSync(event, 'subscribe');
+    subscriptions.add(data);
+    acknowledge = ack;
   }
 
-  void emit(Object message) => _controller.add(message);
-
-  void closeStream() => _controller.close();
-}
-
-class _RecordingAuthenticator implements RiderChannelAuthenticator {
-  String? channelName;
-  String? socketId;
-  int calls = 0;
-  RiderChannelAuthResult result = const RiderChannelAuthResult(
-    auth: 'signed-token',
-  );
-
   @override
-  Future<RiderChannelAuthResult> authenticateChannel({
-    required String channelName,
-    required String socketId,
-  }) async {
-    calls += 1;
-    this.channelName = channelName;
-    this.socketId = socketId;
-    return result;
+  void connect() => connects++;
+  @override
+  void close() => closes++;
+  void emit(String event, [dynamic data]) => handlers[event]?.call(data);
+  void ready() {
+    emit('connect');
+    acknowledge!({'success': true});
   }
 }
 
-RiderRealtimeConfig _config() => RiderRealtimeConfig(
-  socketUrl: Uri.parse('ws://localhost:8080'),
-  appKey: 'public-key',
-);
-
+RiderRealtimeConfig _config() =>
+    RiderRealtimeConfig(socketUrl: Uri.parse('http://localhost:3008'));
 Future<void> _flush() => Future<void>.delayed(Duration.zero);
+RiderRealtimeService _service(_FakeRealtimeSocket socket) =>
+    RiderRealtimeService(
+      config: _config(),
+      readToken: () async => 'access-jwt',
+      opener: (_, _) => socket,
+    );
 
 void main() {
   test(
-    'connects, authenticates, and subscribes to the private user channel',
+    'JWT namespace handshake, own user room ack, and event forwarding',
     () async {
-      final authenticator = _RecordingAuthenticator();
       final socket = _FakeRealtimeSocket();
-      var openerCalls = 0;
-      Uri? openedUrl;
-      final realtime = RiderRealtimeService(
+      Uri? url;
+      String? jwt;
+      final service = RiderRealtimeService(
         config: _config(),
-        authenticator: authenticator,
-        opener: (url) {
-          openerCalls += 1;
-          openedUrl = url;
+        readToken: () async => 'access-jwt',
+        opener: (u, t) {
+          url = u;
+          jwt = t;
           return socket;
         },
       );
-
-      await realtime.start(userId: 5);
-      expect(openerCalls, 1);
-      expect(openedUrl!.path, '/app/public-key');
-
-      socket.emit(
-        jsonEncode({
-          'event': 'pusher:connection_established',
-          'data': jsonEncode({'socket_id': '123.456'}),
-        }),
-      );
-      await _flush();
-
-      expect(authenticator.channelName, 'private-user.5');
-      expect(authenticator.socketId, '123.456');
-      final subscribeMessage = socket.sent.last as Map<String, dynamic>;
-      expect(subscribeMessage['event'], 'pusher:subscribe');
-      final subscribeData = subscribeMessage['data'] as Map<String, dynamic>;
-      expect(subscribeData['channel'], 'private-user.5');
-      expect(subscribeData['auth'], 'signed-token');
-
-      socket.emit(
-        jsonEncode({
-          'event': 'pusher_internal:subscription_succeeded',
-          'channel': 'private-user.99',
-          'data': '{}',
-        }),
-      );
-      await _flush();
-      expect(realtime.state, RiderRealtimeState.connecting);
-
-      socket.emit(
-        jsonEncode({
-          'event': 'pusher_internal:subscription_succeeded',
-          'channel': 'private-user.5',
-          'data': '{}',
-        }),
-      );
-      await _flush();
-      expect(realtime.state, RiderRealtimeState.connected);
-
-      socket.emit(jsonEncode({'event': 'pusher:ping', 'data': '{}'}));
-      await _flush();
-      expect(
-        (socket.sent.last as Map<String, dynamic>)['event'],
-        'pusher:pong',
-      );
-
-      await realtime.stop();
-      expect(realtime.state, RiderRealtimeState.idle);
-      expect(socket.closes, greaterThanOrEqualTo(1));
-    },
-  );
-
-  test(
-    'does not subscribe when the backend rejects channel authorization',
-    () async {
-      final authenticator = _RecordingAuthenticator()
-        ..result = const RiderChannelAuthResult();
-      final socket = _FakeRealtimeSocket();
-      final realtime = RiderRealtimeService(
-        config: _config(),
-        authenticator: authenticator,
-        opener: (_) => socket,
-      );
-
-      await realtime.start(userId: 5);
       final events = <RiderRealtimeEvent>[];
-      final subscription = realtime.events.listen(events.add);
-      socket.emit(
-        jsonEncode({
-          'event': 'pusher:connection_established',
-          'data': jsonEncode({'socket_id': '123.456'}),
-        }),
-      );
-      await _flush();
-
-      expect(socket.sent, isEmpty);
-      expect(realtime.state, RiderRealtimeState.connecting);
-      expect(
-        events.map((event) => event.name),
-        contains('realtime.subscription_error'),
-      );
-
-      await subscription.cancel();
-      await realtime.stop();
-    },
-  );
-
-  test(
-    'decodes text frames and nested JSON from the subscribed user channel',
-    () async {
-      final socket = _FakeRealtimeSocket();
-      final realtime = RiderRealtimeService(
-        config: _config(),
-        authenticator: _RecordingAuthenticator(),
-        opener: (_) => socket,
-      );
-      final events = <RiderRealtimeEvent>[];
-      final subscription = realtime.events.listen(events.add);
-      await realtime.start(userId: 9);
-
-      socket.emit(
-        jsonEncode({
-          'event': 'pusher:connection_established',
-          'data': jsonEncode({'socket_id': '123.456'}),
-        }),
-      );
-      await _flush();
-      socket.emit(
-        jsonEncode({
-          'event': 'delivery.offered',
-          'channel': 'private-user.9',
-          'data': jsonEncode({'offer_id': 31}),
-        }),
-      );
+      service.events.listen(events.add);
+      await service.start(userId: 9);
+      expect(url.toString(), 'http://localhost:3008/realtime');
+      expect(jwt, 'access-jwt');
+      socket.emit('connect');
+      expect(socket.subscriptions.single, {'room': 'user:9'});
+      expect(service.state, RiderRealtimeState.connecting);
+      socket.emit('delivery.offered', {'offerId': 30});
       await _flush();
       expect(events, isEmpty);
-      socket.emit(
-        jsonEncode({
-          'event': 'pusher_internal:subscription_succeeded',
-          'channel': 'private-user.9',
-          'data': '{}',
-        }),
-      );
+      socket.acknowledge!({'success': true});
+      expect(service.state, RiderRealtimeState.connected);
+      for (final event in [
+        'delivery.offered',
+        'delivery.updated',
+        'offer.updated',
+        'notification.created',
+      ]) {
+        socket.emit(event, {'id': 30});
+      }
+      socket.emit('delivery.updated', 'invalid payload');
       await _flush();
-      events.clear();
-
-      socket.emit(
-        jsonEncode({
-          'event': 'delivery.offered',
-          'channel': 'private-user.9',
-          'data': jsonEncode({'offer_id': 31, 'delivery_id': 42}),
-        }),
-      );
+      expect(events.map((e) => e.name), [
+        'realtime.connected',
+        'delivery.offered',
+        'delivery.updated',
+        'offer.updated',
+        'notification.created',
+      ]);
+      await service.stop();
+      socket.emit('delivery.updated', {'id': 30});
       await _flush();
-
-      expect(events, hasLength(1));
-      expect(events.single.name, 'delivery.offered');
-      expect(events.single.data['delivery_id'], 42);
-      expect(events.single.data['offer_id'], 31);
-
-      socket.emit({
-        'event': 'delivery.updated',
-        'channel': 'private-user.9',
-        'data': {'delivery_id': 42},
-      });
-      await _flush();
-      expect(events.last.name, 'delivery.updated');
-
-      socket.emit(
-        jsonEncode({
-          'event': 'delivery.offered',
-          'channel': 'private-user.99',
-          'data': jsonEncode({'offer_id': 32}),
-        }),
-      );
-      await _flush();
-      expect(events, hasLength(2));
-
-      await subscription.cancel();
-      await realtime.stop();
+      expect(events, hasLength(5));
+      expect(service.state, RiderRealtimeState.idle);
+      service.dispose();
     },
   );
 
-  test(
-    'ignores invalid text frames and unknown events without disconnecting',
-    () async {
-      final socket = _FakeRealtimeSocket();
-      final realtime = RiderRealtimeService(
+  testWidgets(
+    'disconnect retries with fresh JWT and rejoins; stopped frames ignored',
+    (tester) async {
+      final sockets = <_FakeRealtimeSocket>[];
+      var token = 'first';
+      final service = RiderRealtimeService(
         config: _config(),
-        authenticator: _RecordingAuthenticator(),
-        opener: (_) => socket,
+        readToken: () async => token,
+        opener: (_, jwt) {
+          expectSync(jwt, token);
+          final s = _FakeRealtimeSocket();
+          sockets.add(s);
+          return s;
+        },
       );
-      final events = <RiderRealtimeEvent>[];
-      final subscription = realtime.events.listen(events.add);
-      await realtime.start(userId: 9);
-
-      socket.emit('{invalid-json');
-      socket.emit(jsonEncode({'event': 'unknown.event', 'data': '{}'}));
-      await _flush();
-
-      expect(realtime.state, RiderRealtimeState.connecting);
-      expect(events, isEmpty);
-
-      await subscription.cancel();
-      await realtime.stop();
+      await service.start(userId: 9);
+      sockets[0].ready();
+      token = 'rotated';
+      sockets[0].emit('disconnect');
+      expect(service.state, RiderRealtimeState.connecting);
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump();
+      expect(sockets, hasLength(2));
+      sockets[0].emit('connect');
+      expect(sockets[0].subscriptions, hasLength(1));
+      sockets[1].ready();
+      expect(service.state, RiderRealtimeState.connected);
+      expect(sockets[1].subscriptions.single, {'room': 'user:9'});
+      await service.stop();
+      service.dispose();
     },
   );
 
-  test('reconnects with backoff after the socket drops', () async {
-    final authenticator = _RecordingAuthenticator();
-    final sockets = <_FakeRealtimeSocket>[];
-    final realtime = RiderRealtimeService(
+  testWidgets(
+    'subscription denial and missing acknowledgment never report connected',
+    (tester) async {
+      final sockets = <_FakeRealtimeSocket>[];
+      final service = RiderRealtimeService(
+        config: _config(),
+        readToken: () async => 'jwt',
+        opener: (_, _) {
+          final s = _FakeRealtimeSocket();
+          sockets.add(s);
+          return s;
+        },
+      );
+      await service.start(userId: 9);
+      sockets[0].emit('connect');
+      sockets[0].acknowledge!({'success': false});
+      expect(service.state, RiderRealtimeState.connecting);
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump();
+      sockets[1].emit('connect');
+      await tester.pump(const Duration(seconds: 10));
+      expect(sockets[1].closes, 1);
+      expect(service.state, RiderRealtimeState.connecting);
+      await service.stop();
+      service.dispose();
+    },
+  );
+
+  test('logout during token read does not open a socket', () async {
+    final pending = Completer<String?>();
+    var calls = 0;
+    final service = RiderRealtimeService(
       config: _config(),
-      authenticator: authenticator,
-      opener: (_) {
-        final socket = _FakeRealtimeSocket();
-        sockets.add(socket);
-        return socket;
-      },
-      reconnectBaseDelay: const Duration(milliseconds: 20),
-      maxReconnectDelay: const Duration(milliseconds: 40),
-    );
-    final events = <RiderRealtimeEvent>[];
-    final subscription = realtime.events.listen(events.add);
-
-    await realtime.start(userId: 3);
-    sockets.first.emit(
-      jsonEncode({
-        'event': 'pusher:connection_established',
-        'data': jsonEncode({'socket_id': 'first.1'}),
-      }),
-    );
-    await _flush();
-    sockets.first.emit(
-      jsonEncode({
-        'event': 'pusher_internal:subscription_succeeded',
-        'channel': 'private-user.3',
-        'data': '{}',
-      }),
-    );
-    await _flush();
-    expect(realtime.state, RiderRealtimeState.connected);
-
-    sockets.first.closeStream();
-    final reconnectDeadline = DateTime.now().add(const Duration(seconds: 2));
-    while (sockets.length < 2 && DateTime.now().isBefore(reconnectDeadline)) {
-      await Future<void>.delayed(const Duration(milliseconds: 10));
-    }
-
-    expect(sockets, hasLength(2));
-    sockets.last.emit(
-      jsonEncode({
-        'event': 'pusher:connection_established',
-        'data': jsonEncode({'socket_id': 'second.2'}),
-      }),
-    );
-    await _flush();
-    expect(authenticator.calls, 2);
-    expect(authenticator.socketId, 'second.2');
-    sockets.last.emit(
-      jsonEncode({
-        'event': 'pusher_internal:subscription_succeeded',
-        'channel': 'private-user.3',
-        'data': '{}',
-      }),
-    );
-    await _flush();
-    expect(realtime.state, RiderRealtimeState.connected);
-    expect(
-      events.map((event) => event.name),
-      contains('realtime.disconnected'),
-    );
-
-    await subscription.cancel();
-    await realtime.stop();
-    for (final socket in sockets) {
-      await socket.close();
-    }
-  });
-
-  test(
-    'reconnect while the socket is alive resyncs without reopening',
-    () async {
-      final socket = _FakeRealtimeSocket();
-      var openerCalls = 0;
-      final realtime = RiderRealtimeService(
-        config: _config(),
-        authenticator: _RecordingAuthenticator(),
-        opener: (url) {
-          openerCalls += 1;
-          return socket;
-        },
-      );
-      final events = <RiderRealtimeEvent>[];
-      final subscription = realtime.events.listen(events.add);
-
-      await realtime.start(userId: 3);
-      socket.emit(
-        jsonEncode({
-          'event': 'pusher:connection_established',
-          'data': jsonEncode({'socket_id': 'abc.1'}),
-        }),
-      );
-      await _flush();
-      socket.emit(
-        jsonEncode({
-          'event': 'pusher_internal:subscription_succeeded',
-          'channel': 'private-user.3',
-          'data': '{}',
-        }),
-      );
-      await _flush();
-
-      await realtime.reconnect();
-      expect(openerCalls, 1);
-      expect(events.map((event) => event.name), contains('realtime.resumed'));
-
-      await subscription.cancel();
-      await realtime.stop();
-    },
-  );
-
-  test('does not open a socket when the app key is missing', () async {
-    var openerCalls = 0;
-    final realtime = RiderRealtimeService(
-      config: RiderRealtimeConfig(
-        socketUrl: Uri.parse('ws://localhost:8080'),
-        appKey: '  ',
-      ),
-      authenticator: _RecordingAuthenticator(),
-      opener: (_) {
-        openerCalls += 1;
+      readToken: () => pending.future,
+      opener: (_, _) {
+        calls++;
         return _FakeRealtimeSocket();
       },
     );
-
-    await realtime.start(userId: 3);
-    expect(openerCalls, 0);
-    expect(realtime.state, RiderRealtimeState.idle);
+    final starting = service.start(userId: 9);
+    await _flush();
+    await service.stop();
+    pending.complete('jwt');
+    await starting;
+    expect(calls, 0);
+    service.dispose();
   });
 
+  test(
+    'switching user closes old socket and ignores stale subscription ack',
+    () async {
+      final sockets = <_FakeRealtimeSocket>[];
+      final service = RiderRealtimeService(
+        config: _config(),
+        readToken: () async => 'jwt',
+        opener: (_, _) {
+          final s = _FakeRealtimeSocket();
+          sockets.add(s);
+          return s;
+        },
+      );
+      await service.start(userId: 9);
+      sockets[0].emit('connect');
+      await service.start(userId: 10);
+      sockets[0].acknowledge!({'success': true});
+      expect(service.state, RiderRealtimeState.connecting);
+      sockets[1].ready();
+      expect(sockets[1].subscriptions.single, {'room': 'user:10'});
+      expect(sockets[0].closes, 1);
+      service.dispose();
+    },
+  );
+
+  test('foreground resume reconnects and resubscribes', () async {
+    final sockets = <_FakeRealtimeSocket>[];
+    final service = RiderRealtimeService(
+      config: _config(),
+      readToken: () async => 'jwt',
+      opener: (_, _) {
+        final s = _FakeRealtimeSocket();
+        sockets.add(s);
+        return s;
+      },
+    );
+    await service.start(userId: 9);
+    sockets[0].ready();
+    await service.reconnect();
+    expect(sockets, hasLength(2));
+    sockets[1].ready();
+    expect(service.state, RiderRealtimeState.connected);
+    service.dispose();
+  });
   _realtimeControllerChecks();
 }
 
@@ -532,10 +357,45 @@ class _EventControllerRepository implements RiderRepository {
 }
 
 void _realtimeControllerChecks() {
-  testWidgets('open delivery reflects pushed updates and cancellation', (
+  testWidgets(
+    'Maps/background keeps active tracking; completion and idle pause stop it',
+    (tester) async {
+      final repository = _EventControllerRepository()
+        ..currentDeliveries = [
+          RiderDelivery.fromJson({'id': 8, 'status': 'PICKED_UP'}),
+        ];
+      final controller = RiderAppController(repository);
+      final location = RiderLocationService(
+        source: _ControllerLocationSource(),
+        postLocation: (_) async {},
+      );
+      controller.attachLocation(location);
+      await controller.restore();
+      await tester.pump();
+      expect(location.activeDeliveryId, 8);
+      expect(location.isRunning, true);
+      controller.handleAppPaused();
+      expect(location.isRunning, true);
+      repository.currentDeliveries = [
+        RiderDelivery.fromJson({'id': 8, 'status': 'DELIVERED'}),
+      ];
+      await controller.refresh();
+      expect(controller.activeDelivery, null);
+      expect(location.isRunning, false);
+      await controller.handleAppResumed();
+      await controller.setOnline(true);
+      expect(location.isRunning, true);
+      controller.handleAppPaused();
+      expect(location.isRunning, false);
+      controller.dispose();
+      location.dispose();
+      await tester.pump();
+    },
+  );
+  testWidgets('open delivery reflects pushed status and cancellation', (
     tester,
   ) async {
-    RiderDelivery deliveryWithStatus(String status) => RiderDelivery(
+    RiderDelivery delivery(String status) => RiderDelivery(
       id: 8,
       status: status,
       pickupAddress: 'Store',
@@ -544,31 +404,17 @@ void _realtimeControllerChecks() {
       deliveryFee: 50,
       createdAt: DateTime(2026, 9, 28),
     );
-    final original = deliveryWithStatus('ASSIGNED');
+    final original = delivery('ASSIGNED');
     final repository = _EventControllerRepository()
       ..currentDeliveries = [original];
     final controller = RiderAppController(repository);
     final socket = _FakeRealtimeSocket();
-    final realtime = RiderRealtimeService(
-      config: _config(),
-      authenticator: _RecordingAuthenticator(),
-      opener: (_) => socket,
-    );
+    final realtime = _service(socket);
     controller.attachRealtime(realtime);
     await controller.login(email: 'rider@example.com', password: 'password');
     await tester.pump();
-    socket.emit({
-      'event': 'pusher:connection_established',
-      'data': {'socket_id': 'abc.1'},
-    });
+    socket.ready();
     await tester.pump();
-    socket.emit({
-      'event': 'pusher_internal:subscription_succeeded',
-      'channel': 'private-user.9',
-      'data': {},
-    });
-    await tester.pump();
-    expect(realtime.state, RiderRealtimeState.connected);
     await tester.pumpWidget(
       MaterialApp(
         home: RiderDependencyScope(
@@ -578,169 +424,79 @@ void _realtimeControllerChecks() {
       ),
     );
     expect(find.text('Heading to store'), findsOneWidget);
-
-    for (final status in ['ACCEPTED', 'CANCELLED']) {
-      repository.currentDeliveries = [deliveryWithStatus(status)];
-      socket.emit({
-        'event': 'delivery.updated',
-        'channel': 'private-user.9',
-        'data': {'id': 8, 'status': status},
-      });
+    expect(find.text('Google Maps: pickup'), findsOneWidget);
+    for (final status in ['ACCEPTED', 'PICKED_UP', 'CANCELLED']) {
+      repository.currentDeliveries = [delivery(status)];
+      socket.emit('delivery.updated', {'deliveryId': 8, 'status': status});
       await tester.pump();
       await tester.pump();
       expect(
-        find.text(status == 'ACCEPTED' ? 'At the store' : 'cancelled'),
+        find.text(
+          status == 'ACCEPTED'
+              ? 'At the store'
+              : status == 'PICKED_UP'
+              ? 'Heading to customer'
+              : 'cancelled',
+        ),
         findsOneWidget,
       );
+      if (status == 'PICKED_UP') {
+        expect(find.text('Google Maps: customer'), findsOneWidget);
+      }
     }
-    expect(find.text('Heading to store'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
     controller.dispose();
     realtime.dispose();
   });
 
-  testWidgets('online rider finds an offer missed by a connected socket', (
-    tester,
-  ) async {
-    final repository = _EventControllerRepository()..offerAvailable = false;
-    final controller = RiderAppController(repository);
-    final socket = _FakeRealtimeSocket();
-    final realtime = RiderRealtimeService(
-      config: _config(),
-      authenticator: _RecordingAuthenticator(),
-      opener: (_) => socket,
-    );
-    controller.attachRealtime(realtime);
+  testWidgets(
+    'offers, expiry, notifications refresh and fallback catches missed offers',
+    (tester) async {
+      final repository = _EventControllerRepository()..offerAvailable = false;
+      final controller = RiderAppController(repository),
+          socket = _FakeRealtimeSocket();
+      final realtime = _service(socket);
+      controller.attachRealtime(realtime);
+      await controller.login(email: 'rider@example.com', password: 'password');
+      await controller.setOnline(true);
+      await tester.pump();
+      socket.ready();
+      await tester.pump();
+      await tester.pump();
+      expect(controller.offerPollInterval, const Duration(seconds: 90));
+      repository.offerAvailable = true;
+      socket.emit('delivery.offered', {'offerId': 30});
+      await tester.pump();
+      expect(controller.offers, hasLength(1));
+      repository.offerAvailable = false;
+      socket.emit('offer.updated', {'offerId': 30, 'status': 'EXPIRED'});
+      await tester.pump();
+      expect(controller.offers, isEmpty);
+      final notifications = repository.notificationsCalls;
+      socket.emit('notification.created', {'id': 11});
+      await tester.pump();
+      expect(repository.notificationsCalls, greaterThan(notifications));
+      expect(controller.unreadNotificationCount, 1);
+      repository.offerAvailable = true;
+      await tester.pump(const Duration(seconds: 91));
+      await tester.pump();
+      expect(controller.offers, hasLength(1));
+      controller.dispose();
+      realtime.dispose();
+    },
+  );
+}
 
-    await controller.login(email: 'rider@example.com', password: 'password');
-    await controller.setOnline(true);
-    socket.emit(
-      jsonEncode({
-        'event': 'pusher:connection_established',
-        'data': jsonEncode({'socket_id': 'abc.1'}),
-      }),
-    );
-    await tester.pump();
-    socket.emit(
-      jsonEncode({
-        'event': 'pusher_internal:subscription_succeeded',
-        'channel': 'private-user.9',
-        'data': '{}',
-      }),
-    );
-    await tester.pump();
-    expect(realtime.state, RiderRealtimeState.connected);
-    expect(controller.offers, isEmpty);
-
-    repository.offerAvailable = true;
-    // While the private channel is healthy the fallback poll is intentionally
-    // slow (90s), so the offer is found after the slower safety reconciliation.
-    await tester.pump(const Duration(seconds: 91));
-    await tester.pump();
-
-    expect(controller.offers, hasLength(1));
-
-    controller.dispose();
-    realtime.dispose();
-    await socket.close();
-  });
-
-  test('delivery.offered reloads offers while online', () async {
-    final repository = _EventControllerRepository();
-    final controller = RiderAppController(repository);
-    final socket = _FakeRealtimeSocket();
-    final realtime = RiderRealtimeService(
-      config: _config(),
-      authenticator: _RecordingAuthenticator(),
-      opener: (_) => socket,
-    );
-    controller.attachRealtime(realtime);
-
-    await controller.login(email: 'rider@example.com', password: 'password');
-    await controller.setOnline(true);
-    await _flush();
-    final before = repository.offersCalls;
-
-    socket.emit(
-      jsonEncode({
-        'event': 'pusher:connection_established',
-        'data': jsonEncode({'socket_id': 'abc.1'}),
-      }),
-    );
-    await _flush();
-    socket.emit(
-      jsonEncode({
-        'event': 'pusher_internal:subscription_succeeded',
-        'channel': 'private-user.9',
-        'data': '{}',
-      }),
-    );
-    await _flush();
-
-    socket.emit(
-      jsonEncode({
-        'event': 'delivery.offered',
-        'channel': 'private-user.9',
-        'data': jsonEncode({'offer_id': 30, 'delivery_id': 8}),
-      }),
-    );
-    await _flush();
-
-    expect(repository.offersCalls, greaterThan(before));
-    expect(controller.offers, isNotEmpty);
-
-    controller.dispose();
-    realtime.dispose();
-    await socket.close();
-  });
-
-  test('notification.created refreshes the notification list', () async {
-    final repository = _EventControllerRepository();
-    final controller = RiderAppController(repository);
-    final socket = _FakeRealtimeSocket();
-    final realtime = RiderRealtimeService(
-      config: _config(),
-      authenticator: _RecordingAuthenticator(),
-      opener: (_) => socket,
-    );
-    controller.attachRealtime(realtime);
-
-    await controller.login(email: 'rider@example.com', password: 'password');
-    await _flush();
-    final before = repository.notificationsCalls;
-
-    socket.emit(
-      jsonEncode({
-        'event': 'pusher:connection_established',
-        'data': jsonEncode({'socket_id': 'abc.1'}),
-      }),
-    );
-    await _flush();
-    socket.emit(
-      jsonEncode({
-        'event': 'pusher_internal:subscription_succeeded',
-        'channel': 'private-user.9',
-        'data': '{}',
-      }),
-    );
-    await _flush();
-
-    socket.emit(
-      jsonEncode({
-        'event': 'notification.created',
-        'channel': 'private-user.9',
-        'data': jsonEncode({
-          'notification': {'id': 11},
-        }),
-      }),
-    );
-    await _flush();
-
-    expect(repository.notificationsCalls, greaterThan(before));
-    expect(controller.unreadNotificationCount, 1);
-
-    controller.dispose();
-    realtime.dispose();
-    await socket.close();
-  });
+class _ControllerLocationSource implements RiderLocationSource {
+  @override
+  Future<RiderLocationPermission> permissionStatus() async =>
+      RiderLocationPermission.granted;
+  @override
+  Future<RiderLocationPermission> requestPermission() async =>
+      RiderLocationPermission.granted;
+  @override
+  Future<bool> isLocationServiceEnabled() async => true;
+  @override
+  Future<RiderLatLng?> currentPosition() async =>
+      const RiderLatLng(16.94, 121.76);
 }

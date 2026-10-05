@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tala_delivery_rider/main.dart';
 
@@ -33,6 +35,99 @@ class _FakeLocationSource implements RiderLocationSource {
 }
 
 void main() {
+  test(
+    'continuous stream uses active foreground service and stops after delivery',
+    () async {
+      final source = _StreamingSource();
+      final tracked = <int>[];
+      final service =
+          RiderLocationService(
+              source: source,
+              postLocation: (_) async {},
+              postTrackedLocation: (_, id) async => tracked.add(id),
+            )
+            ..setActiveDelivery(22)
+            ..start();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(source.backgroundModes, [true]);
+      service.setForeground(false);
+      source.push(const RiderLatLng(16.95, 121.77));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(service.position.value?.latitude, 16.95);
+      expect(tracked, [22, 22]);
+      service.stop();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(source.cancellations, 1);
+      final count = tracked.length;
+      source.push(const RiderLatLng(16.96, 121.78));
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(tracked.length, count);
+      service.dispose();
+      await source.samples.close();
+    },
+  );
+  test(
+    'active delivery upgrades availability stream and completion downgrades',
+    () async {
+      final source = _StreamingSource();
+      final service = RiderLocationService(
+        source: source,
+        postLocation: (_) async {},
+      )..start();
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      service.setActiveDelivery(22);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      service.setActiveDelivery(null);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+      expect(source.backgroundModes, [false, true, false]);
+      service.dispose();
+      await source.samples.close();
+    },
+  );
+  test(
+    'does not ask for permission in the background or post invalid/stale GPS',
+    () async {
+      final source = _FakeLocationSource(
+        permission: RiderLocationPermission.denied,
+      );
+      final service = RiderLocationService(
+        source: source,
+        postLocation: (_) async => fail('Unexpected report'),
+      );
+      service.setForeground(false);
+      expect(await service.reportOnce(), RiderLocationReport.permissionDenied);
+      expect(source.permissionRequests, 0);
+      source.permission = RiderLocationPermission.granted;
+      source.position = const RiderLatLng(91, 121);
+      expect(
+        await service.reportOnce(),
+        RiderLocationReport.locationUnavailable,
+      );
+      source.position = RiderLatLng(
+        16.94,
+        121.76,
+        recordedAt: DateTime.now().subtract(const Duration(minutes: 2)),
+      );
+      expect(
+        await service.reportOnce(),
+        RiderLocationReport.locationUnavailable,
+      );
+      service.dispose();
+    },
+  );
+  test('stop during GPS lookup prevents a late report', () async {
+    final source = _DelayedSource();
+    final service = RiderLocationService(
+      source: source,
+      postLocation: (_) async => fail('Late report'),
+    );
+    final pending = service.reportOnce();
+    await Future<void>.delayed(Duration.zero);
+    service.stop();
+    source.result.complete(const RiderLatLng(16.94, 121.76));
+    expect(await pending, RiderLocationReport.unchanged);
+    service.dispose();
+  });
   test('reports position when permission is granted', () async {
     final source = _FakeLocationSource();
     RiderLatLng? posted;
@@ -137,12 +232,7 @@ void main() {
 
   test('active delivery uses tracked location callback', () async {
     final source = _FakeLocationSource(
-      position: RiderLatLng(
-        14.5,
-        121,
-        accuracy: 7,
-        recordedAt: DateTime.utc(2026, 9, 24),
-      ),
+      position: RiderLatLng(14.5, 121, accuracy: 7, recordedAt: DateTime.now()),
     );
     var idlePosts = 0;
     RiderLatLng? tracked;
@@ -190,4 +280,38 @@ void main() {
     expect(await service.reportOnce(), RiderLocationReport.lowAccuracy);
     expect(posts, 0);
   });
+}
+
+class _StreamingSource extends _FakeLocationSource
+    implements RiderStreamingLocationSource {
+  final samples = StreamController<RiderLatLng>.broadcast(sync: true);
+  final backgroundModes = <bool>[];
+  int cancellations = 0;
+  @override
+  Stream<RiderLatLng> positions({required bool background}) {
+    backgroundModes.add(background);
+    return samples.stream
+        .transform(
+          StreamTransformer<RiderLatLng, RiderLatLng>.fromHandlers(
+            handleDone: (sink) => sink.close(),
+          ),
+        )
+        .asBroadcastStream(
+          onCancel: (subscription) {
+            cancellations++;
+            subscription.cancel();
+          },
+        );
+  }
+
+  void push(RiderLatLng point) {
+    position = point;
+    samples.add(point);
+  }
+}
+
+class _DelayedSource extends _FakeLocationSource {
+  final result = Completer<RiderLatLng?>();
+  @override
+  Future<RiderLatLng?> currentPosition() => result.future;
 }

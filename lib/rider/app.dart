@@ -3,7 +3,13 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart'
-    show ValueListenable, ValueNotifier, kDebugMode, kProfileMode;
+    show
+        ValueListenable,
+        ValueNotifier,
+        kDebugMode,
+        kProfileMode,
+        defaultTargetPlatform,
+        TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -12,8 +18,7 @@ import 'package:http/http.dart' as http;
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart' as mapbox;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:web_socket_channel/io.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import 'core/config/rider_api_config.dart';
 import 'core/config/rider_map_config.dart';
@@ -28,6 +33,7 @@ export 'shared/theme/theme.dart';
 part 'core/network/rider_api_client.dart';
 part 'core/realtime/rider_realtime_service.dart';
 part 'core/location/rider_location_service.dart';
+part 'core/navigation/rider_navigation.dart';
 part 'core/di/rider_dependencies.dart';
 part 'data/rider_repository.dart';
 part 'logic/rider_app_controller.dart';

@@ -50,7 +50,11 @@ abstract class RiderLocationSource {
   Future<bool> isLocationServiceEnabled();
 }
 
-class GeolocatorRiderLocationSource implements RiderLocationSource {
+abstract class RiderStreamingLocationSource implements RiderLocationSource {
+  Stream<RiderLatLng> positions({required bool background});
+}
+
+class GeolocatorRiderLocationSource implements RiderStreamingLocationSource {
   GeolocatorRiderLocationSource({
     this.accuracy = LocationAccuracy.high,
     this.maxAge = const Duration(seconds: 45),
@@ -58,6 +62,57 @@ class GeolocatorRiderLocationSource implements RiderLocationSource {
 
   final LocationAccuracy accuracy;
   final Duration maxAge;
+  RiderLatLng? _latest;
+
+  static RiderLatLng _point(Position position) => RiderLatLng(
+    position.latitude,
+    position.longitude,
+    accuracy: position.accuracy >= 0 ? position.accuracy : null,
+    heading: position.heading >= 0 && position.heading <= 360
+        ? position.heading
+        : null,
+    speed: position.speed >= 0 ? position.speed : null,
+    recordedAt: position.timestamp,
+  );
+
+  @override
+  Stream<RiderLatLng> positions({required bool background}) {
+    _latest = null;
+    final LocationSettings settings;
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      settings = AndroidSettings(
+        accuracy: accuracy,
+        distanceFilter: 5,
+        intervalDuration: const Duration(seconds: 5),
+        foregroundNotificationConfig: background
+            ? const ForegroundNotificationConfig(
+                notificationTitle: 'Tala delivery location sharing',
+                notificationText: 'Sharing your location for your active delivery. Return to Tala to complete it.',
+                notificationChannelName: 'Active delivery tracking',
+                enableWakeLock: true,
+                setOngoing: true,
+              )
+            : null,
+      );
+    } else if (defaultTargetPlatform == TargetPlatform.iOS) {
+      settings = AppleSettings(
+        accuracy: accuracy,
+        distanceFilter: 5,
+        activityType: ActivityType.automotiveNavigation,
+        pauseLocationUpdatesAutomatically: false,
+        allowBackgroundLocationUpdates: background,
+        showBackgroundLocationIndicator: background,
+      );
+    } else {
+      settings = LocationSettings(accuracy: accuracy, distanceFilter: 5);
+    }
+    return Geolocator.getPositionStream(locationSettings: settings)
+        .map((position) {
+          final point = _point(position);
+          _latest = point;
+          return point;
+        });
+  }
 
   static RiderLocationPermission _mapPermission(LocationPermission permission) {
     return switch (permission) {
@@ -99,8 +154,16 @@ class GeolocatorRiderLocationSource implements RiderLocationSource {
   @override
   Future<RiderLatLng?> currentPosition() async {
     try {
+      final cached = _latest;
+      if (cached?.recordedAt != null &&
+          DateTime.now().difference(cached!.recordedAt!).abs() <= maxAge) {
+        return cached;
+      }
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: LocationSettings(accuracy: accuracy),
+        locationSettings: LocationSettings(
+          accuracy: accuracy,
+          timeLimit: const Duration(seconds: 12),
+        ),
       );
       final timestamp = position.timestamp;
       if (DateTime.now().difference(timestamp).abs() > maxAge) {
@@ -148,6 +211,13 @@ class RiderLocationService {
   final DateTime Function() _clock;
 
   Timer? _timer;
+  StreamSubscription<RiderLatLng>? _stream;
+  Future<void> _streamCancellation = Future<void>.value();
+  int? _streamStarting;
+  bool? _streamBackground;
+  bool _foreground = true;
+  bool _disposed = false;
+  int _generation = 0;
   bool _running = false;
   bool _reportInFlight = false;
   int? _activeDeliveryId;
@@ -159,12 +229,19 @@ class RiderLocationService {
   int? get activeDeliveryId => _activeDeliveryId;
   ValueListenable<RiderLatLng?> get position => _position;
 
+  void setForeground(bool value) => _foreground = value;
+
   void setActiveDelivery(int? deliveryId) {
     if (_activeDeliveryId == deliveryId) return;
     _activeDeliveryId = deliveryId;
     _lastPostedPosition = null;
     _lastPostedAt = null;
-    if (_running) _schedule();
+    _generation++;
+    _cancelStream();
+    if (_running) {
+      _schedule();
+      unawaited(_ensureStream());
+    }
   }
 
   /// Reports once and returns the outcome so the caller can surface
@@ -183,11 +260,13 @@ class RiderLocationService {
   }
 
   Future<RiderLocationReport> _reportOnceInner() async {
+    final generation = _generation;
     if (!await source.isLocationServiceEnabled()) {
       return RiderLocationReport.locationUnavailable;
     }
     final permission = await source.permissionStatus();
     if (!permission.isGranted) {
+      if (!_foreground) return RiderLocationReport.permissionDenied;
       final requested = await source.requestPermission();
       if (!requested.isGranted) {
         return requested == RiderLocationPermission.deniedForever
@@ -195,8 +274,23 @@ class RiderLocationService {
             : RiderLocationReport.permissionDenied;
       }
     }
+    if (_disposed || generation != _generation) {
+      return RiderLocationReport.unchanged;
+    }
+    await _ensureStream();
     final position = await source.currentPosition();
+    if (_disposed || generation != _generation) {
+      return RiderLocationReport.unchanged;
+    }
     if (position == null) return RiderLocationReport.locationUnavailable;
+    if (!RiderNavigation.valid(position)) {
+      return RiderLocationReport.locationUnavailable;
+    }
+    if (position.recordedAt != null &&
+        _clock().difference(position.recordedAt!).abs() >
+            const Duration(seconds: 45)) {
+      return RiderLocationReport.locationUnavailable;
+    }
     if (position.accuracy != null &&
         position.accuracy! > maximumAccuracyMeters) {
       return RiderLocationReport.lowAccuracy;
@@ -221,8 +315,10 @@ class RiderLocationService {
     } catch (_) {
       return RiderLocationReport.failed;
     }
-    _lastPostedPosition = position;
-    _lastPostedAt = _clock();
+    if (!_disposed && generation == _generation) {
+      _lastPostedPosition = position;
+      _lastPostedAt = _clock();
+    }
     return RiderLocationReport.posted;
   }
 
@@ -257,13 +353,75 @@ class RiderLocationService {
     _timer = Timer.periodic(frequency, (_) => unawaited(reportOnce()));
   }
 
+  Future<void> _ensureStream() async {
+    final streaming = source;
+    if (!_running || streaming is! RiderStreamingLocationSource) return;
+    final background = _activeDeliveryId != null;
+    if (_stream != null && _streamBackground == background) return;
+    if (_streamStarting == _generation) return;
+    // Foreground services must be started while the app is visible.
+    if (!_foreground) return;
+    _cancelStream();
+    final generation = _generation;
+    _streamStarting = generation;
+    await _streamCancellation;
+    if (!_running || _disposed || generation != _generation || !_foreground) {
+      if (_streamStarting == generation) _streamStarting = null;
+      return;
+    }
+    _streamBackground = background;
+    _streamStarting = null;
+    _stream = streaming
+        .positions(background: background)
+        .listen(
+          (point) {
+            if (!_running ||
+                _disposed ||
+                generation != _generation ||
+                !RiderNavigation.valid(point)) {
+              return;
+            }
+            if ((point.accuracy == null ||
+                    point.accuracy! <= maximumAccuracyMeters) &&
+                (point.recordedAt == null ||
+                    _clock().difference(point.recordedAt!).abs() <=
+                        const Duration(seconds: 45))) {
+              // Own map remains responsive even while an HTTP report is pending.
+              _position.value = point;
+            }
+            unawaited(reportOnce());
+          },
+          onError: (Object error) {
+            // Periodic reconciliation retries GPS without crashing the delivery UI.
+            if (generation == _generation) _cancelStream();
+          },
+          onDone: () {
+            if (generation == _generation) _cancelStream();
+          },
+        );
+  }
+
+  void _cancelStream() {
+    final stream = _stream;
+    _stream = null;
+    _streamBackground = null;
+    if (stream != null) {
+      _streamCancellation = _streamCancellation
+          .then((_) => stream.cancel())
+          .catchError((Object _) {});
+    }
+  }
+
   void stop() {
+    _generation++;
     _running = false;
+    _cancelStream();
     _timer?.cancel();
     _timer = null;
   }
 
   void dispose() {
+    _disposed = true;
     stop();
     _position.dispose();
   }
@@ -272,7 +430,7 @@ class RiderLocationService {
   /// pause. Bypasses the `start` guard exactly once so timers are restored
   /// even when the old run was never explicitly stopped.
   void restart() {
-    _running = false;
+    stop();
     start(reportImmediately: false);
   }
 }

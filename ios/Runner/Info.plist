@@ -28,6 +28,12 @@
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>TalaDelivery uses your location while you are online to match nearby orders and share your live position with the customer during an active delivery.</string>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Your location is shared with the delivery customer during an active delivery, including while using Maps or with the screen locked. Tracking stops when the delivery ends.</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>Keep your active delivery visible to the customer while navigating in another app.</string>
+    <key>UIBackgroundModes</key>
+    <array><string>location</string></array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

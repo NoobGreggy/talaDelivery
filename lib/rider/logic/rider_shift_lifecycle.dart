@@ -14,9 +14,10 @@ extension _RiderShiftLifecycle on RiderAppController {
     if (_disposed) return;
     switch (event.name) {
       case 'delivery.offered':
+      case 'offer.updated':
         if (profile?.isOnline ?? false) await reconcileOffers();
       case 'delivery.updated':
-        if ((profile?.isOnline ?? false) || activeDelivery != null) {
+        if (user != null) {
           await _targetedDeliveryRefresh();
         }
       case 'notification.created':
@@ -46,8 +47,8 @@ extension _RiderShiftLifecycle on RiderAppController {
   void _startLocation() {
     final location = _location;
     if (location == null) return;
+    location.start(reportImmediately: false);
     unawaited(_handleLocationReport(location.reportOnce()));
-    location.restart();
   }
 
   Future<void> _handleLocationReport(Future<RiderLocationReport> report) async {
@@ -89,6 +90,7 @@ extension _RiderShiftLifecycle on RiderAppController {
   }
 
   void _startOfferPoll() {
+    if (!_foreground) return;
     _offerPollTimer?.cancel();
     _offerPollTimer = Timer.periodic(
       offerPollInterval,
@@ -102,7 +104,7 @@ extension _RiderShiftLifecycle on RiderAppController {
   }
 
   /// Reconcile occasionally even with a connected socket: events published
-  /// while the queue or app was unavailable cannot be replayed by Reverb.
+  /// while the queue or app was unavailable cannot be replayed by Socket.IO.
   Future<void> _pollForOffers() async {
     if (_disposed || user == null) return;
     if (!(profile?.isOnline ?? false)) return;

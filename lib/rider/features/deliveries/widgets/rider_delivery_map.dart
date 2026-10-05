@@ -20,7 +20,14 @@ class _RiderDeliveryMapState extends State<RiderDeliveryMap> {
   mapbox.MapboxMap? _map;
   mapbox.CircleAnnotationManager? _circleManager;
   mapbox.PolylineAnnotationManager? _lineManager;
-  mapbox.CircleAnnotation? _destinationMarker;
+  final Map<String, mapbox.CircleAnnotation> _markers = {};
+  final RiderRoadRoutes _routes = RiderRoadRoutes();
+  DateTime? _lastRouteAt;
+  RiderLatLng? _routeDestination;
+  bool _routeInFlight = false;
+  bool _routeUnavailable = false;
+  bool _syncing = false;
+  int _routeGeneration = 0;
   mapbox.PolylineAnnotation? _routeLine;
   bool _styleLoaded = false;
 
@@ -31,23 +38,7 @@ class _RiderDeliveryMapState extends State<RiderDeliveryMap> {
   RiderLatLng? get _rider => widget.riderPosition?.value;
 
   RiderLatLng? get _destination {
-    if (_storePhase &&
-        widget.delivery.pickupLatitude != null &&
-        widget.delivery.pickupLongitude != null) {
-      return RiderLatLng(
-        widget.delivery.pickupLatitude!,
-        widget.delivery.pickupLongitude!,
-      );
-    }
-    if (!_storePhase &&
-        widget.delivery.deliveryLatitude != null &&
-        widget.delivery.deliveryLongitude != null) {
-      return RiderLatLng(
-        widget.delivery.deliveryLatitude!,
-        widget.delivery.deliveryLongitude!,
-      );
-    }
-    return null;
+    return RiderNavigation.destination(widget.delivery, widget.stage);
   }
 
   @override
@@ -71,6 +62,8 @@ class _RiderDeliveryMapState extends State<RiderDeliveryMap> {
 
   @override
   void dispose() {
+    _routeGeneration++;
+    _routes.dispose();
     widget.riderPosition?.removeListener(_onRiderPosition);
     super.dispose();
   }
@@ -78,6 +71,44 @@ class _RiderDeliveryMapState extends State<RiderDeliveryMap> {
   void _onRiderPosition() => unawaited(_syncMap());
 
   Future<void> _syncMap({bool animateDestination = false}) async {
+    if (!mounted || _syncing) return;
+    _syncing = true;
+    try {
+      await _syncMapInner(animateDestination: animateDestination);
+    } catch (_) {
+      // Native map may be torn down during a network/GPS update.
+    } finally {
+      _syncing = false;
+    }
+  }
+
+  Future<void> _pin(String key, RiderLatLng? point, int color) async {
+    if (point == null ||
+        !RiderNavigation.valid(point) ||
+        _circleManager == null) {
+      return;
+    }
+    final options = mapbox.CircleAnnotationOptions(
+      geometry: mapbox.Point(
+        coordinates: mapbox.Position(point.longitude, point.latitude),
+      ),
+      circleColor: color,
+      circleRadius: key == 'rider' ? 8 : 10,
+      circleStrokeColor: 0xFFFFFFFF,
+      circleStrokeWidth: 3,
+    );
+    final marker = _markers[key];
+    if (marker == null) {
+      _markers[key] = await _circleManager!.create(options);
+    } else {
+      marker
+        ..geometry = options.geometry
+        ..circleColor = color;
+      await _circleManager!.update(marker);
+    }
+  }
+
+  Future<void> _syncMapInner({bool animateDestination = false}) async {
     final map = _map;
     final circleManager = _circleManager;
     final lineManager = _lineManager;
@@ -89,67 +120,131 @@ class _RiderDeliveryMapState extends State<RiderDeliveryMap> {
         destination == null) {
       return;
     }
-    final palette = riderPaletteOf(context);
     final scheme = Theme.of(context).colorScheme;
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
-    final destinationColor = _storePhase ? scheme.primary : palette.ratingStar;
-    final markerOptions = mapbox.CircleAnnotationOptions(
-      geometry: mapbox.Point(
-        coordinates: mapbox.Position(
-          destination.longitude,
-          destination.latitude,
-        ),
-      ),
-      circleColor: destinationColor.toARGB32(),
-      circleRadius: 10,
-      circleStrokeColor: scheme.surface.toARGB32(),
-      circleStrokeWidth: 3,
+    await _pin(
+      'store',
+      RiderNavigation.destination(widget.delivery, DeliveryStage.toStore),
+      0xFF2563EB,
     );
-    if (_destinationMarker == null) {
-      _destinationMarker = await circleManager.create(markerOptions);
-    } else {
-      _destinationMarker!
-        ..geometry = markerOptions.geometry
-        ..circleColor = markerOptions.circleColor;
-      await circleManager.update(_destinationMarker!);
-    }
-
+    await _pin(
+      'customer',
+      RiderNavigation.destination(widget.delivery, DeliveryStage.toCustomer),
+      0xFF16A34A,
+    );
     final rider = _rider;
     if (rider != null) {
-      final lineOptions = mapbox.PolylineAnnotationOptions(
-        geometry: mapbox.LineString(
-          coordinates: [
-            mapbox.Position(rider.longitude, rider.latitude),
-            mapbox.Position(destination.longitude, destination.latitude),
-          ],
-        ),
-        lineColor: destinationColor.toARGB32(),
-        lineWidth: 4,
-        lineOpacity: .82,
-      );
-      if (_routeLine == null) {
-        _routeLine = await lineManager.create(lineOptions);
-      } else {
-        _routeLine!
-          ..geometry = lineOptions.geometry
-          ..lineColor = lineOptions.lineColor;
-        await lineManager.update(_routeLine!);
-      }
+      await _pin('rider', rider, 0xFFF97316);
+      unawaited(_syncRoadRoute(rider, destination, scheme.primary.toARGB32()));
     }
 
     if (animateDestination) {
+      final points =
+          [
+                _rider,
+                RiderNavigation.destination(
+                  widget.delivery,
+                  DeliveryStage.toStore,
+                ),
+                RiderNavigation.destination(
+                  widget.delivery,
+                  DeliveryStage.toCustomer,
+                ),
+              ]
+              .whereType<RiderLatLng>()
+              .where(RiderNavigation.valid)
+              .map(
+                (point) => mapbox.Point(
+                  coordinates: mapbox.Position(point.longitude, point.latitude),
+                ),
+              )
+              .toList();
+      final camera = await map.cameraForCoordinatesPadding(
+        points,
+        mapbox.CameraOptions(),
+        mapbox.MbxEdgeInsets(top: 85, left: 35, bottom: 35, right: 35),
+        15,
+        null,
+      );
       await map.easeTo(
-        mapbox.CameraOptions(
-          center: mapbox.Point(
-            coordinates: mapbox.Position(
-              destination.longitude,
-              destination.latitude,
-            ),
-          ),
-          zoom: 14,
-        ),
+        camera,
         mapbox.MapAnimationOptions(duration: reduceMotion ? 100 : 500),
       );
+    }
+  }
+
+  Future<void> _syncRoadRoute(
+    RiderLatLng rider,
+    RiderLatLng destination,
+    int color,
+  ) async {
+    final changed =
+        _routeDestination?.latitude != destination.latitude ||
+        _routeDestination?.longitude != destination.longitude;
+    if (changed) {
+      _routeGeneration++;
+      _routeDestination = destination;
+      _lastRouteAt = null;
+      _routeInFlight = false;
+      await _clearRouteLine();
+    }
+    if (!mounted ||
+        _routeInFlight ||
+        (_lastRouteAt != null &&
+            DateTime.now().difference(_lastRouteAt!) <
+                const Duration(seconds: 30))) {
+      return;
+    }
+    _lastRouteAt = DateTime.now();
+    _routeInFlight = true;
+    final generation = _routeGeneration;
+    try {
+      final coordinates = await _routes.driving(
+        rider,
+        destination,
+        RiderMapConfig.fromEnvironment().accessToken,
+      );
+      if (!mounted || generation != _routeGeneration || _lineManager == null) {
+        return;
+      }
+      setState(() => _routeUnavailable = coordinates.isEmpty);
+      if (coordinates.isEmpty) {
+        await _clearRouteLine();
+        return;
+      }
+      final geometry = mapbox.LineString(coordinates: coordinates);
+      if (_routeLine == null) {
+        _routeLine = await _lineManager!.create(
+          mapbox.PolylineAnnotationOptions(
+            geometry: geometry,
+            lineColor: color,
+            lineWidth: 4,
+          ),
+        );
+      } else {
+        _routeLine!
+          ..geometry = geometry
+          ..lineColor = color;
+        await _lineManager!.update(_routeLine!);
+      }
+    } catch (_) {
+      if (mounted && generation == _routeGeneration) {
+        setState(() => _routeUnavailable = true);
+        await _clearRouteLine();
+      }
+    } finally {
+      if (generation == _routeGeneration) _routeInFlight = false;
+    }
+  }
+
+  Future<void> _clearRouteLine() async {
+    final old = _routeLine;
+    _routeLine = null;
+    if (old == null) return;
+    try {
+      await _lineManager?.delete(old);
+    } catch (_) {
+      /* Native map may already be disposed. */
     }
   }
 
@@ -200,14 +295,11 @@ class _RiderDeliveryMapState extends State<RiderDeliveryMap> {
                     .createCircleAnnotationManager();
                 _lineManager = await value.annotations
                     .createPolylineAnnotationManager();
-                await value.location.updateSettings(
-                  mapbox.LocationComponentSettings(enabled: true),
-                );
-                if (_styleLoaded) unawaited(_syncMap());
+                if (_styleLoaded) unawaited(_syncMap(animateDestination: true));
               },
               onStyleLoadedListener: (_) {
                 _styleLoaded = true;
-                unawaited(_syncMap());
+                unawaited(_syncMap(animateDestination: true));
               },
             ),
             Positioned(
@@ -225,9 +317,9 @@ class _RiderDeliveryMapState extends State<RiderDeliveryMap> {
                     vertical: 7,
                   ),
                   child: Text(
-                    _storePhase
-                        ? 'Destination: pickup store'
-                        : 'Destination: customer',
+                    'Blue: store • Green: customer • Orange: you\n'
+                    '${_storePhase ? "Route: pickup store" : "Route: customer"}'
+                    '${_routeUnavailable ? "\nRoad route unavailable. Use Maps below." : ""}',
                     style: Theme.of(context).textTheme.labelSmall
                         ?.copyWith(fontWeight: FontWeight.w700),
                   ),

@@ -47,7 +47,11 @@ class ApiRiderRepository implements RiderRepository {
         statusCode: 403,
       );
     }
+    await _tokens.clear();
     await _tokens.save(result.token);
+    if (result.refreshToken != null) {
+      await _tokens.saveRefresh(result.refreshToken!);
+    }
     return result.user;
   }
 

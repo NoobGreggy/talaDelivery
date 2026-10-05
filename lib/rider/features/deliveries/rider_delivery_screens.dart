@@ -139,6 +139,32 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
     );
   }
 
+  Future<void> _navigate(
+    RiderDelivery value,
+    DeliveryStage stage, {
+    required bool apple,
+  }) async {
+    final destination = RiderNavigation.destination(value, stage);
+    if (destination == null) {
+      showMessage(context, 'This destination has no valid map pin.');
+      return;
+    }
+    try {
+      final uri = apple
+          ? RiderNavigation.appleMaps(destination)
+          : RiderNavigation.googleMaps(destination);
+      if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
+    } catch (_) {
+      // A missing external app must not interrupt the delivery workflow.
+    }
+    if (mounted) {
+      showMessage(
+        context,
+        'Unable to open Maps. Please install a maps app and try again.',
+      );
+    }
+  }
+
   Future<void> _contact(String? phone, {required bool message}) async {
     if (phone == null || phone.trim().isEmpty) {
       showMessage(context, 'No contact number is available for this stop.');
@@ -194,6 +220,35 @@ class _ActiveDeliveryScreenState extends State<ActiveDeliveryScreen> {
                   riderPosition: _controller?.riderPosition,
                 ),
                 const SizedBox(height: 16),
+                if (value.isActive) ...[
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.navigation_outlined),
+                        label: Text(
+                          'Google Maps: ${storePhase ? "pickup" : "customer"}',
+                        ),
+                        onPressed: () => _navigate(value, stage, apple: false),
+                      ),
+                      if (defaultTargetPlatform == TargetPlatform.iOS)
+                        OutlinedButton.icon(
+                          icon: const Icon(Icons.map_outlined),
+                          label: const Text('Apple Maps'),
+                          onPressed: () => _navigate(value, stage, apple: true),
+                        ),
+                    ],
+                  ),
+                  const Text(
+                    'Location sharing stays on during this delivery when you open Maps or lock the screen. Keep Tala running and allow location access.',
+                  ),
+                  TextButton.icon(
+                    onPressed: () => Geolocator.openAppSettings(),
+                    icon: const Icon(Icons.location_on_outlined),
+                    label: const Text('Location settings'),
+                  ),
+                  const SizedBox(height: 16),
+                ],
                 _DeliveryContactCard(
                   pickup: storePhase,
                   name: contactName,

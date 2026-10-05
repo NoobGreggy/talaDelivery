@@ -46,10 +46,13 @@ void main() {
     final store = SecureRiderTokenStore(const FlutterSecureStorage());
 
     await store.save('bearer-token');
+    await store.saveRefresh('refresh-token');
     expect(await store.read(), 'bearer-token');
+    expect(await store.readRefresh(), 'refresh-token');
 
     await store.clear();
     expect(await store.read(), isNull);
+    expect(await store.readRefresh(), isNull);
   });
 
   test(

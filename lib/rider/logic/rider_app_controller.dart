@@ -35,6 +35,7 @@ class RiderAppController extends ChangeNotifier {
   RiderRealtimeState _lastRealtimeState = RiderRealtimeState.idle;
 
   bool _disposed = false;
+  bool _foreground = true;
 
   RiderRealtimeService? get realtime => _realtime;
 
@@ -89,6 +90,8 @@ class RiderAppController extends ChangeNotifier {
   /// Called when the app returns to the foreground: resync state and restore
   /// socket/location wiring without showing a spinner.
   Future<void> handleAppResumed() async {
+    _foreground = true;
+    _location?.setForeground(true);
     if (_disposed || user == null) return;
     final startedAt = DateTime.now();
     await _realtime?.reconnect();
@@ -97,16 +100,19 @@ class RiderAppController extends ChangeNotifier {
       _startShift();
     } else {
       _stopShift();
+      if (activeDelivery != null) _startLocation();
     }
     _riderPerfTrace('rider.resume', startedAt);
   }
 
-  /// Called when the app leaves the foreground: stop background GPS and the
-  /// offer poll exactly once. The socket stays open and is re-synced on
-  /// resume.
+  /// Keep the active delivery foreground location service alive when opening
+  /// Maps or locking the screen. Availability-only GPS stops outside the app.
   void handleAppPaused() {
+    _foreground = false;
+    _location?.setForeground(false);
     if (_disposed || user == null) return;
-    _stopShift();
+    _stopOfferPoll();
+    if (activeDelivery == null) _location?.stop();
   }
 
   Future<bool> restore() async {
@@ -362,6 +368,11 @@ class RiderAppController extends ChangeNotifier {
       activeDelivery = deliveries.where((item) => item.isActive).firstOrNull;
       activeDelivery ??= profile?.currentDelivery;
       _location?.setActiveDelivery(activeDelivery?.id);
+      if (activeDelivery != null && _foreground) _location?.start();
+      if (activeDelivery == null &&
+          (!_foreground || !(profile?.isOnline ?? false))) {
+        _location?.stop();
+      }
     } finally {
       _loadingDeliveries = false;
     }

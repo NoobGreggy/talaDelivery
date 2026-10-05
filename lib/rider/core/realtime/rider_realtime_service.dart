@@ -1,378 +1,210 @@
 part of '../../app.dart';
 
-/// Connection state; `connected` means the private user channel subscribed.
 enum RiderRealtimeState { idle, connecting, connected }
 
-/// A single authenticated event pushed from the server.
 class RiderRealtimeEvent {
-  const RiderRealtimeEvent(this.name, [this.data = const <String, dynamic>{}]);
-
+  const RiderRealtimeEvent(this.name, [this.data = const {}]);
   final String name;
   final Map<String, dynamic> data;
-
-  @override
-  String toString() => 'RiderRealtimeEvent($name)';
-}
-
-/// Push/Pusher authentication returned by POST /broadcasting/auth.
-class RiderChannelAuthResult {
-  const RiderChannelAuthResult({
-    this.auth,
-    this.sharedSecret,
-    this.channelData,
-  });
-
-  final String? auth;
-  final String? sharedSecret;
-  final Map<String, dynamic>? channelData;
 }
 
 abstract class RiderRealtimeSocket {
-  Stream<dynamic> get messages;
-  void send(Object data);
-  Future<void> close();
+  void on(String event, void Function(dynamic) handler);
+  void emitWithAck(String event, Object data, void Function(dynamic) ack);
+  void connect();
+  void close();
 }
 
-/// Opens the native web socket (used by the real app and live tests).
-typedef RiderRealtimeSocketOpener = RiderRealtimeSocket Function(Uri url);
+typedef RiderRealtimeSocketOpener = RiderRealtimeSocket Function(
+  Uri url,
+  String token,
+);
 
 class NativeRiderRealtimeSocket implements RiderRealtimeSocket {
-  NativeRiderRealtimeSocket(this._channel);
-
-  final WebSocketChannel _channel;
-
+  NativeRiderRealtimeSocket(Uri url, String token)
+    : _socket = io.io(url.toString(), {
+        'transports': ['websocket'],
+        'autoConnect': false,
+        'forceNew': true,
+        'reconnection': false,
+        'auth': {'token': token},
+      });
+  final io.Socket _socket;
   @override
-  Stream<dynamic> get messages => _channel.stream;
-
+  void on(String event, void Function(dynamic) handler) =>
+      _socket.on(event, handler);
   @override
-  void send(Object data) => _channel.sink.add(jsonEncode(data));
-
+  void emitWithAck(String event, Object data, void Function(dynamic) ack) =>
+      _socket.emitWithAck(event, data, ack: ack);
   @override
-  Future<void> close() => _channel.sink.close();
+  void connect() => _socket.connect();
+  @override
+  void close() => _socket.dispose();
 }
 
-RiderRealtimeSocket _openNativeRealtimeSocket(Uri url) =>
-    NativeRiderRealtimeSocket(IOWebSocketChannel.connect(url));
-
-/// Signs private-channel subscription requests against the backend.
-abstract class RiderChannelAuthenticator {
-  Future<RiderChannelAuthResult> authenticateChannel({
-    required String channelName,
-    required String socketId,
-  });
-}
-
-class ApiRiderChannelAuthenticator implements RiderChannelAuthenticator {
-  ApiRiderChannelAuthenticator(this._client, this.config, this._tokens);
-
-  final http.Client _client;
-  final RiderApiConfig config;
-  final RiderTokenStore _tokens;
-
-  @override
-  Future<RiderChannelAuthResult> authenticateChannel({
-    required String channelName,
-    required String socketId,
-  }) async {
-    final token = await _tokens.read();
-    if (token == null || token.isEmpty) {
-      return const RiderChannelAuthResult();
-    }
-    // The auth endpoint expects form-encoded socket_id/channel_name (the
-    // same shape reverb's own broadcaster posts to Laravel).
-    final request = http.Request('POST', config.broadcastAuthUri);
-    request.headers.addAll({
-      'Accept': 'application/json',
-      'X-App-Key': config.apiKey,
-      'Authorization': 'Bearer $token',
-      'Content-Type': 'application/x-www-form-urlencoded',
-    });
-    request.bodyFields = {'channel_name': channelName, 'socket_id': socketId};
-    final response = await _client.send(request);
-    final body = await response.stream.bytesToString();
-    Map<String, dynamic> payload;
-    try {
-      final decoded = jsonDecode(body);
-      payload = decoded is Map<String, dynamic> ? decoded : const {};
-    } on FormatException {
-      payload = const {};
-    }
-    if (response.statusCode != 200) return const RiderChannelAuthResult();
-    return RiderChannelAuthResult(
-      auth: payload['auth'] is String ? payload['auth'] as String : null,
-      sharedSecret: payload['shared_secret'] is String
-          ? payload['shared_secret'] as String
-          : null,
-      channelData: payload['channel_data'] is Map<String, dynamic>
-          ? payload['channel_data'] as Map<String, dynamic>
-          : null,
-    );
-  }
-}
-
-/// Configuration for connecting to a Reverb websocket endpoint.
 class RiderRealtimeConfig {
-  const RiderRealtimeConfig({required this.socketUrl, required this.appKey});
-
+  const RiderRealtimeConfig({required this.socketUrl});
   final Uri socketUrl;
-  final String appKey;
-
-  bool get isConfigured => appKey.trim().isNotEmpty;
-
-  Uri handshakeUri() => socketUrl.replace(
-    path: '/app/${appKey.trim()}',
-    queryParameters: {
-      'protocol': '7',
-      'client': 'flutter-rider',
-      'version': '1.0',
-      'flash': 'false',
-    },
+  bool get isConfigured =>
+      socketUrl.host.isNotEmpty &&
+      const {'http', 'https'}.contains(socketUrl.scheme);
+  Uri get namespaceUri => Uri(
+    scheme: socketUrl.scheme,
+    host: socketUrl.host,
+    port: socketUrl.hasPort ? socketUrl.port : null,
+    path: '/realtime',
   );
 }
 
-/// A minimal Pusher protocol 7 client for the app's private user channel.
-///
-/// Handles connect, authenticated subscribe, automatic event forwarding and
-/// bounded exponential-backoff reconnects. Event payloads never include
-/// connection internals (socket ids, signatures) so secrets stay out of logs.
+/// JWT Socket.IO client. Connected means the server acknowledged our own
+/// user room, not merely that a transport was opened.
 class RiderRealtimeService extends ChangeNotifier {
   RiderRealtimeService({
     required this.config,
-    required this.authenticator,
+    required this.readToken,
     RiderRealtimeSocketOpener? opener,
     this.reconnectBaseDelay = const Duration(seconds: 2),
     this.maxReconnectDelay = const Duration(seconds: 30),
-  }) : _opener = opener ?? _openNativeRealtimeSocket;
+    this.subscriptionTimeout = const Duration(seconds: 10),
+  }) : _opener = opener ?? NativeRiderRealtimeSocket.new;
 
   final RiderRealtimeConfig config;
-  final RiderChannelAuthenticator authenticator;
+  final Future<String?> Function() readToken;
   final RiderRealtimeSocketOpener _opener;
-  final Duration reconnectBaseDelay;
-  final Duration maxReconnectDelay;
-
-  final StreamController<RiderRealtimeEvent> _events =
-      StreamController<RiderRealtimeEvent>.broadcast();
-
+  final Duration reconnectBaseDelay, maxReconnectDelay, subscriptionTimeout;
+  final _events = StreamController<RiderRealtimeEvent>.broadcast();
   Stream<RiderRealtimeEvent> get events => _events.stream;
-
   RiderRealtimeState _state = RiderRealtimeState.idle;
   RiderRealtimeState get state => _state;
-
-  bool _running = false;
-  int? _userId;
   RiderRealtimeSocket? _socket;
-  StreamSubscription<dynamic>? _subscription;
-  Timer? _reconnectTimer;
-  int _reconnectAttempts = 0;
-  String? _socketId;
-
-  @override
-  void dispose() {
-    _running = false;
-    _userId = null;
-    _reconnectTimer?.cancel();
-    _subscription?.cancel();
-    _socket?.close();
-    _events.close();
-    super.dispose();
-  }
+  Timer? _retry, _deadline;
+  bool _running = false, _disposed = false;
+  int? _userId;
+  int _generation = 0, _attempts = 0;
 
   Future<void> start({required int userId}) async {
-    if (_running && _userId == userId) return;
-    _userId = userId;
+    if (_disposed || (_running && _userId == userId)) return;
+    await stop();
     _running = true;
-    if (!config.isConfigured) {
-      _state = RiderRealtimeState.idle;
-      notifyListeners();
-      return;
-    }
-    _reconnectAttempts = 0;
-    _reconnectTimer?.cancel();
+    _userId = userId;
+    _attempts = 0;
     await _connect();
-    notifyListeners();
   }
 
   Future<void> stop() async {
     _running = false;
     _userId = null;
-    _reconnectTimer?.cancel();
-    await _teardownSocket();
+    _generation++;
+    _retry?.cancel();
+    _deadline?.cancel();
+    _socket?.close();
+    _socket = null;
     _setState(RiderRealtimeState.idle);
   }
 
   Future<void> reconnect() async {
-    if (!_running) return;
-    if (_state == RiderRealtimeState.connected &&
-        _socketId != null &&
-        _socket != null) {
-      // Socket is alive; re-subscribe after a missed wake-up is unnecessary,
-      // but the app may have missed events while paused. Ask the listener to
-      // resync via a synthetic event.
-      _events.add(const RiderRealtimeEvent('realtime.resumed'));
-      _setState(RiderRealtimeState.connected);
-      return;
-    }
-    _reconnectAttempts = 0;
-    _reconnectTimer?.cancel();
+    if (!_running || _disposed) return;
+    _attempts = 0;
+    _retry?.cancel();
     await _connect();
   }
 
   Future<void> _connect() async {
-    if (!_running) return;
+    if (!_running || _disposed || !config.isConfigured) return;
+    final generation = ++_generation;
+    _deadline?.cancel();
+    _socket?.close();
+    _socket = null;
     _setState(RiderRealtimeState.connecting);
-    await _teardownSocket();
-    if (!_running) return;
+    bool current() => !_disposed && _running && generation == _generation;
     try {
-      final socket = _opener(config.handshakeUri());
-      _socket = socket;
-      _subscription = socket.messages.listen(
-        (message) => _handleMessage(message),
-        onError: (Object error, StackTrace stack) => _scheduleReconnect(),
-        onDone: () {
-          if (!_running) return;
-          _socket = null;
-          _socketId = null;
-          _events.add(const RiderRealtimeEvent('realtime.disconnected'));
-          _scheduleReconnect();
-        },
-      );
-    } catch (_) {
-      _scheduleReconnect();
-    }
-  }
-
-  void _handleMessage(Object? raw) {
-    if (!_running) return;
-    final message = _decodeObject(raw);
-    if (message == null) {
-      _log('Ignored an invalid WebSocket frame.');
-      return;
-    }
-    final event = message['event'];
-    if (event is! String) return;
-    final channel = message['channel'];
-    final data = _decodeData(message['data']);
-    switch (event) {
-      case 'pusher:connection_established':
-        _socketId = data['socket_id'] is String
-            ? data['socket_id'] as String
-            : null;
-        if (_socketId != null) {
-          _log('WebSocket connected; authorizing rider channel.');
-          unawaited(_subscribeToUserChannel());
-        }
-        break;
-      case 'pusher:ping':
-        _socket?.send({'event': 'pusher:pong', 'data': <String, dynamic>{}});
-        break;
-      case 'pusher_internal:subscription_succeeded':
-      case 'pusher:subscribe_succeeded':
-        if (channel != 'private-user.$_userId' || _socketId == null) return;
-        _reconnectAttempts = 0;
-        _setState(RiderRealtimeState.connected);
-        _log('Subscribed to rider channel.');
-        _riderPerfEvent('rider.realtime.connected');
-        _events.add(
-          RiderRealtimeEvent('realtime.connected', {'channel': channel}),
-        );
-        break;
-      case 'pusher_internal:subscription_error':
-      case 'pusher:subscription_error':
-        _log('Rider channel subscription failed.');
-        _events.add(const RiderRealtimeEvent('realtime.subscription_error'));
-        _scheduleReconnect();
-        break;
-      case 'pusher:error':
-        _log('Reverb reported a WebSocket error.');
-        _events.add(const RiderRealtimeEvent('realtime.error'));
-        _scheduleReconnect();
-        break;
-      default:
-        if (_state != RiderRealtimeState.connected ||
-            channel != 'private-user.$_userId') {
-          return;
-        }
-        if (event == 'delivery.offered') _log('Delivery offer event received.');
-        _riderPerfEvent('rider.realtime.dispatch $event');
-        _events.add(RiderRealtimeEvent(event, data));
-    }
-  }
-
-  Map<String, dynamic>? _decodeObject(Object? raw) {
-    try {
-      final decoded = raw is String ? jsonDecode(raw) : raw;
-      return decoded is Map ? Map<String, dynamic>.from(decoded) : null;
-    } catch (_) {
-      return null;
-    }
-  }
-
-  Map<String, dynamic> _decodeData(Object? raw) {
-    return _decodeObject(raw) ?? const <String, dynamic>{};
-  }
-
-  Future<void> _subscribeToUserChannel() async {
-    final userId = _userId;
-    final socketId = _socketId;
-    final socket = _socket;
-    if (userId == null || socketId == null || socket == null) return;
-    final channelName = 'private-user.$userId';
-    try {
-      final auth = await authenticator.authenticateChannel(
-        channelName: channelName,
-        socketId: socketId,
-      );
-      if (!_running || _socket != socket || _socketId != socketId) return;
-      final authorization = auth.auth;
-      if (authorization == null || authorization.isEmpty) {
-        _log('Rider channel authorization failed.');
-        _events.add(const RiderRealtimeEvent('realtime.subscription_error'));
+      final token = await readToken();
+      if (!current()) return;
+      if (token == null || token.isEmpty) {
         _scheduleReconnect();
         return;
       }
-      socket.send({
-        'event': 'pusher:subscribe',
-        'data': {'channel': channelName, 'auth': authorization},
+      final socket = _opener(config.namespaceUri, token);
+      _socket = socket;
+      _deadline = Timer(subscriptionTimeout, () {
+        if (current()) _scheduleReconnect();
       });
+      socket.on('connect', (_) {
+        if (!current()) return;
+        socket.emitWithAck('subscribe', {'room': 'user:$_userId'}, (result) {
+          if (!current()) return;
+          final reply = result is Map && result['data'] is Map
+              ? result['data']
+              : result;
+          if (reply is! Map || reply['success'] != true) {
+            _events.add(
+              const RiderRealtimeEvent('realtime.subscription_error'),
+            );
+            _scheduleReconnect();
+            return;
+          }
+          _deadline?.cancel();
+          _attempts = 0;
+          _setState(RiderRealtimeState.connected);
+          _events.add(const RiderRealtimeEvent('realtime.connected'));
+        });
+      });
+      for (final event in ['disconnect', 'connect_error', 'error']) {
+        socket.on(event, (_) {
+          if (!current()) return;
+          _events.add(const RiderRealtimeEvent('realtime.disconnected'));
+          _scheduleReconnect();
+        });
+      }
+      for (final event in [
+        'delivery.offered',
+        'delivery.updated',
+        'offer.updated',
+        'notification.created',
+      ]) {
+        socket.on(event, (raw) {
+          if (!current() ||
+              state != RiderRealtimeState.connected ||
+              raw is! Map) {
+            return;
+          }
+          _events.add(
+            RiderRealtimeEvent(event, Map<String, dynamic>.from(raw)),
+          );
+        });
+      }
+      socket.connect();
     } catch (_) {
-      if (!_running || _socket != socket) return;
-      _log('Rider channel authorization request failed.');
-      _events.add(const RiderRealtimeEvent('realtime.subscription_error'));
-      _scheduleReconnect();
+      if (current()) _scheduleReconnect();
     }
   }
 
   void _scheduleReconnect() {
-    if (!_running) return;
-    _reconnectTimer?.cancel();
-    _setState(RiderRealtimeState.connecting);
-    _reconnectAttempts += 1;
-    final attempts = _reconnectAttempts;
-    final shift = math.min(attempts - 1, 8);
-    final exponential = reconnectBaseDelay.inMilliseconds << shift;
-    final delay = Duration(
-      milliseconds: math.min(exponential, maxReconnectDelay.inMilliseconds),
-    );
-    _reconnectTimer = Timer(delay, () => _connect());
-  }
-
-  Future<void> _teardownSocket() async {
-    final subscription = _subscription;
-    _subscription = null;
-    final socket = _socket;
+    if (!_running || _disposed) return;
+    _generation++;
+    _deadline?.cancel();
+    _socket?.close();
     _socket = null;
-    _socketId = null;
-    await subscription?.cancel();
-    await socket?.close();
+    _setState(RiderRealtimeState.connecting);
+    _retry?.cancel();
+    final delay = math.min(
+      reconnectBaseDelay.inMilliseconds << math.min(_attempts++, 8),
+      maxReconnectDelay.inMilliseconds,
+    );
+    _retry = Timer(Duration(milliseconds: delay), () => unawaited(_connect()));
   }
 
   void _setState(RiderRealtimeState value) {
-    if (_state == value) return;
+    if (_disposed || value == _state) return;
     _state = value;
     notifyListeners();
   }
 
-  void _log(String message) {
-    if (kDebugMode) debugPrint('Rider realtime: $message');
+  @override
+  void dispose() {
+    _disposed = true;
+    unawaited(stop());
+    unawaited(_events.close());
+    super.dispose();
   }
 }

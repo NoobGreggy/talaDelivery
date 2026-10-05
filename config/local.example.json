@@ -1,8 +1,7 @@
 {
-  "TALA_API_BASE_URL": "http://127.0.0.1:8000/api/v1/",
-  "TALA_API_KEY": "replace-with-laravel-app-api-key",
-  "TALA_REVERB_WS_URL": "ws://127.0.0.1:6001",
-  "TALA_REVERB_APP_KEY": "replace-with-laravel-reverb-app-key",
+  "TALA_API_BASE_URL": "http://192.168.100.18:3000/api/v1/",
+  "TALA_API_KEY": "replace-with-nest-app-api-key",
+  "TALA_SOCKET_URL": "http://192.168.100.18:3008",
   "TALA_MAPBOX_ACCESS_TOKEN": "replace-with-mapbox-public-access-token",
   "TALA_MAPBOX_STYLE_URL": "mapbox://styles/mapbox/streets-v12"
 }

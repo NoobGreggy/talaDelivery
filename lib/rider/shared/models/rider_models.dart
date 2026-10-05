@@ -155,9 +155,11 @@ class RiderOrderItem {
 
   factory RiderOrderItem.fromJson(Map<String, dynamic> json) => RiderOrderItem(
     id: _riderInt(json['id']),
-    name: _riderString(json['product_name']) ?? 'Order item',
+    name:
+        _riderString(json['productName'] ?? json['product_name']) ??
+        'Order item',
     quantity: math.max(_riderInt(json['quantity']), 1),
-    unitPrice: _riderDouble(json['unit_price']),
+    unitPrice: _riderDouble(json['unitPrice'] ?? json['unit_price']),
     subtotal: _riderDouble(json['subtotal']),
   );
 
@@ -189,11 +191,16 @@ class RiderOrder {
   final List<RiderOrderItem> items;
 
   factory RiderOrder.fromJson(Map<String, dynamic> json) => RiderOrder(
-    number: _riderString(json['order_number']) ?? '#${_riderInt(json['id'])}',
+    number:
+        _riderString(json['orderNumber'] ?? json['order_number']) ??
+        '#${_riderInt(json['id'])}',
     total: _riderDouble(json['total']),
-    paymentMethod: _riderString(json['payment_method']) ?? 'COD',
-    customerName: _riderString(json['customer_name']),
-    customerPhone: _riderString(json['customer_phone']),
+    paymentMethod:
+        _riderString(json['paymentMethod'] ?? json['payment_method']) ?? 'COD',
+    customerName: _riderString(json['customerName'] ?? json['customer_name']),
+    customerPhone: _riderString(
+      json['customerPhone'] ?? json['customer_phone'],
+    ),
     notes: _riderString(json['notes']),
     items: (json['items'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>()
@@ -553,7 +560,7 @@ class RiderNotification {
       id: id,
       type: _riderString(json['type']),
       title: _riderString(json['title']) ?? 'Notification',
-      message: _riderString(json['message']) ?? '',
+      message: _riderString(json['body'] ?? json['message']) ?? '',
       isRead: json['is_read'] == true,
       createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
       readAt: DateTime.tryParse(json['read_at']?.toString() ?? ''),
@@ -563,7 +570,12 @@ class RiderNotification {
 }
 
 class RiderAuthResult {
-  const RiderAuthResult({required this.token, required this.user});
+  const RiderAuthResult({
+    required this.token,
+    required this.user,
+    this.refreshToken,
+  });
+  final String? refreshToken;
   final String token;
   final RiderUser user;
 
@@ -574,6 +586,7 @@ class RiderAuthResult {
     }
     return RiderAuthResult(
       token: json['token'] as String,
+      refreshToken: _riderString(json['refresh_token']),
       user: RiderUser.fromJson(user),
     );
   }

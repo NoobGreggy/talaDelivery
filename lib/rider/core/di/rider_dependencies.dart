@@ -34,11 +34,8 @@ class RiderAppDependencies {
     final apiClient = RiderApiClient(client, apiConfig, tokens);
     final repository = ApiRiderRepository(apiClient, tokens);
     final realtime = RiderRealtimeService(
-      config: RiderRealtimeConfig(
-        socketUrl: apiConfig.socketUri,
-        appKey: apiConfig.reverbKey ?? '',
-      ),
-      authenticator: ApiRiderChannelAuthenticator(client, apiConfig, tokens),
+      config: RiderRealtimeConfig(socketUrl: apiConfig.socketUri),
+      readToken: apiClient.accessToken,
     );
     final location = RiderLocationService(
       source: GeolocatorRiderLocationSource(),
