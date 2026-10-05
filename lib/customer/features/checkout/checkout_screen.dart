@@ -1,7 +1,8 @@
 part of '../../app.dart';
 
 class CheckoutPage extends StatefulWidget {
-  const CheckoutPage({super.key});
+  const CheckoutPage({super.key, this.initialAddressId});
+  final int? initialAddressId;
 
   @override
   State<CheckoutPage> createState() => _CheckoutPageState();
@@ -13,6 +14,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
   CustomerAddress? selectedAddress;
   bool submitting = false;
   String? errorMessage;
+  CustomerDeliveryQuote? deliveryQuote;
+  bool quoteLoading = true;
+  String? quoteError;
+  int quoteGeneration = 0;
 
   @override
   void didChangeDependencies() {
@@ -23,11 +28,45 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   @override
   void dispose() {
+    quoteGeneration++;
     notesController.dispose();
     super.dispose();
   }
 
+  Future<CustomerDeliveryQuote?> refreshQuote() async {
+    if (!mounted) return null;
+    final dependencies = CustomerDependencyScope.of(context);
+    final store = dependencies.cartController.store;
+    final address = selectedAddress;
+    if (store == null || address == null) return null;
+    final generation = ++quoteGeneration;
+    setState(() {
+      quoteLoading = true;
+      quoteError = null;
+      deliveryQuote = null;
+    });
+    try {
+      final result = await dependencies.orderRepository.quoteDelivery(
+        store: store,
+        address: address,
+      );
+      if (!mounted || generation != quoteGeneration) return null;
+      setState(() => deliveryQuote = result);
+      return result;
+    } catch (error) {
+      if (mounted && generation == quoteGeneration) {
+        setState(() => quoteError = apiErrorMessage(error));
+      }
+      return null;
+    } finally {
+      if (mounted && generation == quoteGeneration) {
+        setState(() => quoteLoading = false);
+      }
+    }
+  }
+
   Future<void> placeOrder() async {
+    if (submitting || quoteLoading || deliveryQuote == null) return;
     final dependencies = CustomerDependencyScope.of(context);
     final cart = dependencies.cartController;
     final address = selectedAddress;
@@ -39,18 +78,22 @@ class _CheckoutPageState extends State<CheckoutPage> {
       message(context, 'Choose a delivery address.', kind: ToastKind.error);
       return;
     }
-    final confirmed = await confirmAction(
-      context,
-      title: 'Place this order?',
-      body: '${cart.store!.name} • ${peso(cart.subtotal)} before delivery fee',
-      confirmLabel: 'Place order',
-    );
-    if (!confirmed || !mounted) return;
     setState(() {
       submitting = true;
       errorMessage = null;
     });
     try {
+      // Refresh admin zone settings before confirming; order creation recalculates on the server.
+      final quote = await refreshQuote();
+      if (quote == null || !mounted) return;
+      final confirmed = await confirmAction(
+        context,
+        title: 'Place this order?',
+        body:
+            '${cart.store!.name} • ${peso(cart.subtotal + quote.deliveryFee)} including ${peso(quote.deliveryFee)} delivery fee',
+        confirmLabel: 'Place order',
+      );
+      if (!confirmed || !mounted) return;
       final order = await dependencies.orderRepository.create(
         store: cart.store!,
         lines: cart.lines,
@@ -106,10 +149,18 @@ class _CheckoutPageState extends State<CheckoutPage> {
             );
           }
           final addresses = snapshot.data ?? const [];
-          selectedAddress ??= addresses.cast<CustomerAddress?>().firstWhere(
-            (item) => item?.isDefault == true,
-            orElse: () => addresses.isEmpty ? null : addresses.first,
-          );
+          if (selectedAddress == null && addresses.isNotEmpty) {
+            selectedAddress = addresses.firstWhere(
+              (item) => item.id == widget.initialAddressId,
+              orElse: () => addresses.firstWhere(
+                (item) => item.isDefault,
+                orElse: () => addresses.first,
+              ),
+            );
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) unawaited(refreshQuote());
+            });
+          }
           if (addresses.isEmpty) {
             return EmptyState(
               icon: Icons.location_off_outlined,
@@ -157,11 +208,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ),
                           )
                           .toList(growable: false),
-                      onChanged: (id) => setState(
-                        () => selectedAddress = addresses.firstWhere(
-                          (address) => address.id == id,
-                        ),
-                      ),
+                      onChanged: submitting
+                          ? null
+                          : (id) {
+                              setState(
+                                () => selectedAddress = addresses.firstWhere(
+                                  (address) => address.id == id,
+                                ),
+                              );
+                              unawaited(refreshQuote());
+                            },
                     ),
                     const SizedBox(height: 10),
                     InfoCard(
@@ -232,7 +288,42 @@ class _CheckoutPageState extends State<CheckoutPage> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    PriceSummary(subtotal: cart.subtotal),
+                    if (quoteLoading)
+                      const Padding(
+                        padding: EdgeInsets.all(16),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            SizedBox(width: 12),
+                            Expanded(child: Text('Calculating delivery fee…')),
+                          ],
+                        ),
+                      ),
+                    if (quoteError != null) ...[
+                      AuthErrorBanner(errorMessage: quoteError),
+                      TextButton(
+                        onPressed: quoteLoading || submitting
+                            ? null
+                            : refreshQuote,
+                        child: const Text('Retry delivery fee'),
+                      ),
+                    ],
+                    if (deliveryQuote != null) ...[
+                      Text(
+                        'Delivery zone: ${deliveryQuote!.zoneName} • ${deliveryQuote!.distanceKm.toStringAsFixed(2)} km',
+                        key: const Key('checkout-delivery-zone'),
+                      ),
+                      const SizedBox(height: 10),
+                      PriceSummary(
+                        subtotal: cart.subtotal,
+                        delivery: deliveryQuote!.deliveryFee,
+                        total: cart.subtotal + deliveryQuote!.deliveryFee,
+                      ),
+                    ],
                     if (errorMessage != null) ...[
                       const SizedBox(height: 12),
                       AuthErrorBanner(errorMessage: errorMessage),
@@ -243,8 +334,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
               BottomAction(
                 label: submitting
                     ? 'Placing order…'
-                    : 'Place order • ${peso(cart.subtotal)} + delivery',
-                enabled: !submitting,
+                    : quoteLoading
+                    ? 'Calculating delivery fee…'
+                    : deliveryQuote == null
+                    ? 'Delivery unavailable'
+                    : 'Place order • ${peso(cart.subtotal + deliveryQuote!.deliveryFee)}',
+                enabled: !submitting && !quoteLoading && deliveryQuote != null,
                 onTap: placeOrder,
               ),
             ],

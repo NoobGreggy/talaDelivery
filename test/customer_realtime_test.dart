@@ -125,6 +125,93 @@ class _ChangingNotifications extends FakeCustomerNotificationRepository {
 }
 
 void main() {
+  test('Nest Socket.IO authenticates, subscribes and refreshes customer events', () async {
+    final tokens = MemoryCustomerTokenStore();
+    await tokens.save('customer-token');
+    final socket = _FakeSocket();
+    final client = MockClient(
+      (_) async => throw StateError('No legacy auth request expected'),
+    );
+    final realtime = CustomerRealtimeController(
+      config: CustomerRealtimeConfig(
+        socketUrl: 'http://192.168.100.18:3008',
+        appKey: '',
+        authUri: Uri.parse('http://192.168.100.18:3000/api/v1/'),
+        socketIo: true,
+      ),
+      tokenStore: tokens,
+      authClient: client,
+      socketFactory: (uri) {
+        expect(uri.scheme, 'ws');
+        expect(uri.path, '/socket.io/');
+        expect(uri.queryParameters['EIO'], '4');
+        return socket;
+      },
+    );
+    await realtime.start(7);
+    socket.incoming.add(
+      '0{"sid":"test","pingInterval":25000,"pingTimeout":20000}',
+    );
+    expect(socket.messages.last, '40/realtime,{"token":"customer-token"}');
+    socket.incoming.add('40/realtime,{"sid":"namespace"}');
+    expect(
+      socket.messages.last,
+      '42/realtime,1["subscribe",{"room":"user:7"}]',
+    );
+    socket.incoming.add(
+      '43/realtime,1[{"success":true,"data":{"success":true}}]',
+    );
+    expect(realtime.isSubscribed, isTrue);
+    final version = realtime.orderVersion;
+    socket.incoming.add(
+      '42/realtime,["order.updated",{"orderId":31,"status":"CONFIRMED","updatedAt":"2026-10-05"}]',
+    );
+    expect(realtime.lastOrderId, 31);
+    expect(realtime.orderVersion, version + 1);
+    final notifications = realtime.notificationVersion;
+    socket.incoming.add('42/realtime,["notification.created",{"id":99}]');
+    expect(realtime.notificationVersion, notifications + 1);
+    realtime.watchDelivery(22);
+    expect(
+      socket.messages.last,
+      '42/realtime,2["subscribe",{"room":"delivery:22"}]',
+    );
+    void location(
+      int id,
+      String timestamp, {
+      Object latitude = 16.94,
+    }) => socket.incoming.add(
+      '42/realtime,${jsonEncode([
+        'rider.location',
+        {'deliveryId': id, 'riderId': 4, 'latitude': latitude, 'longitude': 121.76, 'timestamp': timestamp, 'accuracyM': 7},
+      ])}',
+    );
+    location(22, '2026-10-06T01:00:00Z');
+    expect(
+      realtime.lastRiderLocation,
+      isNull,
+    ); // Wait for authorized room acknowledgment.
+    socket.incoming.add('43/realtime,2[{"data":{"success":true}}]');
+    expect(realtime.isDeliverySubscribed, true);
+    location(22, '2026-10-06T01:00:00Z');
+    expect(realtime.lastRiderLocation?.deliveryId, 22);
+    expect(realtime.lastRiderLocation?.accuracy, 7);
+    final locationVersion = realtime.locationVersion;
+    location(99, '2026-10-06T01:00:05Z');
+    location(22, '2026-10-06T00:59:00Z');
+    location(22, '2026-10-06T01:00:05Z', latitude: 'invalid');
+    expect(realtime.locationVersion, locationVersion);
+    location(22, '2026-10-06T01:00:05Z', latitude: 16.95);
+    expect(realtime.locationVersion, locationVersion + 1);
+    expect(realtime.lastRiderLocation?.latitude, 16.95);
+    realtime.watchDelivery(null);
+    expect(realtime.lastRiderLocation, isNull);
+    socket.incoming.add('2');
+    expect(socket.messages.last, '3');
+    realtime.dispose();
+    client.close();
+    await socket.incoming.close();
+  });
   testWidgets('retries when a socket connects but never subscribes', (
     tester,
   ) async {

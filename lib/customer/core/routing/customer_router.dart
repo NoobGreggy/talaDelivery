@@ -73,6 +73,11 @@ class CustomerAddressRouteArgs {
   final CustomerAddress? address;
 }
 
+class CustomerCheckoutRouteArgs {
+  const CustomerCheckoutRouteArgs({required this.addressId});
+  final int addressId;
+}
+
 class CustomerStoreListingRouteArgs {
   const CustomerStoreListingRouteArgs({
     this.initialSearch = '',
@@ -291,7 +296,12 @@ class CustomerRouteController {
       case CustomerRoutes.cart:
         return const CartPage();
       case CustomerRoutes.checkout:
-        return const CheckoutPage();
+        final checkoutArgs = settings.arguments;
+        return CheckoutPage(
+          initialAddressId: checkoutArgs is CustomerCheckoutRouteArgs
+              ? checkoutArgs.addressId
+              : null,
+        );
       case CustomerRoutes.orderSuccess:
         if (settings.arguments is CustomerOrder) {
           return OrderSuccessPage(order: settings.arguments! as CustomerOrder);

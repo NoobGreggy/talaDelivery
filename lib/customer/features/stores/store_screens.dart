@@ -379,7 +379,7 @@ class _StoreDetailPageState extends State<StoreDetailPage> {
                   child: EmptyState(
                     icon: Icons.inventory_2_outlined,
                     title: 'No products available',
-                    subtitle: 'Available products from Laravel appear here.',
+                    subtitle: 'Available products from this store appear here.',
                   ),
                 )
               else

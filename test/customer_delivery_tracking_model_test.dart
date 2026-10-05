@@ -4,7 +4,7 @@ import 'package:tala_delivery_customer/main.dart';
 
 void main() {
   testWidgets(
-    'customer map waits for the rider instead of showing endpoint pins',
+    'customer map can use endpoint pins but needs a configured map token',
     (tester) async {
       const delivery = CustomerDelivery(
         id: 22,
@@ -24,7 +24,7 @@ void main() {
 
       expect(
         find.text(
-          'The rider’s live location will appear here once it is available.',
+          'Mapbox is not configured. Add TALA_MAPBOX_ACCESS_TOKEN to your config file.',
         ),
         findsOneWidget,
       );

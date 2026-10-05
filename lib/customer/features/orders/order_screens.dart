@@ -346,7 +346,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage> {
               const SizedBox(height: 14),
               const InfoBanner(
                 icon: Icons.location_searching_rounded,
-                text: 'Order status and rider location update automatically from Laravel.',
+                text: 'Order status and rider location update automatically during delivery.',
               ),
               if (order.isPending) ...[
                 const SizedBox(height: 14),

@@ -1,5 +1,36 @@
 part of '../../../app.dart';
 
+class CustomerDeliveryQuote {
+  const CustomerDeliveryQuote({
+    required this.deliveryFee,
+    required this.distanceKm,
+    required this.zoneName,
+  });
+  final double deliveryFee;
+  final double distanceKm;
+  final String zoneName;
+
+  factory CustomerDeliveryQuote.fromJson(Map<String, dynamic> json) {
+    final fee = double.tryParse('${json['deliveryFee']}');
+    final distance = double.tryParse('${json['distanceKm']}');
+    final zone = json['zone'];
+    if (fee == null ||
+        !fee.isFinite ||
+        fee < 0 ||
+        distance == null ||
+        !distance.isFinite ||
+        distance < 0 ||
+        zone is! Map<String, dynamic>) {
+      throw const CustomerApiException('The delivery fee response is invalid.');
+    }
+    return CustomerDeliveryQuote(
+      deliveryFee: fee,
+      distanceKm: distance,
+      zoneName: _jsonString(zone['name']) ?? 'Delivery zone',
+    );
+  }
+}
+
 class CustomerRiderLocation {
   const CustomerRiderLocation({
     required this.deliveryId,
@@ -23,27 +54,40 @@ class CustomerRiderLocation {
   final double? heading;
   final double? speed;
 
-  bool get hasCoordinates => latitude != null && longitude != null;
+  bool get hasCoordinates =>
+      latitude != null &&
+      longitude != null &&
+      latitude!.isFinite &&
+      longitude!.isFinite &&
+      latitude!.abs() <= 90 &&
+      longitude!.abs() <= 180;
 
   factory CustomerRiderLocation.fromJson(
     Map<String, dynamic> json, {
     int? deliveryId,
   }) => CustomerRiderLocation(
-    deliveryId: deliveryId ?? _jsonInt(json['delivery_id']),
-    riderId: json['rider_id'] == null ? null : _jsonInt(json['rider_id']),
-    latitude: json['latitude'] == null ? null : _jsonDouble(json['latitude']),
+    deliveryId:
+        deliveryId ?? _jsonInt(json['delivery_id'] ?? json['deliveryId']),
+    riderId: (json['rider_id'] ?? json['riderId']) == null
+        ? null
+        : _jsonInt(json['rider_id'] ?? json['riderId']),
+    latitude: double.tryParse('${json['latitude']}'),
     longitude: json['longitude'] == null
         ? null
-        : _jsonDouble(json['longitude']),
-    recordedAt: DateTime.tryParse(json['recorded_at']?.toString() ?? ''),
+        : double.tryParse('${json['longitude']}'),
+    recordedAt: DateTime.tryParse(
+      (json['recorded_at'] ?? json['timestamp'])?.toString() ?? '',
+    ),
     sequence: _jsonInt(json['sequence']),
-    accuracy: json['accuracy_m'] == null
+    accuracy: (json['accuracy_m'] ?? json['accuracyM']) == null
         ? null
-        : _jsonDouble(json['accuracy_m']),
-    heading: json['heading_deg'] == null
+        : _jsonDouble(json['accuracy_m'] ?? json['accuracyM']),
+    heading: (json['heading_deg'] ?? json['headingDeg']) == null
         ? null
-        : _jsonDouble(json['heading_deg']),
-    speed: json['speed_mps'] == null ? null : _jsonDouble(json['speed_mps']),
+        : _jsonDouble(json['heading_deg'] ?? json['headingDeg']),
+    speed: (json['speed_mps'] ?? json['speedMps']) == null
+        ? null
+        : _jsonDouble(json['speed_mps'] ?? json['speedMps']),
   );
 
   Map<String, dynamic> toJson() => {
@@ -136,17 +180,18 @@ class CustomerOrderItem {
   final double unitPrice;
   final double subtotal;
 
-  factory CustomerOrderItem.fromJson(Map<String, dynamic> json) =>
-      CustomerOrderItem(
-        id: _jsonInt(json['id']),
-        productId: json['product_id'] == null
-            ? null
-            : _jsonInt(json['product_id']),
-        name: _jsonString(json['product_name']) ?? 'Product',
-        quantity: _jsonInt(json['quantity']),
-        unitPrice: _jsonDouble(json['unit_price']),
-        subtotal: _jsonDouble(json['subtotal']),
-      );
+  factory CustomerOrderItem.fromJson(
+    Map<String, dynamic> json,
+  ) => CustomerOrderItem(
+    id: _jsonInt(json['id']),
+    productId: (json['product_id'] ?? json['productId']) == null
+        ? null
+        : _jsonInt(json['product_id'] ?? json['productId']),
+    name: _jsonString(json['product_name'] ?? json['productName']) ?? 'Product',
+    quantity: _jsonInt(json['quantity']),
+    unitPrice: _jsonDouble(json['unit_price'] ?? json['unitPrice']),
+    subtotal: _jsonDouble(json['subtotal']),
+  );
 }
 
 class CustomerOrder {
@@ -194,27 +239,44 @@ class CustomerOrder {
 
   factory CustomerOrder.fromJson(Map<String, dynamic> json) {
     final id = _jsonInt(json['id']);
-    final number = _jsonString(json['order_number']);
+    final number = _jsonString(json['order_number'] ?? json['orderNumber']);
     if (id <= 0 || number == null) {
       throw const FormatException('Invalid order response.');
     }
-    final storeJson = json['store'];
+    final storeJson =
+        json['store'] ??
+        (json['storeId'] == null
+            ? null
+            : {
+                'id': json['storeId'],
+                'name': json['storeName'] ?? 'Store #${json['storeId']}',
+                'status': 'ACTIVE',
+              });
     final deliveryJson = json['delivery'];
     return CustomerOrder(
       id: id,
       orderNumber: number,
       status: _jsonString(json['status']) ?? 'PENDING',
-      statusLabel: _jsonString(json['status_label']) ?? 'Pending',
-      paymentMethod: _jsonString(json['payment_method']) ?? 'COD',
+      statusLabel:
+          _jsonString(json['status_label']) ??
+          (json['status']?.toString().replaceAll('_', ' ') ?? 'Pending'),
+      paymentMethod:
+          _jsonString(json['payment_method'] ?? json['paymentMethod']) ?? 'COD',
       subtotal: _jsonDouble(json['subtotal']),
-      deliveryFee: _jsonDouble(json['delivery_fee']),
+      deliveryFee: _jsonDouble(json['delivery_fee'] ?? json['deliveryFee']),
       discount: _jsonDouble(json['discount']),
       total: _jsonDouble(json['total']),
-      customerName: _jsonString(json['customer_name']),
-      customerPhone: _jsonString(json['customer_phone']),
-      deliveryAddress: _jsonString(json['delivery_address']) ?? '',
+      customerName: _jsonString(json['customer_name'] ?? json['customerName']),
+      customerPhone: _jsonString(
+        json['customer_phone'] ?? json['customerPhone'],
+      ),
+      deliveryAddress:
+          _jsonString(json['delivery_address'] ?? json['deliveryAddress']) ??
+          '',
       notes: _jsonString(json['notes']),
-      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? ''),
+      createdAt: DateTime.tryParse(
+        (json['created_at'] ?? json['createdAt'])?.toString() ?? '',
+      ),
       store: storeJson is Map<String, dynamic>
           ? StoreData.fromJson(storeJson)
           : null,

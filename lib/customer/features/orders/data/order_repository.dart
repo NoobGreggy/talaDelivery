@@ -1,6 +1,10 @@
 part of '../../../app.dart';
 
 abstract class CustomerOrderRepository {
+  Future<CustomerDeliveryQuote> quoteDelivery({
+    required StoreData store,
+    required CustomerAddress address,
+  });
   Future<List<CustomerOrder>> list();
   Future<CustomerOrder> get(int id);
   Future<CustomerOrder> create({
@@ -16,6 +20,29 @@ class ApiCustomerOrderRepository implements CustomerOrderRepository {
   ApiCustomerOrderRepository(this._apiClient);
 
   final CustomerApiClient _apiClient;
+
+  @override
+  Future<CustomerDeliveryQuote> quoteDelivery({
+    required StoreData store,
+    required CustomerAddress address,
+  }) async {
+    if (address.latitude == null || address.longitude == null) {
+      throw const CustomerApiException(
+        'Set a map pin on your delivery address to calculate the delivery fee.',
+      );
+    }
+    final payload = await _apiClient.post(
+      'orders/delivery-quote',
+      body: {
+        'storeId': store.id,
+        'deliveryLatitude': address.latitude.toString(),
+        'deliveryLongitude': address.longitude.toString(),
+        'city': address.city,
+        'province': address.province,
+      },
+    );
+    return CustomerDeliveryQuote.fromJson(_payloadMap(payload));
+  }
 
   @override
   Future<List<CustomerOrder>> list() async {
@@ -40,24 +67,23 @@ class ApiCustomerOrderRepository implements CustomerOrderRepository {
     final payload = await _apiClient.post(
       'orders',
       body: {
-        'store_id': store.id,
+        'storeId': store.id,
         'items': lines
             .map(
               (line) => {
-                'product_id': line.product.id,
+                'productId': line.product.id,
                 'quantity': line.quantity,
               },
             )
             .toList(growable: false),
-        'customer_name': address.recipientName,
-        'customer_phone': address.phone,
-        'delivery_address': address.formatted,
-        'delivery_latitude': address.latitude,
-        'delivery_longitude': address.longitude,
+        'customerName': address.recipientName,
+        'customerPhone': address.phone,
+        'deliveryAddress': address.formatted,
+        'deliveryLatitude': address.latitude?.toString(),
+        'deliveryLongitude': address.longitude?.toString(),
         'city': address.city,
         'province': address.province,
-        'payment_method': 'COD',
-        'notes': notes?.trim().isEmpty == true ? null : notes?.trim(),
+        if (notes?.trim().isNotEmpty == true) 'notes': notes!.trim(),
       },
     );
     return CustomerOrder.fromJson(_payloadMap(payload));

@@ -112,7 +112,9 @@ class StoreData {
     return StoreData(
       id: id,
       name: name,
-      status: _jsonString(json['status']) ?? 'INACTIVE',
+      status:
+          _jsonString(json['status']) ??
+          (json['is_active'] == false ? 'INACTIVE' : 'ACTIVE'),
       description: _jsonString(json['description']),
       phone: _jsonString(json['phone']),
       email: _jsonString(json['email']),
@@ -142,6 +144,7 @@ class CategoryData {
     required this.name,
     required this.status,
     this.description,
+    this.icon,
   });
 
   final int id;
@@ -149,6 +152,17 @@ class CategoryData {
   final String name;
   final String status;
   final String? description;
+  final String? icon;
+
+  IconData? get materialIcon => switch (icon) {
+    'restaurant_rounded' => Icons.restaurant_rounded,
+    'local_grocery_store_rounded' => Icons.local_grocery_store_rounded,
+    'medication_rounded' => Icons.medication_rounded,
+    'inventory_2_rounded' => Icons.inventory_2_rounded,
+    'local_offer_rounded' => Icons.local_offer_rounded,
+    'grid_view_rounded' => Icons.grid_view_rounded,
+    _ => null,
+  };
 
   factory CategoryData.fromJson(Map<String, dynamic> json) {
     final id = _jsonInt(json['id']);
@@ -158,9 +172,12 @@ class CategoryData {
     }
     return CategoryData(
       id: id,
-      storeId: _jsonInt(json['store_id']),
+      storeId: _jsonInt(json['store_id'] ?? json['storeId']),
       name: name,
-      status: _jsonString(json['status']) ?? 'INACTIVE',
+      icon: _jsonString(json['icon']),
+      status:
+          _jsonString(json['status']) ??
+          (json['is_active'] == false ? 'INACTIVE' : 'ACTIVE'),
       description: _jsonString(json['description']),
     );
   }
@@ -194,7 +211,7 @@ class ProductData {
 
   factory ProductData.fromJson(Map<String, dynamic> json) {
     final id = _jsonInt(json['id']);
-    final storeId = _jsonInt(json['store_id']);
+    final storeId = _jsonInt(json['store_id'] ?? json['storeId']);
     final name = _jsonString(json['name']);
     if (id <= 0 || storeId <= 0 || name == null) {
       throw const FormatException('Invalid product response.');
@@ -202,15 +219,17 @@ class ProductData {
     return ProductData(
       id: id,
       storeId: storeId,
-      categoryId: json['category_id'] == null
+      categoryId: (json['category_id'] ?? json['categoryId']) == null
           ? null
-          : _jsonInt(json['category_id']),
+          : _jsonInt(json['category_id'] ?? json['categoryId']),
       name: name,
       description: _jsonString(json['description']),
       price: _jsonDouble(json['price']),
       image: _jsonString(json['image']),
       stock: _jsonInt(json['stock']),
-      available: json['is_available'] == true && _jsonInt(json['stock']) > 0,
+      available:
+          (json['is_available'] ?? json['isAvailable']) == true &&
+          _jsonInt(json['stock']) > 0,
     );
   }
 }

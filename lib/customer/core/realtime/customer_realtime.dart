@@ -7,39 +7,54 @@ class CustomerRealtimeConfig {
     required String socketUrl,
     required this.appKey,
     required this.authUri,
+    this.socketIo = false,
   }) : socketBaseUri = Uri.parse(
          socketUrl.endsWith('/') ? socketUrl : '$socketUrl/',
        );
 
   factory CustomerRealtimeConfig.fromEnvironment(CustomerApiConfig api) =>
       CustomerRealtimeConfig(
-        socketUrl: const String.fromEnvironment('TALA_REVERB_WS_URL'),
-        appKey: const String.fromEnvironment('TALA_REVERB_APP_KEY'),
-        authUri: api.baseUri.resolve('../../broadcasting/auth'),
+        socketUrl: const String.fromEnvironment(
+          'TALA_SOCKET_IO_URL',
+          defaultValue: 'http://192.168.100.18:3008',
+        ),
+        appKey: '',
+        authUri: api.baseUri,
+        socketIo: true,
       );
 
   final Uri socketBaseUri;
   final String appKey;
   final Uri authUri;
+  final bool socketIo;
 
-  bool get enabled =>
-      (socketBaseUri.scheme == 'ws' || socketBaseUri.scheme == 'wss') &&
-      socketBaseUri.hasAuthority &&
-      appKey.trim().isNotEmpty;
+  bool get enabled => socketIo
+      ? socketBaseUri.hasAuthority
+      : (socketBaseUri.scheme == 'ws' || socketBaseUri.scheme == 'wss') &&
+            socketBaseUri.hasAuthority &&
+            appKey.trim().isNotEmpty;
 
-  Uri get socketUri => socketBaseUri
-      .resolve('app/${Uri.encodeComponent(appKey)}')
-      .replace(
-        queryParameters: {
-          'protocol': '7',
-          'client': 'tala-flutter',
-          'version': '1.0',
-          'flash': 'false',
-        },
-      );
+  Uri get socketUri => socketIo
+      ? socketBaseUri.replace(
+          scheme: ['https', 'wss'].contains(socketBaseUri.scheme)
+              ? 'wss'
+              : 'ws',
+          path: '/socket.io/',
+          queryParameters: {'EIO': '4', 'transport': 'websocket'},
+        )
+      : socketBaseUri
+            .resolve('app/${Uri.encodeComponent(appKey)}')
+            .replace(
+              queryParameters: {
+                'protocol': '7',
+                'client': 'tala-flutter',
+                'version': '1.0',
+                'flash': 'false',
+              },
+            );
 }
 
-/// Listens on Laravel's private user channel. REST remains the source of truth.
+/// Authenticated user/delivery tracking. REST remains the source of truth.
 class CustomerRealtimeController extends ChangeNotifier {
   factory CustomerRealtimeController({
     CustomerRealtimeConfig? config,
@@ -78,6 +93,8 @@ class CustomerRealtimeController extends ChangeNotifier {
   bool _disposed = false;
   bool _subscribed = false;
   String? _socketId;
+  int _ackId = 0;
+  final Map<int, String> _pendingRooms = {};
   int? _deliveryId;
   DateTime _lastActivity = DateTime.now();
   final Set<String> _seenOrderEvents = {};
@@ -104,11 +121,22 @@ class CustomerRealtimeController extends ChangeNotifier {
     lastRiderLocation = null;
     locationVersion++;
     if (previous != null && _socket != null) {
-      _send('pusher:unsubscribe', {'channel': previous});
+      if (_config?.socketIo == true) {
+        _socketIoEvent('unsubscribe', {'room': previous});
+      } else {
+        _send('pusher:unsubscribe', {'channel': previous});
+      }
       _subscribedChannels.remove(previous);
     }
     final socketId = _socketId;
     final socket = _socket;
+    if (_config?.socketIo == true) {
+      if (deliveryId != null && _subscribed) {
+        _subscribeRoom(_deliveryChannelName!);
+      }
+      notifyListeners();
+      return;
+    }
     if (deliveryId != null && socketId != null && socket != null) {
       unawaited(
         _authorizeChannel(_deliveryChannelName!, socketId, _generation, socket),
@@ -215,6 +243,10 @@ class CustomerRealtimeController extends ChangeNotifier {
       return;
     }
     _lastActivity = DateTime.now();
+    if (_config?.socketIo == true) {
+      _onSocketIoFrame(frame, generation);
+      return;
+    }
     Map<String, dynamic> message;
     try {
       final decoded = jsonDecode(frame);
@@ -319,9 +351,115 @@ class CustomerRealtimeController extends ChangeNotifier {
     }
   }
 
-  String? get _channelName => _userId == null ? null : 'private-user.$_userId';
-  String? get _deliveryChannelName =>
-      _deliveryId == null ? null : 'private-delivery.$_deliveryId';
+  String? get _channelName => _userId == null
+      ? null
+      : (_config?.socketIo == true ? 'user:$_userId' : 'private-user.$_userId');
+  String? get _deliveryChannelName => _deliveryId == null
+      ? null
+      : (_config?.socketIo == true
+            ? 'delivery:$_deliveryId'
+            : 'private-delivery.$_deliveryId');
+
+  void _socketIoEvent(String event, Map<String, dynamic> data) =>
+      _socket?.sink.add('42/realtime,${jsonEncode([event, data])}');
+
+  void _subscribeRoom(String room) {
+    final id = ++_ackId;
+    _pendingRooms[id] = room;
+    _socket?.sink.add(
+      '42/realtime,$id${jsonEncode([
+        'subscribe',
+        {'room': room},
+      ])}',
+    );
+  }
+
+  void _onSocketIoFrame(String frame, int generation) {
+    if (frame.startsWith('0')) {
+      _socket?.sink.add('40/realtime,${jsonEncode({'token': _token})}');
+      return;
+    }
+    if (frame.startsWith('2')) {
+      _socket?.sink.add('3${frame.substring(1)}');
+      return;
+    }
+    if (frame.startsWith('40/realtime,')) {
+      _subscribeRoom(_channelName!);
+      return;
+    }
+    if (frame.startsWith('44/realtime,') || frame.startsWith('41/realtime')) {
+      _disconnected(generation);
+      return;
+    }
+    try {
+      final ack = RegExp(r'^43/realtime,(\d+)(.*)$').firstMatch(frame);
+      if (ack != null) {
+        final room = _pendingRooms.remove(int.parse(ack.group(1)!));
+        final replies = jsonDecode(ack.group(2)!) as List<dynamic>;
+        final envelope = replies.first as Map<String, dynamic>;
+        final result = envelope['data'] is Map<String, dynamic>
+            ? envelope['data'] as Map<String, dynamic>
+            : envelope;
+        if (result['success'] != true) {
+          _disconnected(generation);
+          return;
+        }
+        if (room != null) _subscribedChannels.add(room);
+        if (room == _channelName) {
+          _subscribed = true;
+          _subscriptionDeadline?.cancel();
+          _retry = 0;
+          lastOrderId = null;
+          orderVersion++;
+          notificationVersion++;
+          _startHeartbeat(generation);
+          if (_deliveryChannelName != null) {
+            _subscribeRoom(_deliveryChannelName!);
+          }
+          notifyListeners();
+        }
+        return;
+      }
+      if (!frame.startsWith('42/realtime,') || !_subscribed) return;
+      final values =
+          jsonDecode(frame.substring('42/realtime,'.length)) as List<dynamic>;
+      final event = values[0];
+      final data = values[1] as Map<String, dynamic>;
+      if (event == 'order.updated') {
+        final id = _jsonInt(data['orderId']);
+        if (id <= 0 ||
+            !_remember(
+              _seenOrderEvents,
+              '$id:${data['status']}:${data['updatedAt']}',
+            )) {
+          return;
+        }
+        lastOrderId = id;
+        orderVersion++;
+        notifyListeners();
+      } else if (event == 'notification.created') {
+        if (!_remember(_seenNotificationIds, _jsonInt(data['id']))) return;
+        notificationVersion++;
+        notifyListeners();
+      } else if (event == 'rider.location' &&
+          isDeliverySubscribed &&
+          _jsonInt(data['deliveryId']) == _deliveryId) {
+        final next = CustomerRiderLocation.fromJson(data);
+        final previous = lastRiderLocation;
+        if (!next.hasCoordinates ||
+            next.recordedAt == null ||
+            (previous?.recordedAt != null &&
+                !next.recordedAt!.isAfter(previous!.recordedAt!))) {
+          return;
+        }
+        lastRiderLocation = next;
+        locationVersion++;
+        notifyListeners();
+      }
+    } catch (_) {
+      /* Ignore malformed transport frames. REST stays authoritative. */
+    }
+  }
 
   Map<String, dynamic>? _frameData(Object? value) {
     if (value is Map<String, dynamic>) return value;
@@ -397,7 +535,8 @@ class CustomerRealtimeController extends ChangeNotifier {
       final idle = DateTime.now().difference(_lastActivity);
       if (idle > const Duration(seconds: 150)) {
         _disconnected(generation);
-      } else if (idle > const Duration(seconds: 90)) {
+      } else if (idle > const Duration(seconds: 90) &&
+          _config?.socketIo != true) {
         _send('pusher:ping', const {});
       }
     });
@@ -424,6 +563,7 @@ class CustomerRealtimeController extends ChangeNotifier {
     _subscribed = false;
     _socketId = null;
     _subscribedChannels.clear();
+    _pendingRooms.clear();
     _heartbeatTimer?.cancel();
     _subscriptionDeadline?.cancel();
     _subscription?.cancel();

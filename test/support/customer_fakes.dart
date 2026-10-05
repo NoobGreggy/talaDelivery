@@ -158,6 +158,9 @@ const fakeStore = StoreData(
 );
 
 class FakeCustomerCatalogRepository implements CustomerCatalogRepository {
+  @override
+  Future<List<CategoryData>> listCategories() async =>
+      (await listStores()).expand((store) => store.categories).toList();
   final List<String?> storeSearches = [];
 
   @override
@@ -184,6 +187,15 @@ class FakeCustomerCatalogRepository implements CustomerCatalogRepository {
 }
 
 class FakeCustomerOrderRepository implements CustomerOrderRepository {
+  @override
+  Future<CustomerDeliveryQuote> quoteDelivery({
+    required StoreData store,
+    required CustomerAddress address,
+  }) async => const CustomerDeliveryQuote(
+    deliveryFee: 49,
+    distanceKm: 2,
+    zoneName: 'Test Delivery Zone',
+  );
   final List<CustomerOrder> orders = [];
 
   @override
@@ -251,13 +263,14 @@ CustomerAppDependencies fakeCustomerDependencies({
   FakeCustomerAuthRepository? auth,
   FakeCustomerAddressRepository? addresses,
   FakeCustomerCatalogRepository? catalog,
+  FakeCustomerOrderRepository? orders,
   CustomerLocationService? locationService,
   CustomerReverseGeocoder? reverseGeocoder,
 }) => CustomerAppDependencies(
   auth ?? FakeCustomerAuthRepository(),
   addresses ?? FakeCustomerAddressRepository(),
   catalog ?? FakeCustomerCatalogRepository(),
-  FakeCustomerOrderRepository(),
+  orders ?? FakeCustomerOrderRepository(),
   FakeCustomerNotificationRepository(),
   CustomerCartController(),
   null,

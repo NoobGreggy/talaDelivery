@@ -33,6 +33,9 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
   mapbox.MapboxMap? controller;
   mapbox.CircleAnnotationManager? circleManager;
   mapbox.CircleAnnotation? riderCircle;
+  mapbox.CircleAnnotation? storeCircle;
+  mapbox.CircleAnnotation? customerCircle;
+  bool _syncing = false;
   bool styleLoaded = false;
 
   late final AnimationController _riderSlide;
@@ -86,7 +89,7 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
     final to = _currentTo;
     if (to == null) return;
     _riderShown = _interpolate(from ?? to, to, _riderSlide.value);
-    unawaited(_updateRiderCircle(_riderShown!));
+    unawaited(_updateRiderCircle(_riderShown!).catchError((Object _) {}));
   }
 
   void _onRiderStatus(AnimationStatus status) {
@@ -98,11 +101,57 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
   }
 
   Future<void> _syncAnnotations() async {
-    if (controller == null || !styleLoaded) return;
-    final rider = riderLocation;
-    if (rider != null && rider.hasCoordinates) {
-      await _moveRider(rider);
+    if (!mounted || controller == null || !styleLoaded || _syncing) return;
+    _syncing = true;
+    try {
+      storeCircle = await _stopPin(
+        widget.delivery.pickupPoint,
+        storeCircle,
+        0xFF2563EB,
+      );
+      customerCircle = await _stopPin(
+        widget.delivery.deliveryPoint,
+        customerCircle,
+        0xFF16A34A,
+      );
+      final rider = riderLocation;
+      if (rider != null && rider.hasCoordinates) {
+        await _moveRider(rider);
+      }
+    } catch (_) {
+      // Map teardown must not interrupt incoming order updates.
+    } finally {
+      _syncing = false;
     }
+  }
+
+  Future<mapbox.CircleAnnotation?> _stopPin(
+    CustomerMapPoint? point,
+    mapbox.CircleAnnotation? marker,
+    int color,
+  ) async {
+    final manager = circleManager;
+    if (manager == null ||
+        point == null ||
+        !point.latitude.isFinite ||
+        !point.longitude.isFinite ||
+        point.latitude.abs() > 90 ||
+        point.longitude.abs() > 180) {
+      return marker;
+    }
+    final options = mapbox.CircleAnnotationOptions(
+      geometry: mapbox.Point(
+        coordinates: mapbox.Position(point.longitude, point.latitude),
+      ),
+      circleColor: color,
+      circleRadius: 9,
+      circleStrokeColor: 0xFFFFFFFF,
+      circleStrokeWidth: 3,
+    );
+    if (marker == null) return manager.create(options);
+    marker.geometry = options.geometry;
+    await manager.update(marker);
+    return marker;
   }
 
   Future<void> _moveRider(CustomerRiderLocation next) async {
@@ -150,7 +199,9 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
 
   Future<void> _updateRiderCircle(CustomerMapPoint point) async {
     final map = controller;
-    if (map == null || !styleLoaded || circleManager == null) return;
+    if (!mounted || map == null || !styleLoaded || circleManager == null) {
+      return;
+    }
     final options = mapbox.CircleAnnotationOptions(
       geometry: mapbox.Point(
         coordinates: mapbox.Position(point.longitude, point.latitude),
@@ -175,13 +226,31 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
   }) async {
     final map = controller;
     if (map == null) return;
+    final points =
+        [point, widget.delivery.pickupPoint, widget.delivery.deliveryPoint]
+            .whereType<CustomerMapPoint>()
+            .where(
+              (p) =>
+                  p.latitude.isFinite &&
+                  p.longitude.isFinite &&
+                  p.latitude.abs() <= 90 &&
+                  p.longitude.abs() <= 180,
+            )
+            .map(
+              (p) => mapbox.Point(
+                coordinates: mapbox.Position(p.longitude, p.latitude),
+              ),
+            )
+            .toList();
+    final camera = await map.cameraForCoordinatesPadding(
+      points,
+      mapbox.CameraOptions(),
+      mapbox.MbxEdgeInsets(top: 75, left: 35, bottom: 35, right: 35),
+      15,
+      null,
+    );
     await map.easeTo(
-      mapbox.CameraOptions(
-        center: mapbox.Point(
-          coordinates: mapbox.Position(point.longitude, point.latitude),
-        ),
-        zoom: 15,
-      ),
+      camera,
       mapbox.MapAnimationOptions(
         duration: animate ? _riderMoveDuration.inMilliseconds : 0,
       ),
@@ -221,14 +290,16 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
   @override
   Widget build(BuildContext context) {
     final rider = riderLocation;
-    if (rider == null || !rider.hasCoordinates) {
+    final center = rider != null && rider.hasCoordinates
+        ? CustomerMapPoint(rider.latitude!, rider.longitude!)
+        : widget.delivery.deliveryPoint ?? widget.delivery.pickupPoint;
+    if (center == null) {
       return const InfoBanner(
         icon: Icons.location_off_outlined,
         text:
             'The rider’s live location will appear here once it is available.',
       );
     }
-    final center = CustomerMapPoint(rider.latitude!, rider.longitude!);
     final mapConfig = CustomerMapConfig.fromEnvironment();
     if (!mapConfig.isConfigured) {
       return const InfoBanner(
@@ -273,11 +344,18 @@ class _CustomerDeliveryMapState extends State<CustomerDeliveryMap>
                   color: palette.surface.withValues(alpha: .92),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 7,
+                  ),
                   child: Text(
-                    'Live rider location',
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700),
+                    'Orange: rider • Blue: store • Green: delivery pin\n'
+                    '${rider?.hasCoordinates == true ? "Rider location • updated ${rider?.recordedAt?.toLocal().toString().split(".").first ?? "time unavailable"}" : "Waiting for rider GPS"}',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
               ),

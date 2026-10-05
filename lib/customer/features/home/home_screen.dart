@@ -5,10 +5,12 @@ class _CustomerHomeData {
     required this.stores,
     required this.addresses,
     required this.notifications,
+    this.categories = const [],
   });
   final List<StoreData> stores;
   final List<CustomerAddress> addresses;
   final List<CustomerNotification> notifications;
+  final List<CategoryData> categories;
 }
 
 class HomePage extends StatefulWidget {
@@ -57,6 +59,7 @@ class _HomePageState extends State<HomePage> {
         future = Future.value(
           _CustomerHomeData(
             stores: current.stores,
+            categories: current.categories,
             addresses: current.addresses,
             notifications: notifications,
           ),
@@ -73,11 +76,13 @@ class _HomePageState extends State<HomePage> {
       dependencies.catalogRepository.listStores(),
       dependencies.addressRepository.list(),
       dependencies.notificationRepository.list(),
+      dependencies.catalogRepository.listCategories(),
     ]);
     return _CustomerHomeData(
       stores: results[0] as List<StoreData>,
       addresses: results[1] as List<CustomerAddress>,
       notifications: results[2] as List<CustomerNotification>,
+      categories: results[3] as List<CategoryData>,
     );
   }
 
@@ -177,7 +182,14 @@ class _HomePageState extends State<HomePage> {
               else ...[
                 SliverToBoxAdapter(
                   child: _DashboardCategories(
-                    categories: _categoryNames(data!.stores),
+                    categories: data!.categories
+                        .map((category) => category.name.toLowerCase().trim())
+                        .toList(),
+                    icons: {
+                      for (final category in data.categories)
+                        category.name.toLowerCase().trim():
+                            category.materialIcon,
+                    },
                     selected: selectedCategory,
                     onSelected: (name) =>
                         setState(() => selectedCategory = name),
@@ -225,18 +237,6 @@ class _HomePageState extends State<HomePage> {
       },
     ),
   );
-
-  static List<String> _categoryNames(List<StoreData> stores) {
-    final names = <String>{};
-    for (final store in stores) {
-      for (final category in store.categories) {
-        names.add(category.name.toLowerCase().trim());
-      }
-    }
-    final sorted = names.toList(growable: false);
-    sorted.sort();
-    return sorted;
-  }
 }
 
 class _DashboardHero extends StatelessWidget {
@@ -454,8 +454,10 @@ class _DashboardCategories extends StatelessWidget {
     required this.categories,
     required this.selected,
     required this.onSelected,
+    this.icons = const {},
   });
   final List<String> categories;
+  final Map<String, IconData?> icons;
   final String? selected;
   final ValueChanged<String?> onSelected;
 
@@ -501,7 +503,7 @@ class _DashboardCategories extends StatelessWidget {
                 final style = _categoryStyle(context, name);
                 return TalaCategoryChip(
                   label: name == null ? 'All' : _titleCase(name),
-                  icon: style.icon,
+                  icon: icons[name] ?? style.icon,
                   color: style.color,
                   selected: selected == name,
                   onTap: () => onSelected(name),
