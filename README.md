@@ -4,6 +4,13 @@ This project was generated using [Angular CLI](https://github.com/angular/angula
 
 ## Development server
 
+Before building or starting, copy `public/mapbox.local.example.js` to
+`public/mapbox.local.js` and set `window.TALA_MAPBOX_ACCESS_TOKEN` to your public
+Mapbox token (`pk.`). The real file is ignored by Git and copied into the build
+as a runtime asset. Never put a secret (`sk.`) token in this browser app.
+Without local map configuration, the rest of the admin app still works, but
+Mapbox maps are unavailable. Include the configured asset in your deployment.
+
 To start a local development server, run:
 
 ```bash

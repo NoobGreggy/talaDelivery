@@ -14,7 +14,7 @@ import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton'
 import { AvatarComponent } from '../../../shared/components/avatar/avatar';
 import { CardComponent } from '../../../shared/components/card/card';
 import { Delivery, DeliveryEvent, Rider, RiderLocationEvent } from '../../../core/models';
-import { EchoService } from '../../../core/echo/echo.service';
+import { RealtimeService } from '../../../core/realtime/realtime.service';
 import { DeliveryTrackingMapComponent } from '../delivery-tracking-map/delivery-tracking-map';
 
 @Component({
@@ -45,7 +45,7 @@ export class DeliveryDetailComponent {
   private riderService = inject(RiderService);
   private toastService = inject(ToastService);
   private destroyRef = inject(DestroyRef);
-  private echoService = inject(EchoService);
+  private realtime = inject(RealtimeService);
   private stopLocationTracking: (() => void) | null = null;
 
   protected readonly delivery = signal<Delivery | null>(null);
@@ -133,10 +133,11 @@ export class DeliveryDetailComponent {
     if (!['ASSIGNED', 'ACCEPTED', 'PICKED_UP', 'IN_TRANSIT'].includes(delivery.status)) {
       return;
     }
-    this.stopLocationTracking = this.echoService.listenToDeliveryLocation(
+    this.stopLocationTracking = this.realtime.watchDelivery(
       delivery.id,
-      (location: RiderLocationEvent) => {
-        if (location.delivery_id !== delivery.id) return;
+      // The gateway emits camelCase (RiderLocationRealtimeEvent); map it into
+      // the snake_case RiderLocation the map and the rest of the app expect.
+      (location) => {
         this.delivery.update((current) =>
           current
             ? {
@@ -144,10 +145,10 @@ export class DeliveryDetailComponent {
                 rider_location: {
                   latitude: location.latitude,
                   longitude: location.longitude,
-                  accuracy_m: location.accuracy_m,
-                  heading_deg: location.heading_deg,
-                  speed_mps: location.speed_mps,
-                  recorded_at: location.recorded_at,
+                  accuracy_m: location.accuracyM,
+                  heading_deg: location.headingDeg,
+                  speed_mps: location.speedMps,
+                  recorded_at: location.timestamp,
                 },
               }
             : current,

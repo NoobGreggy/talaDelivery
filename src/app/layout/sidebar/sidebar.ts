@@ -39,9 +39,6 @@ export class SidebarComponent {
           if (item.route === '/stores' && this.user()?.store_id) {
             return { ...item, route: `/stores/${this.user()?.store_id}` };
           }
-          if (item.route === '/products' && this.user()?.store_id) {
-            return { ...item, route: `/stores/${this.user()?.store_id}/products` };
-          }
           return item;
         }),
       }))
@@ -71,13 +68,14 @@ export class SidebarComponent {
       items: [
         { label: 'Stores', route: '/stores', icon: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4' },
         { label: 'Riders', route: '/riders', icon: 'M8 7h8m-8 4h8m-4-8v16m-7-4h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', platformOnly: true },
-        { label: 'Customers', route: '/customers', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', platformOnly: true }
+        { label: 'Customers', route: '/customers', icon: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z', platformOnly: true },
+        { label: 'Admin Users', route: '/admin-users', icon: 'M12 4.354a4 4 0 110 8m-6 8h12a6 6 0 00-7.743-5.651L11 17H6a6 6 0 016-6zm0 0a4 4 0 104-4 4 4 0 00-4 4zm8 9v-6m3 3h-6', platformOnly: true }
       ]
     },
     {
       label: 'Catalog',
       items: [
-        { label: 'Products', route: '/products', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' }
+        { label: 'Categories', route: '/categories', icon: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4', platformOnly: true }
       ]
     },
     {

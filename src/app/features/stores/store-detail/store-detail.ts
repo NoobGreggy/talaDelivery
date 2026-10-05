@@ -1,30 +1,29 @@
 import { Component, inject, signal, DestroyRef } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { DatePipe, CurrencyPipe } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { StoreService } from '../../../core/services/store.service';
+import { StoreCategoryService } from '../../../core/services/store-category.service';
+import { ZoneService } from '../../../core/services/zone.service';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge';
 import { SkeletonComponent } from '../../../shared/components/skeleton/skeleton';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state';
-import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state';
 import { ButtonComponent } from '../../../shared/components/button/button';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { CardComponent } from '../../../shared/components/card/card';
 import { ToastService } from '../../../core/services/toast.service';
-import { Store, Product } from '../../../core/models';
+import { Store, StoreCategory, DeliveryZone } from '../../../core/models';
 
-type StoreTab = 'overview' | 'products' | 'orders' | 'delivery';
+type StoreTab = 'overview' | 'categories' | 'orders' | 'delivery';
 
 @Component({
   selector: 'app-store-detail',
   standalone: true,
   imports: [
     DatePipe,
-    CurrencyPipe,
     RouterLink,
     StatusBadgeComponent,
     SkeletonComponent,
     ErrorStateComponent,
-    EmptyStateComponent,
     ButtonComponent,
     ConfirmDialogComponent,
     CardComponent,
@@ -38,10 +37,20 @@ export class StoreDetailComponent {
   private storeService = inject(StoreService);
   private toastService = inject(ToastService);
   private destroyRef = inject(DestroyRef);
+  private categoryService = inject(StoreCategoryService);
+  private zoneService = inject(ZoneService);
+  protected readonly zones = signal<DeliveryZone[]>([]);
+  protected readonly zonesLoading = signal(true);
+  protected readonly zonesError = signal<string | null>(null);
+  protected readonly selectedZones = signal<number[]>([]);
+  protected readonly zonesSaving = signal(false);
 
   protected readonly store = signal<Store | null>(null);
-  protected readonly products = signal<Product[]>([]);
-  protected readonly productsLoading = signal(true);
+  protected readonly categories = signal<StoreCategory[]>([]);
+  protected readonly categoriesLoading = signal(true);
+  protected readonly categoriesError = signal<string | null>(null);
+  protected readonly selectedCategories = signal<number[]>([]);
+  protected readonly categoriesSaving = signal(false);
   protected readonly loading = signal(true);
   protected readonly error = signal<string | null>(null);
   protected readonly activeTab = signal<StoreTab>('overview');
@@ -50,7 +59,7 @@ export class StoreDetailComponent {
 
   protected readonly tabs: { key: StoreTab; label: string }[] = [
     { key: 'overview', label: 'Overview' },
-    { key: 'products', label: 'Products' },
+    { key: 'categories', label: 'Categories' },
     { key: 'orders', label: 'Orders' },
     { key: 'delivery', label: 'Delivery Settings' },
   ];
@@ -58,6 +67,8 @@ export class StoreDetailComponent {
   constructor() {
     const sub = this.route.paramMap.subscribe((params) => {
       const id = Number(params.get('id'));
+      const tab = this.route.snapshot.queryParamMap.get('tab');
+      this.activeTab.set(tab === 'categories' || tab === 'delivery' ? tab : 'overview');
       this.loadStore(id);
     });
     this.destroyRef.onDestroy(() => sub.unsubscribe());
@@ -71,7 +82,10 @@ export class StoreDetailComponent {
       next: (store) => {
         this.store.set(store);
         this.loading.set(false);
-        this.loadProducts(id);
+        this.selectedCategories.set((store.categories ?? []).map((category) => category.id));
+        this.selectedZones.set(store.deliveryZoneIds ?? []);
+        this.loadZones();
+        this.loadCategories();
       },
       error: () => {
         this.error.set('We couldn\'t load this store.');
@@ -80,17 +94,17 @@ export class StoreDetailComponent {
     });
   }
 
-  private loadProducts(storeId: number): void {
-    this.productsLoading.set(true);
-
-    this.storeService.listProducts(storeId).subscribe({
-      next: (products) => {
-        this.products.set(products);
-        this.productsLoading.set(false);
+  protected loadCategories(): void {
+    this.categoriesLoading.set(true);
+    this.categoriesError.set(null);
+    this.categoryService.list().subscribe({
+      next: (categories) => {
+        this.categories.set(categories);
+        this.categoriesLoading.set(false);
       },
       error: () => {
-        this.products.set([]);
-        this.productsLoading.set(false);
+        this.categoriesError.set('Unable to load categories.');
+        this.categoriesLoading.set(false);
       },
     });
   }
@@ -98,6 +112,32 @@ export class StoreDetailComponent {
   protected retry(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.loadStore(id);
+  }
+
+  protected loadZones(): void {
+    this.zonesLoading.set(true); this.zonesError.set(null);
+    this.zoneService.listAllForAssignment().subscribe({
+      next: (zones) => { this.zones.set(zones); this.zonesLoading.set(false); },
+      error: () => { this.zonesError.set('Unable to load delivery zones.'); this.zonesLoading.set(false); },
+    });
+  }
+
+  protected toggleZone(id: number, checked: boolean): void {
+    this.selectedZones.update((ids) => checked ? [...new Set([...ids, id])] : ids.filter((value) => value !== id));
+  }
+
+  protected saveZones(): void {
+    const store = this.store();
+    if (!store || this.zonesLoading() || this.zonesSaving() || this.zonesError()) return;
+    this.zonesSaving.set(true);
+    this.storeService.assignDeliveryZones(store.id, this.selectedZones()).subscribe({
+      next: (updated) => {
+        this.zonesSaving.set(false);
+        if (this.store()?.id === store.id) { this.store.set(updated); this.selectedZones.set(updated.deliveryZoneIds ?? []); }
+        this.toastService.show('Store delivery zones saved');
+      },
+      error: (error) => { this.zonesSaving.set(false); this.toastService.show(error.error?.message ?? 'Unable to save delivery zones', 'error'); },
+    });
   }
 
   protected goBack(): void {
@@ -108,11 +148,27 @@ export class StoreDetailComponent {
     this.activeTab.set(tab);
   }
 
-  protected goToProducts(): void {
+  protected goToCategories(): void { this.setTab('categories'); }
+
+  protected toggleCategory(id: number, checked: boolean): void {
+    this.selectedCategories.update((ids) => checked ? [...new Set([...ids, id])] : ids.filter((value) => value !== id));
+  }
+
+  protected saveCategories(): void {
     const store = this.store();
-    if (store) {
-      this.router.navigate(['/stores', store.id, 'products']);
-    }
+    if (!store || this.categoriesSaving() || this.categoriesLoading() || this.categoriesError()) return;
+    this.categoriesSaving.set(true);
+    this.storeService.tagCategories(store.id, this.selectedCategories()).subscribe({
+      next: (updated) => {
+        this.categoriesSaving.set(false);
+        if (this.store()?.id === store.id) {
+          this.store.set(updated);
+          this.selectedCategories.set((updated.categories ?? []).map((category) => category.id));
+        }
+        this.toastService.show('Store categories saved');
+      },
+      error: (error) => { this.categoriesSaving.set(false); this.toastService.show(error.error?.message ?? 'Unable to save store categories', 'error'); },
+    });
   }
 
   protected confirmToggle(): void {
@@ -136,7 +192,4 @@ export class StoreDetailComponent {
     });
   }
 
-  protected trackById(_: number, product: Product): number {
-    return product.id;
-  }
 }

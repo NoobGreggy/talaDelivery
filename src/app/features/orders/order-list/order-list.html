@@ -21,6 +21,10 @@
   </div>
 
   <!-- Status filter pills -->
+  <p class="text-xs text-slate-500" aria-live="polite">
+    {{ total() }} orders · {{ realtimeStatus() === 'connected' ? 'Live updates enabled' : 'Auto-refresh every 10 seconds' }}
+    @if (lastUpdated()) { · Updated {{ lastUpdated() | date:'h:mm:ss a' }} }
+  </p>
   <div class="flex flex-wrap gap-2">
     @for (f of [
       { value: 'all', label: 'All' },
@@ -58,7 +62,7 @@
   }
 
   <!-- Table -->
-  @if (!error()) {
+  @if (!error() || orders().length) {
     <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
       <table class="min-w-[820px] w-full divide-y divide-slate-200">
         <thead class="bg-slate-50">

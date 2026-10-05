@@ -111,15 +111,15 @@ export class StoreListComponent {
     this.router.navigate(['/stores', id]);
   }
 
-  protected openProducts(id: number): void {
-    this.router.navigate(['/stores', id, 'products']);
+  protected openCategories(id: number): void {
+    this.router.navigate(['/stores', id], { queryParams: { tab: 'categories' } });
   }
 
   protected onRowAction(action: string, store: Store): void {
     if (action === 'View') {
       this.openStore(store.id);
-    } else if (action === 'Products') {
-      this.openProducts(store.id);
+    } else if (action === 'Categories') {
+      this.openCategories(store.id);
     } else if (action === 'Activate' || action === 'Deactivate') {
       this.toggleStore.set(store);
     }

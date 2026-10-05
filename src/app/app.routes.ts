@@ -50,9 +50,15 @@ export const routes: Routes = [
         loadComponent: () => import('./features/stores/store-detail/store-detail').then(m => m.StoreDetailComponent)
       },
       {
+        path: 'categories',
+        title: 'Categories | TalaDelivery',
+        canActivate: [roleGuard], data: { role: 'platform_admin' },
+        loadComponent: () => import('./features/categories/category-list').then(m => m.CategoryListComponent)
+      },
+      { path: 'products', redirectTo: 'categories', pathMatch: 'full' },
+      {
         path: 'stores/:id/products',
-        title: 'Products | TalaDelivery',
-        loadComponent: () => import('./features/products/product-list/product-list').then(m => m.ProductListComponent)
+        redirectTo: 'stores/:id', pathMatch: 'full'
       },
       {
         path: 'riders',
@@ -81,6 +87,13 @@ export const routes: Routes = [
         canActivate: [roleGuard],
         data: { role: 'platform_admin' },
         loadComponent: () => import('./features/customers/customer-detail/customer-detail').then(m => m.CustomerDetailComponent)
+      },
+      {
+        path: 'admin-users',
+        title: 'Admin Users | TalaDelivery',
+        canActivate: [roleGuard],
+        data: { role: 'platform_admin' },
+        loadComponent: () => import('./features/users/admin-user-list/admin-user-list').then(m => m.AdminUserListComponent)
       },
       {
         path: 'zones',

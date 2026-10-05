@@ -2,11 +2,19 @@ import { Injectable, inject, signal } from '@angular/core';
 import { ApiClientService } from '../api/api-client.service';
 import {
   DeliveryZone,
+  DeliveryZoneWrite,
   PaginatedResponse,
   PlaceBoundaryResult,
   ZonePricingPreview,
 } from '../models';
-import { Observable } from 'rxjs';
+import { Observable, map, expand, reduce, EMPTY } from 'rxjs';
+
+/**
+ * Decimal columns come off the wire as strings (`"base_fee":"49.00"`, mirroring
+ * the Laravel decimal casts). `toZone` coerces them so the read model stays
+ * number-typed for templates, sorting and currency pipes.
+ */
+type RawZone = Record<string, unknown> & { id: number };
 
 export interface ZoneFilters {
   status?: string;
@@ -31,7 +39,7 @@ export class ZoneService {
 
     this.getZones(filters).subscribe({
       next: (result) => {
-        this._zones.set(result.data);
+        this._zones.set(result.data.map((zone) => this.toZone(zone)));
         this._loading.set(false);
       },
       error: () => {
@@ -42,15 +50,27 @@ export class ZoneService {
   }
 
   getZone(id: number): Observable<DeliveryZone> {
-    return this.api.get<DeliveryZone>(`/admin/delivery-zones/${id}`);
+    return this.api
+      .get<RawZone>(`/admin/delivery-zones/${id}`)
+      .pipe(map((raw) => this.toZone(raw)));
   }
 
-  createZone(zone: Partial<DeliveryZone>): Observable<DeliveryZone> {
-    return this.api.post<DeliveryZone>('/admin/delivery-zones', zone);
+  listAllForAssignment(): Observable<DeliveryZone[]> {
+    const page = (number: number) => this.api.get<PaginatedResponse<RawZone>>('/admin/delivery-zones', { page: String(number), per_page: '100' });
+    return page(1).pipe(
+      expand((result) => result.meta.current_page < result.meta.last_page ? page(result.meta.current_page + 1) : EMPTY),
+      reduce((zones, result) => [...zones, ...result.data.map((zone) => this.toZone(zone))], [] as DeliveryZone[]),
+    );
   }
 
-  updateZone(id: number, zone: Partial<DeliveryZone>): Observable<DeliveryZone> {
-    return this.api.put<DeliveryZone>(`/admin/delivery-zones/${id}`, zone);
+  createZone(zone: DeliveryZoneWrite): Observable<DeliveryZone> {
+    return this.api.post<RawZone>('/admin/delivery-zones', zone).pipe(map((raw) => this.toZone(raw)));
+  }
+
+  updateZone(id: number, zone: DeliveryZoneWrite): Observable<DeliveryZone> {
+    return this.api
+      .put<RawZone>(`/admin/delivery-zones/${id}`, zone)
+      .pipe(map((raw) => this.toZone(raw)));
   }
 
   deleteZone(id: number): Observable<void> {
@@ -58,12 +78,12 @@ export class ZoneService {
   }
 
   previewPricing(payload: {
-    zone: Partial<DeliveryZone>;
-    pickup_latitude: number;
-    pickup_longitude: number;
-    delivery_latitude: number;
-    delivery_longitude: number;
-    distance_method: 'STRAIGHT_LINE' | 'ROAD_ROUTE';
+    zone: DeliveryZoneWrite;
+    pickup_latitude: string;
+    pickup_longitude: string;
+    delivery_latitude: string;
+    delivery_longitude: string;
+    distance_method?: 'STRAIGHT_LINE' | 'ROAD_ROUTE';
   }): Observable<ZonePricingPreview> {
     return this.api.post<ZonePricingPreview>('/admin/delivery-zones/preview', payload);
   }
@@ -72,10 +92,33 @@ export class ZoneService {
     return this.api.get<PlaceBoundaryResult[]>('/admin/place-boundaries', { query, type });
   }
 
-  private getZones(filters: ZoneFilters): Observable<PaginatedResponse<DeliveryZone>> {
+  private toZone(raw: RawZone): DeliveryZone {
+    const toNumber = (value: unknown): number => {
+      const parsed = typeof value === 'number' ? value : Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    };
+    const toOptionalNumber = (value: unknown): number | null => {
+      if (value === null || value === undefined || value === '') return null;
+      const parsed = typeof value === 'number' ? value : Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+
+    return {
+      ...(raw as unknown as DeliveryZone),
+      base_fee: toNumber(raw['base_fee']),
+      tala_coins_percent: toNumber(raw['tala_coins_percent']),
+      included_km: toNumber(raw['included_km']),
+      maximum_delivery_km: toOptionalNumber(raw['maximum_delivery_km']),
+      extra_fee_per_km: toNumber(raw['extra_fee_per_km']),
+      maximum_delivery_fee: toOptionalNumber(raw['maximum_delivery_fee']),
+      distance_rounding_km: toNumber(raw['distance_rounding_km']),
+    };
+  }
+
+  private getZones(filters: ZoneFilters): Observable<PaginatedResponse<RawZone>> {
     const params: Record<string, string> = { per_page: '1000' };
     if (filters.status) params['status'] = filters.status;
     if (filters.search) params['search'] = filters.search;
-    return this.api.get<PaginatedResponse<DeliveryZone>>('/admin/delivery-zones', params);
+    return this.api.get<PaginatedResponse<RawZone>>('/admin/delivery-zones', params);
   }
 }

@@ -1,0 +1,21 @@
+# Build target for esbuild (via @angular/build).
+#
+# Without this, @angular/build falls back to a default browser set that predates
+# ES2018 object spread, so esbuild lowers `{ ...a, ...b }` and injects the
+# TypeScript-style helpers `__spreadValues` / `__spreadProps`.
+#
+# That is fatal for mapbox-gl: the dev build code-splits it into its own chunk,
+# the helper definition lands in a *different* chunk, and the mapbox chunk ends
+# up with 131 unresolved `__spreadValues` references. mapbox also runs this code
+# inside a Blob worker, which has no access to the other chunk's scope, so the
+# tile pipeline dies with:
+#   ReferenceError: __spreadValues is not defined
+# and the coverage map renders blank with no visible error.
+#
+# Production builds only survive by accident: minification renames and inlines
+# the helpers, so the bug never appears outside `ng serve`.
+last 2 Chrome versions
+last 2 Edge versions
+last 2 Firefox versions
+last 2 Safari versions
+not dead

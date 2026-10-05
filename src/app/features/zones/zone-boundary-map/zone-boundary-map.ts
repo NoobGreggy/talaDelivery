@@ -4,15 +4,16 @@ import {
   ElementRef,
   EventEmitter,
   Input,
-  isDevMode,
   OnChanges,
   OnDestroy,
   Output,
+  signal,
   SimpleChanges,
   ViewChild,
 } from '@angular/core';
 import type { Feature, FeatureCollection, Geometry, Position } from 'geojson';
-import * as mapboxgl from 'mapbox-gl';
+import type * as mapboxgl from 'mapbox-gl';
+import { mapboxgl as getMapbox } from '../../../core/mapbox/mapbox-global';
 import { GeoJsonBoundary } from '../../../core/models';
 import { environment } from '../../../../environments/environment';
 
@@ -36,6 +37,17 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
   protected hasImportedBoundary = false;
   protected drawingMode = false;
   protected readonly mapboxConfigured = environment.mapboxAccessToken.trim().length > 0;
+  /**
+   * Only ever set for conditions that make the map genuinely unusable. This is
+   * what disables the drawing controls, so it must NOT be driven by Mapbox's
+   * `error` event: Mapbox emits that routinely for recoverable resource
+   * problems (a missing glyph range, a 404 sprite, a rate-limited tile, an
+   * aborted request), and treating those as fatal locked the draw controls
+   * after a single hiccup.
+   */
+  protected readonly mapError = signal<string | null>(null);
+  /** True once the Map instance exists. This, not mapError, gates drawing. */
+  protected readonly mapReady = signal(false);
   private map: mapboxgl.Map | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private vertices: Position[] = [];
@@ -44,7 +56,18 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
   ngAfterViewInit(): void {
     this.readBoundary();
     if (!this.mapboxConfigured) return;
-    const map = new mapboxgl.Map({
+    try {
+      this.createMap();
+    } catch (error) {
+      this.map = null;
+      this.mapReady.set(false);
+      this.mapError.set(this.describeMapFailure(error));
+    }
+  }
+
+  private createMap(): void {
+    const mapbox = getMapbox();
+    const map = new mapbox.Map({
       accessToken: environment.mapboxAccessToken,
       container: this.mapContainer.nativeElement,
       style: 'mapbox://styles/mapbox/streets-v12',
@@ -54,18 +77,43 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
       maxZoom: 19,
       fadeDuration: 0,
       renderWorldCopies: false,
-      attributionControl: true,
+      // Added explicitly just below with `{ compact: true }`; the Map option is
+      // typed as a plain boolean, so it cannot carry the flag.
+      attributionControl: false,
     });
     this.map = map;
+    this.mapReady.set(true);
     this.resizeObserver = new ResizeObserver(() => map.resize());
     this.resizeObserver.observe(this.mapContainer.nativeElement);
     requestAnimationFrame(() => map.resize());
-    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
-    if (isDevMode()) {
-      map.on('error', (event) => {
-        console.error('Zone map rendering error', event.error);
-      });
-    }
+    map.addControl(new mapbox.NavigationControl(), 'top-right');
+    // Attribution is required by the Mapbox terms of service - never hide it.
+    // `compact: true` collapses it to a small badge that expands on click,
+    // instead of a permanent text strip across the bottom of the map.
+    map.addControl(new mapbox.AttributionControl({ compact: true }), 'bottom-right');
+    // Mapbox's `_updateCompact()` drops the compact class whenever the canvas is
+    // wider than 640px, which re-expands the full text strip, so the class is
+    // re-applied after each resize. Registered after the control's own handler
+    // so it wins.
+    const keepAttributionCompact = () => {
+      map
+        .getContainer()
+        .querySelector('.mapboxgl-ctrl-attrib')
+        ?.classList.add('mapboxgl-compact');
+    };
+    map.on('resize', keepAttributionCompact);
+    map.on('load', keepAttributionCompact);
+
+    // Recoverable resource failures are logged, never promoted to mapError.
+    map.on('error', (event) => {
+      console.warn('Zone map resource warning', event.error);
+    });
+    // A lost GL context is the one runtime error that really is fatal.
+    map.getCanvas().addEventListener('webglcontextlost', () => {
+      this.mapError.set(
+        'The browser dropped the map’s graphics context, so drawing is paused. Reload this form to continue.',
+      );
+    });
     map.on('load', () => {
       map.addSource(COVERAGE_SOURCE_ID, { type: 'geojson', data: EMPTY_COLLECTION });
       map.addSource(DRAWING_SOURCE_ID, { type: 'geojson', data: EMPTY_COLLECTION });
@@ -83,6 +131,17 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
     map.on('dblclick', (event) => {
       if (this.drawingMode) event.preventDefault();
     });
+  }
+
+  private describeMapFailure(error: unknown): string {
+    const message = error instanceof Error ? error.message : String(error ?? 'unknown error');
+    if (/webgl/i.test(message)) {
+      return 'This browser could not start WebGL, so the coverage map cannot be drawn. Enable hardware acceleration or try another browser, then reopen this form.';
+    }
+    if (/token|401|403|unauthorized/i.test(message)) {
+      return 'The Mapbox access token was rejected. Check mapboxAccessToken in the admin environment file.';
+    }
+    return `The coverage map could not be loaded: ${message}`;
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -120,14 +179,20 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
   }
 
   protected startDrawing(): void {
+    if (this.map === null) {
+      this.mapError.set(
+        'The coverage map is not running, so points cannot be captured. Reload this form once the map loads.',
+      );
+      return;
+    }
     this.vertices = [];
     this.hasImportedBoundary = false;
     this.vertexCount = 0;
+    this.mapError.set(null);
     this.emitBoundary(null);
     this.setDrawingMode(true);
     this.syncMapSources();
   }
-
   protected finishDrawing(): void {
     if (this.vertices.length < 3) return;
     this.setDrawingMode(false);
@@ -304,9 +369,14 @@ export class ZoneBoundaryMapComponent implements AfterViewInit, OnChanges, OnDes
     const map = this.map;
     const points = this.focusPoints();
     if (!map || points.length < 2) return;
+    // The global UMD build is only typed loosely, so pin the constructor shape.
+    const Bounds = getMapbox().LngLatBounds as unknown as new (
+      sw: [number, number],
+      ne: [number, number],
+    ) => mapboxgl.LngLatBounds;
     const bounds = points.reduce(
       (current, point) => current.extend([Number(point[0]), Number(point[1])]),
-      new mapboxgl.LngLatBounds(
+      new Bounds(
         [Number(points[0][0]), Number(points[0][1])],
         [Number(points[0][0]), Number(points[0][1])],
       ),

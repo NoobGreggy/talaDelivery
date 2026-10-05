@@ -1,0 +1,336 @@
+<div class="space-y-4">
+  <!-- Header -->
+  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-semibold text-slate-900">Admin Users</h1>
+      <p class="mt-1 text-sm text-slate-500">
+        {{ users().length }} platform admin{{ users().length === 1 ? '' : 's' }} &middot; {{ activeCount() }} active
+      </p>
+    </div>
+    <div class="flex items-center gap-2">
+      <app-search-input
+        placeholder="Search admins..."
+        (valueChange)="onSearch($event)" />
+      <button
+        (click)="refresh()"
+        aria-label="Refresh admin users"
+        class="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+      </button>
+      <app-button (clicked)="openCreate()">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+        Add admin
+      </app-button>
+    </div>
+  </div>
+
+  <!-- Status filter pills -->
+  <div class="flex flex-wrap gap-2">
+    @for (f of [
+      { value: 'all', label: 'All' },
+      { value: 'ACTIVE', label: 'Active' },
+      { value: 'INACTIVE', label: 'Inactive' },
+      { value: 'SUSPENDED', label: 'Suspended' }
+    ]; track f.value) {
+      <button
+        (click)="setStatusFilter(f.value)"
+        class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+        [class.bg-sky-600]="statusFilter() === f.value"
+        [class.text-white]="statusFilter() === f.value"
+        [class.bg-slate-100]="statusFilter() !== f.value"
+        [class.text-slate-600]="statusFilter() !== f.value"
+        [class.hover:bg-slate-200]="statusFilter() !== f.value">
+        {{ f.label }}
+      </button>
+    }
+  </div>
+
+  <!-- Error -->
+  @if (error()) {
+    <div class="flex items-center justify-center py-16">
+      <app-error-state
+        [message]="'Something went wrong'"
+        [description]="error() ?? ''"
+        (retried)="refresh()" />
+    </div>
+  }
+
+  <!-- Table -->
+  @if (!error()) {
+    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="min-w-[720px] w-full divide-y divide-slate-200">
+        <thead class="bg-slate-50">
+          <tr>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Name</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Email</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Phone</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Role</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Created</th>
+            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Status</th>
+            <th scope="col" class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200">
+          @if (loading()) {
+            @for (row of [1, 2, 3, 4, 5]; track row) {
+              <tr>
+                @for (col of [1, 2, 3, 4, 5, 6, 7]; track col) {
+                  <td class="px-4 py-4">
+                    <div class="h-4 w-full animate-pulse rounded bg-slate-200"></div>
+                  </td>
+                }
+              </tr>
+            }
+          } @else if (filteredUsers().length === 0) {
+            <tr>
+              <td colspan="7" class="px-4 py-12">
+                <app-empty-state
+                  message="No admin users found"
+                  description="No platform admins match the current filters." />
+              </td>
+            </tr>
+          } @else {
+            @for (user of filteredUsers(); track user.id) {
+              <tr class="transition-colors hover:bg-sky-50/50">
+                <td class="px-4 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <app-avatar [name]="user.name" size="sm" />
+                    <span class="font-medium text-slate-900">{{ user.name }}</span>
+                  </div>
+                </td>
+                <td class="px-4 py-3.5 text-sm text-slate-600">{{ user.email }}</td>
+                <td class="px-4 py-3.5 text-sm text-slate-600">{{ user.phone || '—' }}</td>
+                <td class="px-4 py-3.5 text-sm text-slate-700">{{ user.role }}</td>
+                <td class="px-4 py-3.5 text-sm text-slate-600">
+              @if (user.created_at) {
+                {{ user.created_at | date: 'mediumDate' }}
+              } @else {
+                —
+              }
+                </td>
+                <td class="px-4 py-3.5">
+                  <app-status-badge [status]="user.status" />
+                </td>
+                <td class="px-4 py-3.5 text-right" (click)="$event.stopPropagation()">
+                  <app-dropdown
+                    [items]="userMenu(user)"
+                    (itemClick)="onRowAction($event, user)" />
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- Create modal -->
+  <app-modal [open]="modalOpen()" title="Add platform admin" (closed)="closeModal()">
+    <form [formGroup]="form" class="space-y-4" (ngSubmit)="save()">
+      <p class="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        The account is created with the <span class="font-semibold">platform_admin</span> role and can sign in immediately.
+        Share the password securely &mdash; it cannot be retrieved later.
+      </p>
+
+      <div>
+        <label for="admin-name" class="mb-1 block text-sm font-medium text-slate-700">Full name</label>
+        <input
+          id="admin-name"
+          type="text"
+          formControlName="name"
+          placeholder="Ada Lovelace"
+          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition-colors focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+          [class.border-red-400]="fieldInvalid('name')" />
+        @if (fieldInvalid('name')) {
+          <p class="mt-1 text-xs text-red-600">Name is required (max 255 characters).</p>
+        }
+      </div>
+
+      <div>
+        <label for="admin-email" class="mb-1 block text-sm font-medium text-slate-700">Email</label>
+        <input
+          id="admin-email"
+          type="email"
+          formControlName="email"
+          placeholder="ada@example.com"
+          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition-colors focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+          [class.border-red-400]="fieldInvalid('email')" />
+        @if (fieldInvalid('email')) {
+          <p class="mt-1 text-xs text-red-600">A valid email is required.</p>
+        }
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label for="admin-phone" class="mb-1 block text-sm font-medium text-slate-700">Phone <span class="font-normal text-slate-400">(optional)</span></label>
+          <input
+            id="admin-phone"
+            type="tel"
+            formControlName="phone"
+            placeholder="+639171234567"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition-colors focus:border-sky-500 focus:ring-1 focus:ring-sky-500" />
+        </div>
+
+        <div>
+          <label for="admin-status" class="mb-1 block text-sm font-medium text-slate-700">Status</label>
+          <select
+            id="admin-status"
+            formControlName="status"
+            class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-sky-500 focus:ring-1 focus:ring-sky-500">
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+            <option value="SUSPENDED">Suspended</option>
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label for="admin-password" class="mb-1 block text-sm font-medium text-slate-700">Password</label>
+        <input
+          id="admin-password"
+          type="password"
+          formControlName="password"
+          autocomplete="new-password"
+          placeholder="At least 8 characters"
+          class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition-colors focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+          [class.border-red-400]="fieldInvalid('password')" />
+        @if (fieldInvalid('password')) {
+          <p class="mt-1 text-xs text-red-600">Password must be at least 8 characters.</p>
+        }
+      </div>
+
+      @if (formError()) {
+        <div class="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+          {{ formError() }}
+        </div>
+      }
+
+      <div class="flex justify-end gap-2 pt-2">
+        <app-button variant="secondary" (clicked)="closeModal()">Cancel</app-button>
+        <app-button type="submit" [loading]="acting()" [disabled]="form.invalid">
+          Create admin
+        </app-button>
+      </div>
+    </form>
+  </app-modal>
+
+  <!-- Reset password modal -->
+  <app-modal
+    [open]="passwordModalOpen()"
+    [title]="'Reset password'"
+    (closed)="closePasswordReset()">
+    @if (passwordTarget(); as target) {
+      <form [formGroup]="passwordForm" class="space-y-4" (ngSubmit)="savePassword()">
+        <p class="text-sm text-slate-600">
+          Set a new password for <span class="font-semibold text-slate-900">{{ target.name }}</span>
+          ({{ target.email }}). Their active sessions will be signed out.
+        </p>
+
+        <div>
+          <label for="reset-password" class="mb-1 block text-sm font-medium text-slate-700">New password</label>
+          <input
+            id="reset-password"
+            type="password"
+            formControlName="password"
+            autocomplete="new-password"
+            placeholder="At least 8 characters"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition-colors focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+            [class.border-red-400]="passwordFieldInvalid('password')" />
+          @if (passwordFieldInvalid('password')) {
+            <p class="mt-1 text-xs text-red-600">Password must be at least 8 characters.</p>
+          }
+        </div>
+
+        <div>
+          <label for="reset-confirm" class="mb-1 block text-sm font-medium text-slate-700">Confirm password</label>
+          <input
+            id="reset-confirm"
+            type="password"
+            formControlName="confirmPassword"
+            autocomplete="new-password"
+            placeholder="Repeat the new password"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none transition-colors focus:border-sky-500 focus:ring-1 focus:ring-sky-500" />
+        </div>
+
+        @if (passwordError()) {
+          <div class="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+            {{ passwordError() }}
+          </div>
+        }
+
+        <div class="flex justify-end gap-2 pt-2">
+          <app-button variant="secondary" (clicked)="closePasswordReset()">Cancel</app-button>
+          <app-button type="submit" [loading]="acting()">Reset password</app-button>
+        </div>
+      </form>
+    }
+  </app-modal>
+
+  <!-- Status confirmation -->
+  <app-confirm-dialog
+    [open]="statusTarget() !== null"
+    [title]="statusChoiceLabel() + ' this admin?'"
+    [message]="
+      statusChoice() === 'ACTIVE'
+        ? (statusTarget()?.name ?? '') + ' will be able to sign in again.'
+        : (statusTarget()?.name ?? '') +
+          ' will be signed out and blocked from signing in again until re-enabled.'
+    "
+    [confirmLabel]="statusChoiceLabel()"
+    [danger]="statusChoice() !== 'ACTIVE'"
+    (confirmed)="confirmStatusChange()"
+    (cancelled)="closeStatusChange()" />
+
+  <!-- Details modal -->
+  <app-modal
+    [open]="detailTarget() !== null"
+    title="Admin details"
+    (closed)="closeDetail()">
+    @if (detailTarget(); as user) {
+      <div class="space-y-4">
+        <div class="flex items-center gap-3">
+          <app-avatar [name]="user.name" size="lg" />
+          <div>
+            <p class="text-base font-semibold text-slate-900">{{ user.name }}</p>
+            <p class="text-sm text-slate-500">{{ user.email }}</p>
+          </div>
+        </div>
+
+        <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+          <dt class="text-slate-500">Phone</dt>
+          <dd class="text-slate-900">{{ user.phone || '—' }}</dd>
+
+          <dt class="text-slate-500">Role</dt>
+          <dd class="text-slate-900">{{ user.role }}</dd>
+
+          <dt class="text-slate-500">Status</dt>
+          <dd><app-status-badge [status]="user.status" /></dd>
+
+          <dt class="text-slate-500">Created</dt>
+          <dd class="text-slate-900">
+            @if (user.created_at) {
+              {{ user.created_at | date: 'medium' }}
+            } @else {
+              —
+            }
+          </dd>
+        </dl>
+
+        @if (isSelf(user)) {
+          <p class="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            This is your own account. Status changes are disabled to prevent you from locking
+            yourself out of the console.
+          </p>
+        }
+
+        <div class="flex justify-end gap-2 pt-2">
+          <app-button variant="secondary" (clicked)="closeDetail()">Close</app-button>
+        </div>
+      </div>
+    }
+  </app-modal>
+</div>

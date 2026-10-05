@@ -1,9 +1,10 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ApiClientService } from '../api/api-client.service';
-import { Rider, User } from '../models';
+import { Rider, User, RiderCoinTransaction, PaginatedResponse } from '../models';
 import { Observable, map } from 'rxjs';
 
 interface RawRider {
+  tala_coins_balance?: string | number;
   id: number;
   user?: User | null;
   vehicle_type?: string;
@@ -79,6 +80,15 @@ export class RiderService {
       .pipe(map((r) => this.toRider(r)));
   }
 
+  coinHistory(id: number, page = 1): Observable<PaginatedResponse<RiderCoinTransaction>> {
+    return this.api.get(`/admin/riders/${id}/coins`, { page: String(page), per_page: '20' });
+  }
+
+  topUpCoins(id: number, amount: string, note: string, requestId: string): Observable<Rider> {
+    return this.api.post<RawRider>(`/admin/riders/${id}/coins/top-up`, { amount, note, request_id: requestId })
+      .pipe(map((r) => this.toRider(r)));
+  }
+
   reject(id: number, reason: string): Observable<Rider> {
     return this.api
       .post<RawRider>(`/admin/riders/${id}/reject`, { reason })
@@ -98,6 +108,7 @@ export class RiderService {
   private toRider(raw: RawRider): Rider {
     return {
       id: raw.id,
+      tala_coins_balance: Number(raw.tala_coins_balance ?? 0),
       user: raw.user,
       name: raw.user?.name ?? '',
       phone: raw.user?.phone ?? '',

@@ -1,7 +1,10 @@
-import { Component, inject, signal, computed } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { interval, merge, fromEvent, debounceTime } from 'rxjs';
+import { ActivatedRoute, Router } from '@angular/router';
 import { DatePipe, CurrencyPipe } from '@angular/common';
 import { OrderService } from '../../../core/services/order.service';
+import { RealtimeService } from '../../../core/realtime/realtime.service';
 import { SearchInputComponent } from '../../../shared/components/search-input/search-input';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state';
@@ -32,12 +35,19 @@ interface OrderColumn {
 export class OrderListComponent {
   private orderService = inject(OrderService);
   private router = inject(Router);
+  private realtime = inject(RealtimeService);
+  private route = inject(ActivatedRoute);
+  private storeFilter?: string;
 
   protected readonly orders = this.orderService.orders;
   protected readonly loading = this.orderService.loading;
   protected readonly error = this.orderService.error;
   protected readonly currentPage = this.orderService.currentPage;
   protected readonly lastPage = this.orderService.lastPage;
+  protected readonly total = this.orderService.total;
+  protected readonly lastUpdated = this.orderService.lastUpdated;
+  protected readonly realtimeStatus = this.realtime.status;
+  protected readonly filteredOrders = this.orders;
 
   protected readonly searchTerm = signal('');
   protected readonly statusFilter = signal('all');
@@ -52,41 +62,34 @@ export class OrderListComponent {
     { key: 'created', label: 'Created' },
   ];
 
-  protected readonly filteredOrders = computed(() => {
-    const term = this.searchTerm().toLowerCase();
-    const status = this.statusFilter();
-    let list = this.orders();
-
-    if (status !== 'all') {
-      list = list.filter((o) => o.status === status);
-    }
-
-    if (term) {
-      list = list.filter(
-        (o) =>
-          o.order_number.toLowerCase().includes(term) ||
-          (o.customer?.name?.toLowerCase() ?? '').includes(term) ||
-          (o.store?.name?.toLowerCase() ?? '').includes(term),
-      );
-    }
-
-    return list;
-  });
-
   constructor() {
-    this.orderService.load();
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      this.storeFilter = params.get('store') || undefined;
+      this.goToPage(1);
+    });
+    this.realtime.connect();
+    merge(this.realtime.orderUpdated$, fromEvent(window, 'focus')).pipe(
+      debounceTime(250), takeUntilDestroyed(),
+    ).subscribe(() => this.orderService.refresh(true));
+    interval(10000).pipe(takeUntilDestroyed()).subscribe(() => {
+      if (!document.hidden) this.orderService.refresh(true);
+    });
   }
 
   protected onSearch(term: string): void {
     this.searchTerm.set(term);
+    this.goToPage(1);
   }
 
   protected setStatusFilter(status: string): void {
     this.statusFilter.set(status);
+    this.goToPage(1);
   }
 
   protected goToPage(page: number): void {
-    this.orderService.load({ page });
+    this.orderService.load({ page, search: this.searchTerm().trim() || undefined,
+      store: this.storeFilter,
+      status: this.statusFilter() === 'all' ? undefined : this.statusFilter() });
   }
 
   protected refresh(): void {

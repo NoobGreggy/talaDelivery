@@ -1,0 +1,44 @@
+<div class="space-y-4">
+  <div class="flex flex-wrap items-center justify-between gap-4">
+    <div><h1 class="text-2xl font-semibold text-slate-900">Categories</h1><p class="mt-1 text-sm text-slate-500">Create categories and tag stores from their Categories tab.</p></div>
+    <div class="flex gap-2"><app-search-input placeholder="Search categories..." (valueChange)="search.set($event)" /><app-button variant="primary" size="md" (clicked)="open()">Add Category</app-button></div>
+  </div>
+  @if (error()) { <app-error-state message="Unable to load categories" [description]="error() ?? ''" (retried)="load()" /> }
+  @else if (loading()) { <p class="py-10 text-center text-sm text-slate-500">Loading categories...</p> }
+  @else if (!filtered().length) { <app-empty-state message="No categories found" description="Add a category such as Restaurants, Groceries, or Pharmacy to start tagging stores." /> }
+  @else {
+    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="w-full text-left text-sm">
+        <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr><th class="px-4 py-3">Category</th><th class="px-4 py-3">Stores</th><th class="px-4 py-3">Status</th><th class="px-4 py-3"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody class="divide-y divide-slate-100">
+          @for (category of filtered(); track category.id) {
+            <tr><td class="px-4 py-4"><p class="flex items-center gap-2 font-medium text-slate-900"><span aria-hidden="true" class="flutter-icon">{{ iconGlyph(category.icon) }}</span>{{ category.name }}</p><p class="mt-1 text-xs text-slate-500">{{ category.description }}</p></td>
+              <td class="px-4 py-4">{{ category.store_count }}</td>
+              <td class="px-4 py-4"><span class="rounded-full px-2 py-1 text-xs" [class.bg-emerald-50]="category.is_active" [class.text-emerald-700]="category.is_active" [class.bg-slate-100]="!category.is_active">{{ category.is_active ? 'Active' : 'Inactive' }}</span></td>
+              <td class="px-4 py-4 text-right"><app-button variant="secondary" size="sm" (clicked)="open(category)">Edit</app-button></td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+  <app-modal [title]="editing() ? 'Edit Category' : 'Add Category'" [open]="modalOpen()" (closed)="close()">
+    <form [formGroup]="form" (ngSubmit)="save()" class="space-y-4">
+      <label class="block text-sm font-medium text-slate-700">Category name<input formControlName="name" maxlength="80" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2" placeholder="e.g. Restaurants" /></label>
+      @if (form.controls.name.invalid && form.controls.name.touched) { <p class="text-xs text-red-600">Enter a category name of 1 to 80 characters.</p> }
+      <label class="block text-sm font-medium text-slate-700">Description (optional)<textarea formControlName="description" maxlength="500" rows="3" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"></textarea></label>
+      <label class="block text-sm font-medium text-slate-700">Customer app icon<select formControlName="icon" class="mt-1 w-full rounded-md border border-slate-300 px-3 py-2">@for (icon of icons(); track icon.key) { <option [value]="icon.key">{{ icon.label }} — {{ icon.key }}</option> }</select></label>
+      <p class="text-xs text-slate-500">Uses the matching built-in Flutter Material icon in the customer category list.</p>
+      <div class="grid grid-cols-2 gap-2" role="group" aria-label="Flutter category icons">
+        @for (icon of icons(); track icon.key) {
+          <button type="button" class="flex items-center gap-2 rounded-md border p-3 text-left text-sm" [class.border-sky-500]="form.controls.icon.value === icon.key" [class.bg-sky-50]="form.controls.icon.value === icon.key" [attr.aria-pressed]="form.controls.icon.value === icon.key" (click)="form.controls.icon.setValue(icon.key)">
+            <span class="flutter-icon" aria-hidden="true">{{ iconGlyph(icon.key) }}</span>{{ icon.label }}
+          </button>
+        }
+      </div>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" formControlName="is_active" /> Active</label>
+      <p class="text-xs text-slate-500">Inactive categories keep existing store tags and are hidden from the customer category list.</p>
+      @if (formError()) { <p role="alert" class="text-sm text-red-600">{{ formError() }}</p> }
+      <div class="flex justify-end gap-2"><app-button type="button" variant="secondary" size="md" [disabled]="saving()" (clicked)="close()">Cancel</app-button><app-button type="submit" variant="primary" size="md" [loading]="saving()" [disabled]="form.invalid">Save Category</app-button></div>
+    </form>
+  </app-modal>
+</div>

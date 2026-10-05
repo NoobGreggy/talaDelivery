@@ -9,6 +9,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <!--
+    Mapbox GL must stay outside the Angular bundler. Angular force-disables the
+    `object-rest-spread` esbuild feature, which rewrites mapbox's tile worker
+    to call `__spreadValues`; the worker is stringified into a Blob that drops
+    the helper import, so every tile throws and the map renders blank.
+    See src/app/core/mapbox/mapbox-global.ts.
+  -->
+  <script src="vendor/mapbox-gl.js"></script>
+  <!-- Optional, ignored deployment-local token. Configure before building. -->
+  <script src="mapbox.local.js"></script>
 </head>
 <body>
   <app-root></app-root>

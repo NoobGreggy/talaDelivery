@@ -8,7 +8,46 @@ export interface User {
   avatar?: string;
 }
 
+/**
+ * Platform-admin account as returned by `GET /admin/users`. Mirrors the
+ * identity-service `UserResource`: `rider`/`stores` stay empty and
+ * `orders_count`/`total_spent` are 0 because those facts live in dispatch-
+ * and order-service.
+ */
+export type AdminUserStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+
+export interface AdminUser {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: 'platform_admin';
+  status: AdminUserStatus;
+  roles: string[];
+  permissions: string[];
+  created_at: string | null;
+  rider: unknown | null;
+  stores: unknown[];
+  orders_count: number;
+  total_spent: number;
+}
+
+/**
+ * Write model for `POST /admin/users`. There is deliberately no `role` field:
+ * the endpoint only ever grants `platform_admin`, so the UI cannot offer a role
+ * choice it would silently ignore.
+ */
+export interface CreateAdminUserRequest {
+  name: string;
+  email: string;
+  phone?: string | null;
+  password: string;
+  status?: AdminUserStatus;
+}
+
 export interface Store {
+  deliveryZoneIds?: number[];
+  categories?: Array<{ id: number; name: string; is_active: boolean }>;
   id: number;
   name: string;
   slug?: string;
@@ -47,6 +86,7 @@ export interface Order {
   delivery_fee: number;
   total: number;
   payment_method: string;
+  payment_status?: string;
   status: OrderStatus;
   created_at: string;
 }
@@ -128,6 +168,7 @@ export interface DeliveryEvent {
 }
 
 export interface Rider {
+  tala_coins_balance?: number;
   id: number;
   user?: User | null;
   name: string;
@@ -159,6 +200,30 @@ export interface Customer {
   created_at: string;
 }
 
+export interface StoreCategory {
+  icon: string;
+  id: number;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+  store_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RiderCoinTransaction {
+  id: number;
+  type: 'TOP_UP' | 'DELIVERY_DEDUCTION';
+  amount: string;
+  balance_after: string;
+  delivery_id: number | null;
+  delivery_zone_id: number | null;
+  deduction_percent: string | null;
+  actor_id: number | null;
+  note: string | null;
+  created_at: string;
+}
+
 export interface Address {
   id: number;
   label: string;
@@ -167,7 +232,13 @@ export interface Address {
   longitude: number;
 }
 
+/**
+ * Read model. Decimal columns arrive from the API as strings (`"base_fee":"49.00"`,
+ * mirroring the Laravel decimal casts) and are coerced to numbers by
+ * `ZoneService` so templates, sorting and currency pipes get real numbers.
+ */
 export interface DeliveryZone {
+  tala_coins_percent?: number;
   id: number;
   name: string;
   city: string | null;
@@ -189,6 +260,27 @@ export interface DeliveryZone {
 }
 
 export type DeliveryZoneStatus = 'DRAFT' | 'ACTIVE' | 'SUSPENDED' | 'ARCHIVED';
+
+/**
+ * Write model for create/update. Every decimal field is a STRING because the
+ * DTOs validate with `@IsString() @Matches(/^(0|[1-9]\d*)(\.\d+)?$/)`; sending
+ * JSON numbers is rejected with 422 "base_fee must be a string".
+ */
+export interface DeliveryZoneWrite {
+  tala_coins_percent?: string;
+  name?: string;
+  city?: string | null;
+  province?: string;
+  boundary_geojson?: GeoJsonBoundary | null;
+  base_fee?: string;
+  included_km?: string;
+  maximum_delivery_km?: string | null;
+  extra_fee_per_km?: string;
+  maximum_delivery_fee?: string | null;
+  distance_rounding_km?: string;
+  effective_from?: string | null;
+  status?: DeliveryZoneStatus;
+}
 
 export interface GeoJsonPolygon {
   type: 'Polygon';
@@ -297,9 +389,49 @@ export interface AppNotification {
   id: number;
   type: string;
   title: string;
-  message: string;
+  /** Body text, as returned by the notification service. */
+  body: string;
   data: Record<string, unknown>;
   is_read: boolean;
   read_at: string | null;
+  sent_at?: string | null;
   created_at: string;
+}
+
+export type RealtimeStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+
+/** `realtime.emit` payload from order-service (`order.updated`). */
+export interface OrderUpdatedRealtimeEvent {
+  orderId: number;
+  orderNumber: string;
+  storeId: number;
+  customerId: number;
+  deliveryId: number | null;
+  status: OrderStatus;
+  paymentStatus: string;
+  total: string;
+  eventType: string;
+  updatedAt: string;
+}
+
+/** `realtime.emit` payload from identity-service (`rider.application`). */
+export interface RiderApplicationRealtimeEvent {
+  userId: number;
+  riderId: number;
+  name: string;
+  email: string;
+  vehicleType: string;
+  appliedAt: string;
+}
+
+/** `rider.location` broadcast by the gateway from dispatch's location events. */
+export interface RiderLocationRealtimeEvent {
+  deliveryId: number;
+  riderId: number;
+  latitude: number;
+  longitude: number;
+  accuracyM: number | null;
+  headingDeg: number | null;
+  speedMps: number | null;
+  timestamp: string;
 }

@@ -5,6 +5,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   DeliveryZone,
   DeliveryZoneStatus,
+  DeliveryZoneWrite,
   GeoJsonBoundary,
   PlaceBoundaryResult,
   ZonePricingPreview,
@@ -100,6 +101,7 @@ export class ZoneListComponent {
     province: ['', Validators.required],
     status: ['DRAFT' as DeliveryZoneStatus, Validators.required],
     base_fee: [49, [Validators.required, Validators.min(0)]],
+    tala_coins_percent: [0, [Validators.required, Validators.min(0), Validators.max(100), Validators.pattern(/^\d+(\.\d{1,2})?$/)]],
     included_km: [5, [Validators.required, Validators.min(0)]],
     maximum_delivery_km: [20 as number | null, Validators.min(0.1)],
     extra_fee_per_km: [10, [Validators.required, Validators.min(0)]],
@@ -150,6 +152,7 @@ export class ZoneListComponent {
       province: '',
       status: 'DRAFT',
       base_fee: 49,
+      tala_coins_percent: 0,
       included_km: 5,
       maximum_delivery_km: 20,
       extra_fee_per_km: 10,
@@ -324,10 +327,12 @@ export class ZoneListComponent {
     this.zoneService
       .previewPricing({
         zone: this.zonePayload(),
-        pickup_latitude: Number(store.latitude),
-        pickup_longitude: Number(store.longitude),
-        delivery_latitude: Number(preview.delivery_latitude),
-        delivery_longitude: Number(preview.delivery_longitude),
+        // Coordinates follow the same decimal-string contract as the zone
+        // fields, otherwise the preview fails validation the same way.
+        pickup_latitude: this.decimal(store.latitude),
+        pickup_longitude: this.decimal(store.longitude),
+        delivery_latitude: this.decimal(preview.delivery_latitude),
+        delivery_longitude: this.decimal(preview.delivery_longitude),
         distance_method: preview.distance_method ?? 'STRAIGHT_LINE',
       })
       .subscribe({
@@ -340,6 +345,24 @@ export class ZoneListComponent {
           this.formError.set(this.apiError(error, 'Unable to calculate the preview.'));
         },
       });
+  }
+
+  /**
+   * Money, distance and coordinate fields are decimal STRINGS on the wire. The
+   * API validates them against /^(0|[1-9]\d*)(\.\d+)?$/ with @IsString(), so
+   * sending JSON numbers fails with "base_fee must be a string" and nothing
+   * saves. Form controls are typed as numbers, so format at the boundary.
+   */
+  private decimal(value: number | string | null | undefined, fallback = '0.00'): string {
+    if (value === null || value === undefined || value === '') return fallback;
+    const asNumber = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(asNumber) ? asNumber.toFixed(2) : fallback;
+  }
+
+  private optionalDecimal(value: number | string | null | undefined): string | null {
+    if (value === null || value === undefined || value === '') return null;
+    const asNumber = typeof value === 'number' ? value : Number(value);
+    return Number.isFinite(asNumber) ? asNumber.toFixed(2) : null;
   }
 
   protected zoneLocation(zone: DeliveryZone): string {
@@ -358,6 +381,7 @@ export class ZoneListComponent {
       province: zone.province,
       status: zone.status,
       base_fee: Number(zone.base_fee),
+      tala_coins_percent: Number(zone.tala_coins_percent ?? 0),
       included_km: Number(zone.included_km),
       maximum_delivery_km:
         zone.maximum_delivery_km == null ? null : Number(zone.maximum_delivery_km),
@@ -370,21 +394,22 @@ export class ZoneListComponent {
     this.formModalOpen.set(true);
   }
 
-  private zonePayload(): Partial<DeliveryZone> {
+  private zonePayload(): DeliveryZoneWrite {
     const raw = this.form.getRawValue();
+
     return {
       name: raw.name ?? '',
       city: raw.city?.trim() || null,
       province: raw.province ?? '',
       status: raw.status ?? 'DRAFT',
       boundary_geojson: this.boundary(),
-      base_fee: Number(raw.base_fee ?? 0),
-      included_km: Number(raw.included_km ?? 0),
-      maximum_delivery_km: raw.maximum_delivery_km == null ? null : Number(raw.maximum_delivery_km),
-      extra_fee_per_km: Number(raw.extra_fee_per_km ?? 0),
-      maximum_delivery_fee:
-        raw.maximum_delivery_fee == null ? null : Number(raw.maximum_delivery_fee),
-      distance_rounding_km: Number(raw.distance_rounding_km ?? 0.1),
+      base_fee: this.decimal(raw.base_fee),
+      tala_coins_percent: this.decimal(raw.tala_coins_percent),
+      included_km: this.decimal(raw.included_km),
+      maximum_delivery_km: this.optionalDecimal(raw.maximum_delivery_km),
+      extra_fee_per_km: this.decimal(raw.extra_fee_per_km),
+      maximum_delivery_fee: this.optionalDecimal(raw.maximum_delivery_fee),
+      distance_rounding_km: this.decimal(raw.distance_rounding_km, '0.10'),
       effective_from: raw.effective_from || null,
     };
   }

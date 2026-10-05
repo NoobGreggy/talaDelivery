@@ -133,6 +133,10 @@
                 <td class="px-4 py-3.5">
                   <app-status-badge [status]="rider.status" />
                 </td>
+                <td class="px-4 py-3.5 text-sm font-semibold" [class.text-red-600]="(rider.tala_coins_balance ?? 0) < 0">
+                  {{ (rider.tala_coins_balance ?? 0) | number:'1.2-2' }}
+                  @if ((rider.tala_coins_balance ?? 0) < 0) { <span class="block text-xs font-normal">Needs top-up · Call rider</span> }
+                </td>
                 <td class="px-4 py-3.5 text-sm">
                   @if (rider.current_delivery) {
                     <span class="font-medium text-sky-600">{{ rider.current_delivery.delivery_number }}</span>

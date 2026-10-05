@@ -1,5 +1,16 @@
-@import 'tailwindcss';
+/*
+ * Mapbox GL's stylesheet must be imported here, NOT added to the `styles` array
+ * in angular.json. `ng build` honours that array, but `ng serve` only emits the
+ * first entry as a link tag, so the dev app would run without it. The visible
+ * symptom is that `.mapboxgl-map` never gets `overflow: hidden`, so the
+ * attribution control spills out of the 320px map and covers the buttons
+ * underneath it.
+ *
+ * Imported before Tailwind so the (unlayered) Mapbox rules keep winning over
+ * Tailwind's layered base/utilities.
+ */
 @import 'mapbox-gl/dist/mapbox-gl.css';
+@import 'tailwindcss';
 
 @theme {
   --color-primary: #0ea5e9;

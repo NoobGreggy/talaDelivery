@@ -9,8 +9,8 @@ import {
   ViewChild,
 } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import * as mapboxgl from 'mapbox-gl';
-import { LngLatBounds, Map, Marker } from 'mapbox-gl';
+import type { Map as MapboxMap, Marker } from 'mapbox-gl';
+import { mapboxgl } from '../../../core/mapbox/mapbox-global';
 import { Delivery } from '../../../core/models';
 import { environment } from '../../../../environments/environment';
 
@@ -25,7 +25,7 @@ export class DeliveryTrackingMapComponent implements AfterViewInit, OnChanges, O
   @Input({ required: true }) delivery!: Delivery;
   @ViewChild('mapContainer') mapContainer!: ElementRef<HTMLDivElement>;
 
-  private map: Map | null = null;
+  private map: MapboxMap | null = null;
   private pickupMarker: Marker | null = null;
   private destinationMarker: Marker | null = null;
   private riderMarker: Marker | null = null;
@@ -34,7 +34,8 @@ export class DeliveryTrackingMapComponent implements AfterViewInit, OnChanges, O
   ngAfterViewInit(): void {
     if (!this.mapboxConfigured) return;
     const center = this.initialCenter();
-    const map = new mapboxgl.Map({
+    const mapbox = mapboxgl();
+    const map = new mapbox.Map({
       accessToken: environment.mapboxAccessToken,
       container: this.mapContainer.nativeElement,
       style: 'mapbox://styles/mapbox/streets-v12',
@@ -43,7 +44,10 @@ export class DeliveryTrackingMapComponent implements AfterViewInit, OnChanges, O
       attributionControl: true,
     });
     this.map = map;
-    map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+    // Attribution is required by the Mapbox terms of service - keep it.
+    // Mapbox chooses its own compact/full presentation from the canvas width
+    // and strips a forced `mapboxgl-compact` on the next resize, so don't set it.
+    map.addControl(new mapbox.NavigationControl(), 'top-right');
     map.on('load', () => this.syncMarkers(true));
   }
 
@@ -75,6 +79,7 @@ export class DeliveryTrackingMapComponent implements AfterViewInit, OnChanges, O
   private syncMarkers(fitBounds: boolean): void {
     const map = this.map;
     if (!map) return;
+    const mapbox = mapboxgl();
     const points: [number, number][] = [];
 
     if (this.delivery.pickup_latitude != null && this.delivery.pickup_longitude != null) {
@@ -85,9 +90,9 @@ export class DeliveryTrackingMapComponent implements AfterViewInit, OnChanges, O
       points.push(pickup);
       const pickupMarker =
         this.pickupMarker ??
-        new mapboxgl.Marker({ color: '#2563eb' })
+        new mapbox.Marker({ color: '#2563eb' })
           .setLngLat(pickup)
-          .setPopup(new mapboxgl.Popup().setText('Pickup'))
+          .setPopup(new mapbox.Popup().setText('Pickup'))
           .addTo(map);
       this.pickupMarker = pickupMarker;
       pickupMarker.setLngLat(pickup);
@@ -101,9 +106,9 @@ export class DeliveryTrackingMapComponent implements AfterViewInit, OnChanges, O
       points.push(destination);
       const destinationMarker =
         this.destinationMarker ??
-        new mapboxgl.Marker({ color: '#16a34a' })
+        new mapbox.Marker({ color: '#16a34a' })
           .setLngLat(destination)
-          .setPopup(new mapboxgl.Popup().setText('Customer'))
+          .setPopup(new mapbox.Popup().setText('Customer'))
           .addTo(map);
       this.destinationMarker = destinationMarker;
       destinationMarker.setLngLat(destination);
@@ -115,9 +120,9 @@ export class DeliveryTrackingMapComponent implements AfterViewInit, OnChanges, O
       points.push(riderPoint);
       const riderMarker =
         this.riderMarker ??
-        new mapboxgl.Marker({ color: '#f97316' })
+        new mapbox.Marker({ color: '#f97316' })
           .setLngLat(riderPoint)
-          .setPopup(new mapboxgl.Popup().setText('Rider'))
+          .setPopup(new mapbox.Popup().setText('Rider'))
           .addTo(map);
       this.riderMarker = riderMarker;
       riderMarker.setLngLat(riderPoint);
@@ -126,7 +131,7 @@ export class DeliveryTrackingMapComponent implements AfterViewInit, OnChanges, O
     if (fitBounds && points.length > 1) {
       const bounds = points.reduce(
         (current, point) => current.extend(point),
-        new LngLatBounds(points[0], points[0]),
+        new mapbox.LngLatBounds(points[0], points[0]),
       );
       map.fitBounds(bounds, { padding: 60, maxZoom: 16, duration: 0 });
     }

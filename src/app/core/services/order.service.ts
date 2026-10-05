@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { ApiClientService } from '../api/api-client.service';
 import { Order, PaginatedResponse } from '../models';
-import { Observable } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 
 export interface OrderFilters {
   status?: string;
@@ -31,29 +31,49 @@ export class OrderService {
   lastPage = this._lastPage.asReadonly();
 
   private lastFilters: OrderFilters = {};
+  private request?: Subscription;
+  private requestVersion = 0;
+  private _refreshing = signal(false);
+  private _lastUpdated = signal<Date | null>(null);
+  refreshing = this._refreshing.asReadonly();
+  lastUpdated = this._lastUpdated.asReadonly();
 
-  load(filters: OrderFilters = {}): void {
+  load(filters: OrderFilters = {}, silent = false): void {
+    if (silent && (this._loading() || this._refreshing())) return;
+    this.request?.unsubscribe();
+    const version = ++this.requestVersion;
     this.lastFilters = filters;
-    this._loading.set(true);
-    this._error.set(null);
+    this._loading.set(!silent);
+    this._refreshing.set(silent);
+    if (!silent) this._error.set(null);
 
-    this.getOrders(filters).subscribe({
+    this.request = this.getOrders(filters).subscribe({
       next: (result) => {
+        if (version !== this.requestVersion) return;
+        if (result.meta.current_page > result.meta.last_page) {
+          this.load({ ...filters, page: result.meta.last_page });
+          return;
+        }
         this._orders.set(result.data);
         this._total.set(result.meta.total);
         this._currentPage.set(result.meta.current_page);
         this._lastPage.set(result.meta.last_page);
         this._loading.set(false);
+        this._refreshing.set(false);
+        this._error.set(null);
+        this._lastUpdated.set(new Date());
       },
-      error: () => {
-        this._error.set('We couldn\'t load orders.');
+      error: (error) => {
+        if (version !== this.requestVersion) return;
+        this._error.set(error.error?.message ?? 'We couldn\'t load orders.');
         this._loading.set(false);
+        this._refreshing.set(false);
       },
     });
   }
 
-  refresh(): void {
-    this.load(this.lastFilters);
+  refresh(silent = false): void {
+    this.load(this.lastFilters, silent);
   }
 
   getOrder(id: number): Observable<Order> {

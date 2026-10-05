@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { RiderService } from '../../../core/services/rider.service';
@@ -18,6 +19,7 @@ import { Rider } from '../../../core/models';
   selector: 'app-rider-list',
   standalone: true,
   imports: [
+    DecimalPipe,
     ReactiveFormsModule,
     SearchInputComponent,
     StatusBadgeComponent,
@@ -58,6 +60,7 @@ export class RiderListComponent {
     { key: 'phone', label: 'Phone' },
     { key: 'vehicle', label: 'Vehicle' },
     { key: 'status', label: 'Status' },
+    { key: 'coins', label: 'Tala Coins' },
     { key: 'delivery', label: 'Current Delivery' },
     { key: 'actions', label: '' },
   ];

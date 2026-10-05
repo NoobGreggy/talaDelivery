@@ -49,6 +49,14 @@ export class StoreService {
     });
   }
 
+  tagCategories(id: number, categoryIds: number[]): Observable<Store> {
+    return this.api.put<Store>(`/admin/stores/${id}/categories`, { category_ids: categoryIds });
+  }
+
+  assignDeliveryZones(id: number, zoneIds: number[]): Observable<Store> {
+    return this.api.put<Store>(`/admin/stores/${id}/delivery-zones`, { delivery_zone_ids: zoneIds });
+  }
+
   listProducts(storeId: number): Observable<Product[]> {
     return this.api.get<Product[]>(`/stores/${storeId}/products`);
   }

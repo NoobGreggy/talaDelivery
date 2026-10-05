@@ -47,8 +47,8 @@
         <p class="mt-1 text-sm text-slate-500">{{ store()?.address }}</p>
       </div>
       <div class="flex items-center gap-2">
-        <app-button variant="secondary" size="md" (clicked)="goToProducts()">
-          Manage Products
+        <app-button variant="secondary" size="md" (clicked)="goToCategories()">
+          Tag Categories
         </app-button>
         @if (store()?.status === 'ACTIVE') {
           <app-button variant="danger" size="md" (clicked)="toggleStore.set(store()!)">
@@ -120,42 +120,32 @@
       </div>
     }
 
-    <!-- Products tab -->
-    @if (activeTab() === 'products') {
-      <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-          <p class="text-sm font-semibold uppercase tracking-wider text-slate-500">Products</p>
-          <app-button variant="primary" size="sm" (clicked)="goToProducts()">
-            Manage Products
-          </app-button>
+    @if (activeTab() === 'categories') {
+      <section class="space-y-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div><h3 class="font-semibold text-slate-900">Store Categories</h3><p class="mt-1 text-sm text-slate-500">Select the categories that describe this store.</p></div>
+          <a routerLink="/categories" class="text-sm font-medium text-sky-600">Manage category list</a>
         </div>
-        <div class="divide-y divide-slate-100 px-6">
-          @if (productsLoading()) {
-            @for (s of [1, 2, 3]; track s) {
-              <app-skeleton width="100%" height="32px" class="my-2" />
+        @if (categoriesLoading()) { <p class="text-sm text-slate-500">Loading categories...</p> }
+        @else if (categoriesError()) { <app-error-state message="Unable to load categories" [description]="categoriesError() ?? ''" (retried)="loadCategories()" /> }
+        @else {
+          <div class="grid gap-3 sm:grid-cols-2">
+            @for (category of categories(); track category.id) {
+              @if (category.is_active || selectedCategories().includes(category.id)) {
+                <label class="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-sm">
+                  <input type="checkbox" class="mt-1" [disabled]="categoriesSaving()" [checked]="selectedCategories().includes(category.id)" (change)="toggleCategory(category.id, $any($event.target).checked)" />
+                  <span><span class="font-medium text-slate-900">{{ category.name }}</span>@if (!category.is_active) { <span class="ml-2 text-xs text-slate-500">Inactive</span> }<span class="block text-xs text-slate-500">{{ category.description }}</span></span>
+                </label>
+              }
             }
-          } @else if (products().length === 0) {
-            <app-empty-state
-              message="No products yet"
-              description="Add products to start selling through this store." />
-          } @else {
-            @for (product of products(); track product.id) {
-              <div class="flex items-center justify-between gap-3 py-3">
-                <div>
-                  <p class="text-sm font-medium text-slate-900">{{ product.name }}</p>
-                  <p class="text-xs text-slate-400">{{ product.category }}</p>
-                </div>
-                <div class="flex items-center gap-3">
-                  <span class="text-sm font-medium text-slate-700">
-                    {{ product.price | currency: 'PHP' : 'symbol' }}
-                  </span>
-                  <app-status-badge [status]="product.available ? 'ACTIVE' : 'INACTIVE'" />
-                </div>
-              </div>
-            }
-          }
-        </div>
-      </div>
+          </div>
+          @if (!categories().length) { <p class="text-sm text-slate-500">Create categories from the Categories page first.</p> }
+          <div class="flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+            <p class="text-xs text-slate-500">{{ selectedCategories().length }} categories selected</p>
+            <app-button variant="primary" size="md" [loading]="categoriesSaving()" (clicked)="saveCategories()">Save Categories</app-button>
+          </div>
+        }
+      </section>
     }
 
     <!-- Orders tab -->
@@ -165,8 +155,8 @@
           Store Orders
         </h3>
         <p class="text-sm text-slate-500">Review and manage orders for this store.</p>
-        <a routerLink="/orders" class="mt-3 inline-block text-sm font-medium text-sky-600 hover:text-sky-700">
-          View all orders
+        <a routerLink="/orders" [queryParams]="{ store: store()?.id }" class="mt-3 inline-block text-sm font-medium text-sky-600 hover:text-sky-700">
+          View store orders
         </a>
       </div>
     }
@@ -178,11 +168,34 @@
           Delivery Settings
         </h3>
         <p class="text-sm text-slate-500">
-          Delivery fees and zones are configured at the platform level in Zones &amp; Pricing.
+          Choose the delivery zones this branch serves. Fees use the selected zone's rates and distance from this store's pickup location.
         </p>
         <a routerLink="/zones" class="mt-3 inline-block text-sm font-medium text-sky-600 hover:text-sky-700">
           Configure delivery zones
         </a>
+        @if (zonesLoading()) { <p class="mt-4 text-sm text-slate-500">Loading delivery zones...</p> }
+        @else if (zonesError()) { <app-error-state message="Unable to load delivery zones" [description]="zonesError() ?? ''" (retried)="loadZones()" /> }
+        @else {
+          <div class="mt-4 grid gap-3 sm:grid-cols-2">
+            @for (zone of zones(); track zone.id) {
+              @if (zone.status === 'ACTIVE' || selectedZones().includes(zone.id)) {
+                <label class="flex items-start gap-3 rounded-lg border border-slate-200 p-3 text-sm">
+                  <input type="checkbox" class="mt-1" [disabled]="zonesSaving()" [checked]="selectedZones().includes(zone.id)" (change)="toggleZone(zone.id, $any($event.target).checked)" />
+                  <span><span class="font-medium text-slate-900">{{ zone.name }}</span>
+                    <span class="block text-xs text-slate-500">{{ zone.city }}, {{ zone.province }} · {{ zone.status }}</span>
+                    <span class="block text-xs text-slate-500">Base fee: ₱{{ zone.base_fee }} · {{ zone.included_km }} km included · ₱{{ zone.extra_fee_per_km }}/extra km</span>
+                  </span>
+                </label>
+              }
+            }
+          </div>
+          @if (!selectedZones().length) { <p class="mt-3 text-sm text-amber-700">No zones selected. This store cannot accept delivery orders until a serving zone is assigned.</p> }
+          <p class="mt-3 text-xs text-slate-500">Only active, effective assigned zones can deliver. Their coverage boundary and maximum distance still apply. Existing inactive assignments can be removed.</p>
+          <div class="mt-4 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+            <span class="text-xs text-slate-500">{{ selectedZones().length }} zones selected</span>
+            <app-button variant="primary" size="md" [loading]="zonesSaving()" (clicked)="saveZones()">Save Delivery Zones</app-button>
+          </div>
+        }
       </div>
     }
   }
