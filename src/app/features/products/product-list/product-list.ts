@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ProductService } from '../../../core/services/product.service';
@@ -35,6 +35,8 @@ export class ProductListComponent {
   private categoryService = inject(CategoryService);
   private toastService = inject(ToastService);
   private fb = inject(FormBuilder);
+  private destroyRef = inject(DestroyRef);
+  private imageReader?: FileReader;
 
   protected readonly products = this.productService.products;
   protected readonly loading = this.productService.loading;
@@ -50,6 +52,7 @@ export class ProductListComponent {
   protected readonly formError = signal<string | null>(null);
   protected readonly imagePreview = signal<string | null>(null);
   protected readonly imageError = signal<string | null>(null);
+  protected readonly imageLoading = signal(false);
   protected readonly MAX_IMAGE_MB = 5;
 
   protected readonly filteredProducts = computed(() => {
@@ -81,6 +84,7 @@ export class ProductListComponent {
   });
 
   constructor() {
+    this.destroyRef.onDestroy(() => this.cancelImageRead());
     this.categoryService.load();
     this.productService.load();
   }
@@ -98,6 +102,7 @@ export class ProductListComponent {
   }
 
   protected openCreate(): void {
+    this.cancelImageRead();
     this.editingProduct.set(null);
     this.formError.set(null);
     this.form.reset({
@@ -115,6 +120,7 @@ export class ProductListComponent {
   }
 
   protected openEdit(product: Product): void {
+    this.cancelImageRead();
     this.editingProduct.set(product);
     this.formError.set(null);
     this.form.setValue({
@@ -132,6 +138,7 @@ export class ProductListComponent {
   }
 
   protected closeModal(): void {
+    this.cancelImageRead();
     this.formModalOpen.set(false);
     this.editingProduct.set(null);
     this.imagePreview.set(null);
@@ -145,8 +152,9 @@ export class ProductListComponent {
 
     this.imageError.set(null);
 
-    if (!file.type.startsWith('image/')) {
-      this.imageError.set('Only image files are allowed.');
+    this.cancelImageRead();
+    if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(file.type)) {
+      this.imageError.set('Choose a PNG, JPG, GIF or WebP image.');
       input.value = '';
       return;
     }
@@ -154,27 +162,37 @@ export class ProductListComponent {
     if (file.size > this.MAX_IMAGE_MB * 1024 * 1024) {
       this.imageError.set(`Image must be ${this.MAX_IMAGE_MB} MB or smaller.`);
       input.value = '';
-      this.imagePreview.set(null);
       return;
     }
 
     const reader = new FileReader();
+    this.imageReader = reader;
+    this.imageLoading.set(true);
     reader.onload = () => {
+      if (this.imageReader !== reader) return;
       this.imagePreview.set(String(reader.result));
+      this.imageLoading.set(false);
+      this.imageReader = undefined;
+      input.value = '';
     };
     reader.onerror = () => {
+      if (this.imageReader !== reader) return;
       this.imageError.set('Unable to read the image file.');
+      this.imageLoading.set(false);
+      this.imageReader = undefined;
+      input.value = '';
     };
     reader.readAsDataURL(file);
   }
 
   protected removeImage(): void {
+    this.cancelImageRead();
     this.imagePreview.set(null);
     this.imageError.set(null);
   }
 
   protected save(): void {
-    if (this.form.invalid) return;
+    if (this.form.invalid || this.imageLoading() || this.imageError() || this.acting()) return;
 
     const editing = this.editingProduct();
     const raw = this.form.getRawValue();
@@ -186,7 +204,7 @@ export class ProductListComponent {
       stock: raw.stock ?? 0,
       category_id: raw.category_id ? Number(raw.category_id) : null,
       is_available: raw.is_available === true,
-      image: this.imagePreview() ?? undefined,
+      image: this.imagePreview() ?? '',
     };
     this.acting.set(true);
     this.formError.set(null);
@@ -202,9 +220,9 @@ export class ProductListComponent {
         this.productService.load();
         this.toastService.show(editing ? 'Product updated' : 'Product created');
       },
-      error: () => {
+      error: (error) => {
         this.acting.set(false);
-        this.formError.set('Unable to save product. Please check the details and try again.');
+        this.formError.set(error.error?.message ?? 'Unable to save product. Please check the details and try again.');
         this.toastService.show('Unable to save product', 'error');
       },
     });
@@ -248,5 +266,11 @@ export class ProductListComponent {
 
   protected toIdString(value: number): string {
     return String(value);
+  }
+  private cancelImageRead(): void {
+    const reader = this.imageReader;
+    this.imageReader = undefined;
+    reader?.abort();
+    this.imageLoading.set(false);
   }
 }

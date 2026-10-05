@@ -1,8 +1,8 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { ApiClientService } from '../api/api-client.service';
-import { User, LoginRequest, LoginResponse } from '../models';
-import { Observable, tap, catchError, of } from 'rxjs';
+import { User, Store, LoginRequest, LoginResponse } from '../models';
+import { Observable, tap, catchError, of, switchMap, map } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -26,7 +26,9 @@ export class AuthService {
         this.currentUser.set(response.user);
         localStorage.setItem('auth_token', response.token);
         localStorage.setItem('auth_user', JSON.stringify(response.user));
-      })
+      }),
+      switchMap(response => this.withStore(response.user).pipe(map(user => ({ ...response, user })))),
+      tap(response => this.persistUser(response.user))
     );
   }
 
@@ -58,6 +60,7 @@ export class AuthService {
       return of(null);
     }
     return this.api.get<User>('/auth/me').pipe(
+      switchMap(user => this.withStore(user)),
       tap(user => {
         this.currentUser.set(user);
         localStorage.setItem('auth_user', JSON.stringify(user));
@@ -79,5 +82,16 @@ export class AuthService {
     } catch {
       return null;
     }
+  }
+
+  private withStore(user: User): Observable<User> {
+    if (user.role !== 'store_admin') return of(user);
+    // Clear cached store scope before resolving the new NestJS membership.
+    this.persistUser({ ...user, store_id: undefined, stores: [] });
+    return this.api.get<Store>('/store/profile').pipe(map(store => ({ ...user, store_id: store.id, stores: [store] })));
+  }
+  private persistUser(user: User): void {
+    this.currentUser.set(user);
+    localStorage.setItem('auth_user', JSON.stringify(user));
   }
 }

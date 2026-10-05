@@ -1,8 +1,8 @@
 import { Injectable, inject, signal, effect } from '@angular/core';
 import { ApiClientService } from '../api/api-client.service';
-import { EchoService } from '../echo/echo.service';
+import { RealtimeService } from '../realtime/realtime.service';
 import { Order, PaginatedResponse } from '../models';
-import { map, Observable } from 'rxjs';
+import { map, Observable, Subscription } from 'rxjs';
 
 export interface OrderFilters {
   status?: string;
@@ -13,7 +13,7 @@ export interface OrderFilters {
 @Injectable({ providedIn: 'root' })
 export class StoreOrderService {
   private api = inject(ApiClientService);
-  private echoService = inject(EchoService);
+  private realtime = inject(RealtimeService);
 
   private _orders = signal<Order[]>([]);
   private _total = signal(0);
@@ -31,27 +31,29 @@ export class StoreOrderService {
 
   private lastFilters: OrderFilters = {};
   private hasLoaded = false;
+  private request?: Subscription;
 
   constructor() {
     effect(() => {
-      const update = this.echoService.orderUpdated$();
-      const delivery = this.echoService.deliveryUpdated$();
-      if (update || delivery) {
-        this.refresh();
+      const update = this.realtime.orderUpdated();
+      if (update && this.hasLoaded) {
+        this.refresh(true);
       }
     });
     effect(() => {
-      const connectionVersion = this.echoService.connectionVersion$();
+      const connectionVersion = this.realtime.connectionVersion();
       if (connectionVersion > 0 && this.hasLoaded) {
-        this.refresh();
+        this.refresh(true);
       }
     });
   }
 
-  load(filters: OrderFilters = {}): void {
+  load(filters: OrderFilters = {}, silent = false): void {
+    if (silent && this.request && !this.request.closed) return;
+    this.request?.unsubscribe();
     this.hasLoaded = true;
     this.lastFilters = filters;
-    this._loading.set(true);
+    this._loading.set(!silent);
     this._error.set(null);
 
     const params: Record<string, string> = {};
@@ -59,7 +61,7 @@ export class StoreOrderService {
     if (filters.search) params['search'] = filters.search;
     if (filters.page) params['page'] = String(filters.page);
 
-    this.api.get<PaginatedResponse<Order>>('/store/orders', params).subscribe({
+    this.request = this.api.get<PaginatedResponse<Order>>('/store/orders', params).subscribe({
       next: (result) => {
         const orders = result.data.map((order) => this.normalizeOrder(order));
         this._orders.set(orders);
@@ -75,8 +77,8 @@ export class StoreOrderService {
     });
   }
 
-  refresh(): void {
-    this.load(this.lastFilters);
+  refresh(silent = false): void {
+    this.load(this.lastFilters, silent);
   }
 
   getOrder(id: number): Observable<Order> {

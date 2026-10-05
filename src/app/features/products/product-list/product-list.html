@@ -234,18 +234,21 @@
           >
             <input
               type="file"
-              accept="image/png,image/jpeg,image/gif,image/webp,image/svg+xml"
+              accept="image/png,image/jpeg,image/gif,image/webp"
               class="hidden"
               (change)="onImageSelected($event)"
             />
             <span class="text-sm font-medium text-slate-600">Choose a photo</span>
             <span class="mt-1 text-xs text-slate-400"
-              >PNG, JPG, GIF, WebP or SVG · Max {{ MAX_IMAGE_MB }} MB</span
+              >PNG, JPG, GIF or WebP · Max {{ MAX_IMAGE_MB }} MB</span
             >
           </label>
         }
         @if (imageError()) {
           <p class="mt-1 text-xs text-red-600">{{ imageError() }}</p>
+        }
+        @if (imageLoading()) {
+          <p class="mt-1 text-xs text-slate-500">Converting image to Base64...</p>
         }
       </div>
       <div>
@@ -321,7 +324,7 @@
           variant="primary"
           size="md"
           [loading]="acting()"
-          [disabled]="form.invalid"
+          [disabled]="form.invalid || imageLoading() || !!imageError() || acting()"
         >
           {{ editingProduct() ? 'Save Changes' : 'Add Product' }}
         </app-button>

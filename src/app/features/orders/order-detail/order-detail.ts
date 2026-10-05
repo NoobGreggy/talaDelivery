@@ -10,7 +10,9 @@ import { ErrorStateComponent } from '../../../shared/components/error-state/erro
 import { CardComponent } from '../../../shared/components/card/card';
 import { Order } from '../../../core/models';
 import { ModalComponent } from '../../../shared/components/modal/modal';
-import { EchoService } from '../../../core/echo/echo.service';
+import { RealtimeService } from '../../../core/realtime/realtime.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { interval, fromEvent, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-order-detail',
@@ -32,7 +34,8 @@ export class OrderDetailComponent {
   private router = inject(Router);
   private orderService = inject(StoreOrderService);
   private toastService = inject(ToastService);
-  private echoService = inject(EchoService);
+  private realtime = inject(RealtimeService);
+  private request?: Subscription;
   private destroyRef = inject(DestroyRef);
 
   protected readonly order = signal<Order | null>(null);
@@ -48,33 +51,36 @@ export class OrderDetailComponent {
       const id = Number(params.get('id'));
       this.loadOrder(id);
     });
-    this.destroyRef.onDestroy(() => sub.unsubscribe());
+    this.destroyRef.onDestroy(() => { sub.unsubscribe(); this.request?.unsubscribe(); });
+    this.realtime.connect();
+    interval(10000).pipe(takeUntilDestroyed()).subscribe(() => {
+      if (!document.hidden && !this.acting()) this.loadOrder(Number(this.route.snapshot.paramMap.get('id')), true);
+    });
+    fromEvent(window, 'focus').pipe(takeUntilDestroyed()).subscribe(() => {
+      if (!this.acting()) this.loadOrder(Number(this.route.snapshot.paramMap.get('id')), true);
+    });
 
     effect(() => {
-      const update = this.echoService.orderUpdated$();
-      if (update && update.id === Number(this.route.snapshot.paramMap.get('id'))) {
-        untracked(() => this.loadOrder(update.id));
+      const update = this.realtime.orderUpdated();
+      if (update && update.orderId === Number(this.route.snapshot.paramMap.get('id'))) {
+        untracked(() => this.loadOrder(update.orderId, true));
       }
     });
     effect(() => {
-      const update = this.echoService.deliveryUpdated$();
-      if (update && update.order_id === Number(this.route.snapshot.paramMap.get('id'))) {
-        untracked(() => this.loadOrder(update.order_id));
-      }
-    });
-    effect(() => {
-      if (this.echoService.connectionVersion$() > 0) {
+      if (this.realtime.connectionVersion() > 0) {
         const id = Number(this.route.snapshot.paramMap.get('id'));
-        if (id > 0) untracked(() => this.loadOrder(id));
+        if (id > 0) untracked(() => this.loadOrder(id, true));
       }
     });
   }
 
-  private loadOrder(id: number): void {
-    this.loading.set(true);
+  private loadOrder(id: number, silent = false): void {
+    if (silent && this.request && !this.request.closed) return;
+    this.request?.unsubscribe();
+    this.loading.set(!silent);
     this.error.set(null);
 
-    this.orderService.getOrder(id).subscribe({
+    this.request = this.orderService.getOrder(id).subscribe({
       next: (order) => {
         this.order.set(order);
         this.loading.set(false);

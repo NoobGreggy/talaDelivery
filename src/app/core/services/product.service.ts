@@ -86,8 +86,8 @@ export class ProductService {
     if (product.name !== undefined) payload['name'] = product.name;
     if (product.description !== undefined) payload['description'] = product.description;
     if (product.sku !== undefined) payload['sku'] = product.sku;
-    if (product.price !== undefined) payload['price'] = product.price;
     if (product.image !== undefined) payload['image'] = product.image;
+    if (product.price !== undefined) payload['price'] = product.price;
     if (product.stock !== undefined) payload['stock'] = product.stock;
     if (product.category_id !== undefined) payload['category_id'] = product.category_id;
     if (product.is_available !== undefined) payload['is_available'] = product.is_available;

@@ -205,9 +205,24 @@ export interface AppNotification {
   id: number;
   type: string;
   title: string;
-  message: string;
+  body: string;
+  sent_at?: string | null;
   data: Record<string, unknown>;
   is_read: boolean;
   read_at: string | null;
   created_at: string;
+}
+
+export type RealtimeStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+export interface OrderUpdatedRealtimeEvent {
+  orderId: number;
+  orderNumber: string;
+  status: OrderStatus;
+  storeId: number;
+  deliveryId: number | null;
+}
+export interface RiderLocationRealtimeEvent {
+  deliveryId: number;
+  latitude: number | string;
+  longitude: number | string;
 }

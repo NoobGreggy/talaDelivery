@@ -2,7 +2,8 @@ import { Component, output, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth/auth.service';
-import { EchoService } from '../../core/echo/echo.service';
+import { RealtimeService } from '../../core/realtime/realtime.service';
+import { NotificationService } from '../../core/services/notification.service';
 
 @Component({
   selector: 'app-topbar',
@@ -16,17 +17,19 @@ export class TopbarComponent {
 
   private router = inject(Router);
   private authService = inject(AuthService);
-  private echoService = inject(EchoService);
+  private realtime = inject(RealtimeService);
+  private notificationService = inject(NotificationService);
 
   protected readonly user = this.authService.user;
   protected readonly profileOpen = signal(false);
   protected readonly notificationsOpen = signal(false);
-  protected readonly notifications = this.echoService.notifications$;
-  protected readonly unreadCount = this.echoService.unreadCount$;
-  protected readonly loadingNotifications = this.echoService.loadingNotifications;
+  protected readonly notifications = this.notificationService.items;
+  protected readonly unreadCount = this.notificationService.unreadCount;
+  protected readonly loadingNotifications = this.notificationService.loading;
 
   constructor() {
-    this.echoService.connect();
+    this.realtime.connect();
+    this.notificationService.load();
   }
 
   protected toggleProfile(): void {
@@ -38,12 +41,13 @@ export class TopbarComponent {
     this.notificationsOpen.update((v) => !v);
     this.profileOpen.set(false);
     if (this.notificationsOpen()) {
-      this.echoService.markAllRead();
+      this.notificationService.markAllRead();
     }
   }
 
   protected logout(): void {
-    this.echoService.disconnect();
+    this.realtime.disconnect();
+    this.notificationService.clear();
     this.authService.logout();
   }
 
