@@ -104,10 +104,16 @@ export function gatewayProxyMiddleware(req: Request, res: Response, next: NextFu
     },
     (upstreamResponse) => {
       const status = upstreamResponse.statusCode ?? 502;
+      // The public gateway owns browser origin policy, not the private services.
+      const responseHeaders = Object.fromEntries(
+        Object.entries(upstreamResponse.headers).filter(
+          ([name]) => !name.toLowerCase().startsWith('access-control-'),
+        ),
+      );
       if (upstreamResponse.statusMessage) {
-        res.writeHead(status, upstreamResponse.statusMessage, upstreamResponse.headers);
+        res.writeHead(status, upstreamResponse.statusMessage, responseHeaders);
       } else {
-        res.writeHead(status, upstreamResponse.headers);
+        res.writeHead(status, responseHeaders);
       }
       upstreamResponse.pipe(res);
     },

@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { bootstrapLogger, configureHttpApp, resolvePort } from '@taladelivery/common';
 import { AppModule } from './app.module';
 import { gatewayProxyMiddleware } from './gateway-proxy.middleware';
+import { gatewayCorsOrigins } from './gateway-cors';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -14,6 +15,7 @@ async function bootstrap(): Promise<void> {
     description:
       'Public entry point: thin prefix-based proxy to TalaDelivery microservices (Phases 1-11).',
     version: '1.0',
+    corsOrigins: gatewayCorsOrigins(),
   });
 
   // Register the raw proxy middleware BEFORE `app.init()`.
