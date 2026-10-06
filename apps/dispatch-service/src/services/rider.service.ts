@@ -21,6 +21,8 @@ import { moneyString } from '../common/format.util';
 export interface RiderStats {
   completed: number;
   earnings: string;
+  acceptanceRate?: number | null;
+  onTimeRate?: number | null;
 }
 
 export interface DeliveryPage {
@@ -99,8 +101,7 @@ export class RiderService {
       throw new DomainError('This rider is not assigned to the selected delivery.');
     }
 
-    const recordedAt =
-      dto.recorded_at !== undefined ? new Date(dto.recorded_at) : new Date();
+    const recordedAt = dto.recorded_at !== undefined ? new Date(dto.recorded_at) : new Date();
     const oldest = Date.now() - 2 * 60 * 1000;
     const newest = Date.now() + 30 * 1000;
     if (recordedAt.getTime() < oldest || recordedAt.getTime() > newest) {
@@ -110,19 +111,23 @@ export class RiderService {
     const hadLocation = rider.currentLatitude !== null && rider.currentLongitude !== null;
     rider.currentLatitude = String(dto.latitude);
     rider.currentLongitude = String(dto.longitude);
-    rider.currentLocationAccuracy =
-      dto.accuracy_m !== undefined ? String(dto.accuracy_m) : null;
+    rider.currentLocationAccuracy = dto.accuracy_m !== undefined ? String(dto.accuracy_m) : null;
     rider.currentLocationHeading = dto.heading_deg !== undefined ? String(dto.heading_deg) : null;
     rider.currentLocationSpeed = dto.speed_mps !== undefined ? String(dto.speed_mps) : null;
     rider.currentLocationUpdatedAt = recordedAt;
     // Location requests may hold a profile from before a simultaneous coin top-up.
     // Write only location fields so that stale profiles cannot overwrite the balance.
-    await this.riders.update({ id: rider.id }, {
-      currentLatitude: rider.currentLatitude, currentLongitude: rider.currentLongitude,
-      currentLocationAccuracy: rider.currentLocationAccuracy,
-      currentLocationHeading: rider.currentLocationHeading, currentLocationSpeed: rider.currentLocationSpeed,
-      currentLocationUpdatedAt: rider.currentLocationUpdatedAt,
-    });
+    await this.riders.update(
+      { id: rider.id },
+      {
+        currentLatitude: rider.currentLatitude,
+        currentLongitude: rider.currentLongitude,
+        currentLocationAccuracy: rider.currentLocationAccuracy,
+        currentLocationHeading: rider.currentLocationHeading,
+        currentLocationSpeed: rider.currentLocationSpeed,
+        currentLocationUpdatedAt: rider.currentLocationUpdatedAt,
+      },
+    );
     const updated = await this.riders.findOneByOrFail({ id: rider.id });
 
     if (activeDelivery !== null) {
@@ -214,7 +219,25 @@ export class RiderService {
       return sum + Math.round(value * 100);
     }, 0);
 
-    return { completed, earnings: moneyString(totalMinor / 100) };
+    const counts = await this.offers
+      .createQueryBuilder('offer')
+      .select('COUNT(*) FILTER (WHERE offer.status = :accepted)', 'accepted')
+      .addSelect('COUNT(*)', 'answered')
+      .where('offer.rider_id = :riderId', { riderId })
+      .andWhere('offer.status IN (:...statuses)', {
+        statuses: [DeliveryOfferStatus.Accepted, DeliveryOfferStatus.Rejected],
+      })
+      .setParameter('accepted', DeliveryOfferStatus.Accepted)
+      .getRawOne<{ accepted: string; answered: string }>();
+    const answered = Number(counts?.answered ?? 0);
+    const accepted = Number(counts?.accepted ?? 0);
+    return {
+      completed,
+      earnings: moneyString(totalMinor / 100),
+      acceptanceRate: answered === 0 ? null : Math.round((accepted * 10000) / answered) / 100,
+      // A delivery deadline is not currently recorded; do not manufacture a rate.
+      onTimeRate: null,
+    };
   }
 
   /**

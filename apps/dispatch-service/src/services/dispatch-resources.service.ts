@@ -90,6 +90,8 @@ export interface RiderResourceJson {
   current_location_updated_at: string | null;
   completed_deliveries: number;
   total_earnings: string;
+  acceptance_rate: number | null;
+  on_time_rate: number | null;
   created_at: string;
   user: UserSnapshot | null;
   current_delivery: DeliveryResourceJson | null;
@@ -127,6 +129,8 @@ export interface ZoneResourceJson {
 export interface RiderStats {
   completed: number;
   earnings: string;
+  acceptanceRate?: number | null;
+  onTimeRate?: number | null;
 }
 
 export interface DeliveryResourceHints {
@@ -288,6 +292,8 @@ export class DispatchResourcesService {
       current_location_updated_at: toIso(rider.currentLocationUpdatedAt),
       completed_deliveries: stats.completed,
       total_earnings: stats.earnings,
+      acceptance_rate: stats.acceptanceRate ?? null,
+      on_time_rate: stats.onTimeRate ?? null,
       created_at: rider.createdAt.toISOString(),
       user,
       current_delivery:

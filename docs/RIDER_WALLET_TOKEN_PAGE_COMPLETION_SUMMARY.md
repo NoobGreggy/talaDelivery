@@ -150,3 +150,13 @@ flutter run --release -d 00008140-001E39C6222B001C --device-timeout 60 --dart-de
 ```
 
 - The backend deployment requirement above still applies if balance/history calls fail after opening the page.
+
+## Follow-up: dashboard performance metrics
+
+- NestJS now returns `acceptance_rate` in the existing rider profile response, calculated as accepted offers divided by accepted plus rejected offers, multiplied by 100 and rounded to two decimals. Queries are scoped to the rider. Pending/expired offers are excluded because platform-withdrawn offers are not distinguishable from missed offers.
+- No answered offers returns null; the Rider dashboard displays N/A rather than a fabricated percentage.
+- The profile is refreshed after rejecting an offer so the dashboard receives the authoritative updated rate. Existing acceptance, delivery, and refresh flows already reload profile data.
+- On-time calculation is skipped at the user’s request; the gauge is hidden while its backend value is unavailable. No deadline rule or schema was invented.
+- Added backend stats and serialization tests, a frontend rejection-refresh test, and assertions covering unavailable metrics.
+- Verification: 23 backend tests across stats, matching, and wallet suites passed; dispatch typecheck, build, and lint passed. Flutter analysis passed; 14 relevant app/model/realtime tests passed; the Rider web build passed with the same existing dependency Wasm dry-run warning.
+- No new migration is required. Deploy the updated dispatch service and rebuild the Rider app to use these changes.
