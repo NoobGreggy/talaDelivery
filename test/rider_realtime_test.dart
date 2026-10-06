@@ -224,6 +224,12 @@ void main() {
 }
 
 class _EventControllerRepository implements RiderRepository {
+  @override
+  Future<RiderWallet> wallet() async => const RiderWallet('0.00');
+  @override
+  Future<RiderWalletPage> walletTransactions({int page = 1}) async =>
+      const RiderWalletPage([], 1);
+
   List<RiderDelivery> currentDeliveries = const [];
   int offersCalls = 0;
   int notificationsCalls = 0;

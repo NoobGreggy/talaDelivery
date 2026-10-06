@@ -39,6 +39,33 @@ void main() {
     expect(find.text('You’re offline'), findsOneWidget);
     expect(find.text('₱0'), findsOneWidget);
 
+    expect(find.byKey(const Key('rider-wallet-shortcut')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('rider-wallet-shortcut')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    expect(find.text('Available Tala Coins'), findsOneWidget);
+    expect(find.byType(RiderCoinImage), findsWidgets);
+    expect(tester.takeException(), isNull);
+    await tester.pageBack();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+
+    await tester.tap(find.text('Profile'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.ensureVisible(find.text('Tala Coins'));
+    await tester.tap(find.text('Tala Coins'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    expect(find.text('Available Tala Coins'), findsOneWidget);
+    expect(find.text('No wallet activity yet'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+    await tester.tap(find.text('Home'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+
     await tester.tap(find.byKey(const Key('rider-power-button')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 600));
@@ -51,6 +78,12 @@ void main() {
 }
 
 class _FakeRiderRepository implements RiderRepository {
+  @override
+  Future<RiderWallet> wallet() async => const RiderWallet('0.00');
+  @override
+  Future<RiderWalletPage> walletTransactions({int page = 1}) async =>
+      const RiderWalletPage([], 1);
+
   final user = const RiderUser(
     id: 9,
     name: 'API Rider',

@@ -23,6 +23,20 @@ String riderDate(DateTime? value) {
   return '${months[date.month - 1]} ${date.day}, ${date.year}';
 }
 
+class RiderCoinImage extends StatelessWidget {
+  const RiderCoinImage({super.key, this.size = 32});
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Image.asset(
+    'assets/images/talaCoin.png',
+    width: size,
+    height: size,
+    fit: BoxFit.contain,
+    excludeFromSemantics: true,
+  );
+}
+
 class RiderLogo extends StatelessWidget {
   const RiderLogo({super.key, required this.size});
   final double size;
@@ -628,9 +642,11 @@ class MenuTile extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.destructive = false,
+    this.leading,
     this.onTap,
   });
   final IconData icon;
+  final Widget? leading;
   final String title;
   final String? subtitle;
   final bool destructive;
@@ -647,7 +663,7 @@ class MenuTile extends StatelessWidget {
       child: ListTile(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17)),
         onTap: onTap,
-        leading: Icon(icon, color: color),
+        leading: leading ?? Icon(icon, color: color),
         title: Text(
           title,
           style: TextStyle(color: color, fontWeight: FontWeight.w700),

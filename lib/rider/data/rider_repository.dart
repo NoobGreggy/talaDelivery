@@ -4,6 +4,8 @@ abstract class RiderRepository {
   Future<RiderUser?> restoreSession();
   Future<RiderUser> login({required String email, required String password});
   Future<void> logout();
+  Future<RiderWallet> wallet();
+  Future<RiderWalletPage> walletTransactions({int page = 1});
   Future<RiderProfile> profile();
   Future<RiderProfile> setOnline(bool online);
   Future<List<RiderOffer>> offers();
@@ -83,6 +85,24 @@ class ApiRiderRepository implements RiderRepository {
     } finally {
       await _tokens.clear();
     }
+  }
+
+  @override
+  Future<RiderWallet> wallet() async =>
+      RiderWallet.fromJson(_riderPayloadMap(await _api.get('rider/wallet')));
+
+  @override
+  Future<RiderWalletPage> walletTransactions({int page = 1}) async {
+    final result = _riderPayloadPaged(
+      await _api.get('rider/wallet/transactions?page=$page&per_page=20'),
+    );
+    return RiderWalletPage(
+      result.items
+          .whereType<Map<String, dynamic>>()
+          .map(RiderWalletTransaction.fromJson)
+          .toList(),
+      result.lastPage,
+    );
   }
 
   @override

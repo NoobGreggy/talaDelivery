@@ -271,6 +271,13 @@ class _DashboardHero extends StatelessWidget {
                       ],
                     ),
                   ),
+                  IconButton(
+                    key: const Key('rider-wallet-shortcut'),
+                    tooltip: 'Tala Coins wallet',
+                    onPressed: () =>
+                        Navigator.of(context).pushNamed(RiderRoutes.wallet),
+                    icon: const RiderCoinImage(),
+                  ),
                   Semantics(
                     button: true,
                     label:

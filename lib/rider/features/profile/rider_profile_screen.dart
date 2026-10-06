@@ -126,6 +126,14 @@ class ProfileScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 22),
+            MenuTile(
+              icon: Icons.account_balance_wallet_outlined,
+              leading: const RiderCoinImage(),
+              title: 'Tala Coins',
+              subtitle: 'Balance and transaction history',
+              onTap: () => Navigator.of(context).pushNamed(RiderRoutes.wallet),
+            ),
+            const SizedBox(height: 22),
             Text('Appearance', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 10),
             SegmentedButton<ThemeMode>(
