@@ -235,6 +235,7 @@ class RiderAppController extends ChangeNotifier {
   Future<bool> reject(RiderOffer offer) => _runMutation(() async {
     await _repository.rejectOffer(offer.id);
     offers = offers.where((item) => item.id != offer.id).toList();
+    profile = await _repository.profile();
   });
 
   Future<void> markNotificationRead(int notificationId) async {

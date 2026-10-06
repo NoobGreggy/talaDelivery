@@ -162,18 +162,22 @@ class _DashboardScreenState extends State<DashboardScreen>
                       Expanded(
                         child: _GaugeCard(
                           label: 'Acceptance rate',
+                          description: 'Accepted offers divided by accepted and rejected offers. Pending and expired offers are excluded.',
                           value: profile.acceptanceRate,
                           color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _GaugeCard(
-                          label: 'On-time rate',
-                          value: profile.onTimeRate,
-                          color: palette.success,
+                      if (profile.onTimeRate != null) ...[
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _GaugeCard(
+                            label: 'On-time rate',
+                            description: 'Available when delivery deadlines are tracked by the platform.',
+                            value: profile.onTimeRate,
+                            color: palette.success,
+                          ),
                         ),
-                      ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 28),
@@ -654,8 +658,10 @@ class _GaugeCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.color,
+    required this.description,
   });
 
+  final String description;
   final String label;
   final double? value;
   final Color color;
@@ -687,7 +693,7 @@ class _GaugeCard extends StatelessWidget {
                 ),
                 Center(
                   child: Text(
-                    value == null ? '—' : '${value!.round()}%',
+                    value == null ? 'N/A' : '${value!.round()}%',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
@@ -695,10 +701,13 @@ class _GaugeCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall,
+          Tooltip(
+            message: description,
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ),
         ],
       ),

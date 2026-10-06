@@ -3,6 +3,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:tala_delivery_rider/main.dart';
 
 void main() {
+  test(
+    'rejecting an offer refreshes the authoritative acceptance rate',
+    () async {
+      final repository = _FakeRiderRepository();
+      final controller = RiderAppController(repository);
+      controller.profile = repository.currentProfile;
+      await controller.reject(
+        RiderOffer(
+          id: 1,
+          status: 'PENDING',
+          expiresAt: DateTime.now().add(const Duration(minutes: 1)),
+          delivery: repository.delivery,
+        ),
+      );
+      expect(controller.profile!.acceptanceRate, 50);
+      controller.dispose();
+    },
+  );
+
   testWidgets('rider signs in and sees live backend state', (tester) async {
     tester.view.physicalSize = const Size(390, 844);
     tester.view.devicePixelRatio = 1;
@@ -40,6 +59,10 @@ void main() {
     expect(find.text('₱0'), findsOneWidget);
 
     expect(find.byKey(const Key('rider-wallet-shortcut')), findsOneWidget);
+    await tester.ensureVisible(find.text('Acceptance rate'));
+    expect(find.text('N/A'), findsOneWidget);
+    expect(find.text('On-time rate'), findsNothing);
+    await tester.ensureVisible(find.byKey(const Key('rider-wallet-shortcut')));
     await tester.tap(find.byKey(const Key('rider-wallet-shortcut')));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 700));
@@ -204,7 +227,12 @@ class _FakeRiderRepository implements RiderRepository {
   );
 
   @override
-  Future<void> rejectOffer(int offerId) async {}
+  Future<void> rejectOffer(int offerId) async {
+    currentProfile = RiderProfile.fromJson({
+      ...currentProfile.toJson(),
+      'acceptance_rate': 50,
+    });
+  }
 
   @override
   Future<List<RiderDelivery>> deliveries() async => const [];
