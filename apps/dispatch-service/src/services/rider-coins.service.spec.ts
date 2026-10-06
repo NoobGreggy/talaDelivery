@@ -10,29 +10,49 @@ function harness(balance = '5.00') {
   const rider = { id: 5, userId: 50, talaCoinsBalance: balance } as Rider;
   const ledger: RiderCoinTransaction[] = [];
   const chain = { setLock: jest.fn(), where: jest.fn(), getOne: jest.fn(async () => rider) };
-  chain.setLock.mockReturnValue(chain); chain.where.mockReturnValue(chain);
+  chain.setLock.mockReturnValue(chain);
+  chain.where.mockReturnValue(chain);
   const riders = {
     createQueryBuilder: jest.fn(() => chain),
-    update: jest.fn(async (_criteria, changes) => { Object.assign(rider, changes); }),
+    update: jest.fn(async (_criteria, changes) => {
+      Object.assign(rider, changes);
+    }),
     findOneByOrFail: jest.fn(async () => rider),
   };
   const transactions = {
     create: jest.fn((data) => data),
     save: jest.fn(async (data) => {
-      if (data.deliveryId && ledger.some((row) => row.deliveryId === data.deliveryId)) throw new Error('duplicate delivery');
-      const row = { ...data, id: ledger.length + 1, createdAt: new Date() }; ledger.push(row); return row;
+      if (data.deliveryId && ledger.some((row) => row.deliveryId === data.deliveryId))
+        throw new Error('duplicate delivery');
+      const row = { ...data, id: ledger.length + 1, createdAt: new Date() };
+      ledger.push(row);
+      return row;
     }),
-    findOneBy: jest.fn(async ({ requestId }) => ledger.find((row) => row.requestId === requestId) ?? null),
+    findOneBy: jest.fn(
+      async ({ requestId }) => ledger.find((row) => row.requestId === requestId) ?? null,
+    ),
     find: jest.fn(async () => ledger.filter((row) => row.adminAlertPending)),
-    update: jest.fn(async ({ id }, changes) => { Object.assign(ledger.find((row) => row.id === id)!, changes); }),
+    update: jest.fn(async ({ id }, changes) => {
+      Object.assign(
+        ledger.find((row) => row.id === id)!,
+        changes,
+      );
+    }),
   };
-  const manager = { getRepository: jest.fn((entity) => entity === Rider ? riders : transactions) } as unknown as EntityManager;
+  const manager = {
+    getRepository: jest.fn((entity) => (entity === Rider ? riders : transactions)),
+  } as unknown as EntityManager;
   const dataSource = {
     transaction: jest.fn(async (callback) => {
       const savedBalance = rider.talaCoinsBalance;
       const savedLength = ledger.length;
-      try { return await callback(manager); }
-      catch (error) { rider.talaCoinsBalance = savedBalance; ledger.splice(savedLength); throw error; }
+      try {
+        return await callback(manager);
+      } catch (error) {
+        rider.talaCoinsBalance = savedBalance;
+        ledger.splice(savedLength);
+        throw error;
+      }
     }),
     getRepository: jest.fn(() => riders),
   };
@@ -41,10 +61,19 @@ function harness(balance = '5.00') {
     userById: jest.fn(async () => ({ id: 50, name: 'Test Rider', phone: '09123456789' })),
   };
   const events = { addJob: jest.fn(async () => true) };
-  const service = new RiderCoinsService(dataSource as unknown as DataSource,
+  const service = new RiderCoinsService(
+    dataSource as unknown as DataSource,
     transactions as unknown as Repository<RiderCoinTransaction>,
-    refs as unknown as RemoteReferencesService, events as unknown as EventPublisher);
-  const delivery = { id: 10, riderId: 5, deliveryZoneId: 3, deliveryFee: '100.00', talaCoinsPercent: '10.00' } as Delivery;
+    refs as unknown as RemoteReferencesService,
+    events as unknown as EventPublisher,
+  );
+  const delivery = {
+    id: 10,
+    riderId: 5,
+    deliveryZoneId: 3,
+    deliveryFee: '100.00',
+    talaCoinsPercent: '10.00',
+  } as Delivery;
   return { service, manager, rider, ledger, transactions, events, refs, delivery, dataSource };
 }
 
@@ -53,12 +82,22 @@ describe('Rider Tala Coins', () => {
     const h = harness();
     await h.service.deduct(h.manager, h.delivery);
     expect(h.rider.talaCoinsBalance).toBe('-5.00');
-    expect(h.ledger[0]).toMatchObject({ amount: '-10.00', balanceAfter: '-5.00', deductionPercent: '10.00', deliveryZoneId: 3, adminAlertPending: true });
+    expect(h.ledger[0]).toMatchObject({
+      amount: '-10.00',
+      balanceAfter: '-5.00',
+      deductionPercent: '10.00',
+      deliveryZoneId: 3,
+      adminAlertPending: true,
+    });
   });
 
   it('rounds fractional coins to two decimals', async () => {
     const h = harness('100.00');
-    await h.service.deduct(h.manager, { ...h.delivery, deliveryFee: '49.99', talaCoinsPercent: '12.50' });
+    await h.service.deduct(h.manager, {
+      ...h.delivery,
+      deliveryFee: '49.99',
+      talaCoinsPercent: '12.50',
+    });
     expect(h.ledger[0].amount).toBe('-6.25');
     expect(h.rider.talaCoinsBalance).toBe('93.75');
   });
@@ -87,7 +126,11 @@ describe('Rider Tala Coins', () => {
 
   it('applies a top-up once even when the request is retried', async () => {
     const h = harness('-5.00');
-    const dto = { amount: '20.00', request_id: 'c5cba3ad-79be-4b73-8786-df49b3305980', note: 'Cash payment' };
+    const dto = {
+      amount: '20.00',
+      request_id: 'c5cba3ad-79be-4b73-8786-df49b3305980',
+      note: 'Cash payment',
+    };
     await h.service.topUp(5, dto, 1);
     await h.service.topUp(5, dto, 1);
     expect(h.rider.talaCoinsBalance).toBe('15.00');
@@ -99,14 +142,68 @@ describe('Rider Tala Coins', () => {
     const h = harness();
     const dto = { amount: '20.00', request_id: 'c5cba3ad-79be-4b73-8786-df49b3305980' };
     await h.service.topUp(5, dto, 1);
-    await expect(h.service.topUp(5, { ...dto, amount: '30.00' }, 1)).rejects.toThrow('already been used');
+    await expect(h.service.topUp(5, { ...dto, amount: '30.00' }, 1)).rejects.toThrow(
+      'already been used',
+    );
     expect(h.rider.talaCoinsBalance).toBe('25.00');
   });
 
   it('rejects zero top-ups', async () => {
     const h = harness();
-    await expect(h.service.topUp(5, { amount: '0', request_id: 'unused' }, 1)).rejects.toThrow('greater than zero');
+    await expect(h.service.topUp(5, { amount: '0', request_id: 'unused' }, 1)).rejects.toThrow(
+      'greater than zero',
+    );
     expect(h.ledger).toHaveLength(0);
+  });
+
+  it('rolls back balance if ledger insertion fails', async () => {
+    const h = harness();
+    h.transactions.save.mockRejectedValueOnce(new Error('database unavailable'));
+    await expect(h.service.topUp(5, { amount: '10.00', request_id: 'unused' }, 1)).rejects.toThrow(
+      'database unavailable',
+    );
+    expect(h.rider.talaCoinsBalance).toBe('5.00');
+    expect(h.ledger).toHaveLength(0);
+  });
+
+  it.each(['NaN', 'Infinity', '10oops', '1.001', '-1.00'])(
+    'rejects invalid top-up %s',
+    async (amount) => {
+      const h = harness();
+      await expect(h.service.topUp(5, { amount, request_id: 'unused' }, 1)).rejects.toThrow();
+      expect(h.ledger).toHaveLength(0);
+    },
+  );
+
+  it('parses large decimal balances without floating point loss', async () => {
+    const h = harness('9999999999.28');
+    await h.service.topUp(5, { amount: '0.01', request_id: 'unused' }, 1);
+    expect(h.rider.talaCoinsBalance).toBe('9999999999.29');
+  });
+
+  it('does not duplicate a delivery deduction on retry inside a transaction', async () => {
+    const h = harness('100.00');
+    await h.dataSource.transaction((manager: EntityManager) =>
+      h.service.deduct(manager, h.delivery),
+    );
+    await expect(
+      h.dataSource.transaction((manager: EntityManager) => h.service.deduct(manager, h.delivery)),
+    ).rejects.toThrow('duplicate delivery');
+    expect(h.rider.talaCoinsBalance).toBe('90.00');
+    expect(h.ledger).toHaveLength(1);
+  });
+
+  it('queries history for only one rider, newest first with pagination', async () => {
+    const h = harness();
+    const repository = h.transactions as typeof h.transactions & { findAndCount: jest.Mock };
+    repository.findAndCount = jest.fn(async () => [[], 35]);
+    expect(await h.service.history(5, 2, 20)).toEqual({ items: [], total: 35 });
+    expect(repository.findAndCount).toHaveBeenCalledWith({
+      where: { riderId: 5 },
+      order: { id: 'DESC' },
+      skip: 20,
+      take: 20,
+    });
   });
 
   it('alerts admins with rider contact details and clears the pending alert', async () => {
@@ -114,10 +211,20 @@ describe('Rider Tala Coins', () => {
     await h.service.deduct(h.manager, h.delivery);
     await h.service.flushAlerts();
     expect(h.events.addJob).toHaveBeenCalledTimes(2);
-    expect(h.events.addJob).toHaveBeenNthCalledWith(1, expect.any(String), 'event', expect.objectContaining({ data: expect.objectContaining({
-      userId: 1, type: 'admin.rider_coins_negative', sourceKey: 'rider-coins:1:1',
-      data: expect.objectContaining({ riderId: 5, phone: '09123456789', balance: '-5.00' }),
-    }) }), expect.any(Object));
+    expect(h.events.addJob).toHaveBeenNthCalledWith(
+      1,
+      expect.any(String),
+      'event',
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: 1,
+          type: 'admin.rider_coins_negative',
+          sourceKey: 'rider-coins:1:1',
+          data: expect.objectContaining({ riderId: 5, phone: '09123456789', balance: '-5.00' }),
+        }),
+      }),
+      expect.any(Object),
+    );
     expect(h.ledger[0].adminAlertPending).toBe(false);
   });
 
@@ -143,7 +250,11 @@ describe('Rider Tala Coins', () => {
 
   it('allows a new crossing alert after the rider tops up', async () => {
     const h = harness('-5.00');
-    await h.service.topUp(5, { amount: '10.00', request_id: 'c5cba3ad-79be-4b73-8786-df49b3305980' }, 1);
+    await h.service.topUp(
+      5,
+      { amount: '10.00', request_id: 'c5cba3ad-79be-4b73-8786-df49b3305980' },
+      1,
+    );
     await h.service.deduct(h.manager, h.delivery);
     expect(h.ledger[1].adminAlertPending).toBe(true);
   });

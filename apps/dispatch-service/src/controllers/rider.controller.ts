@@ -1,24 +1,7 @@
-import {
-  Body,
-  Controller,
-  Get,
-  NotFoundException,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
-import {
-  AppKeyGuard,
-  CurrentUser,
-  JwtAuthGuard,
-  type JwtPayload,
-} from '@taladelivery/auth';
-import {
-  Message,
-  PaginatedResult,
-  resolvePagination,
-  requestContext,
-} from '@taladelivery/common';
+import { Body, Controller, Get, NotFoundException, Post, Query, UseGuards } from '@nestjs/common';
+import { AppKeyGuard, CurrentUser, JwtAuthGuard, type JwtPayload } from '@taladelivery/auth';
+import { Message, PaginatedResult, resolvePagination, requestContext } from '@taladelivery/common';
+import { RiderCoinsService } from '../services/rider-coins.service';
 import { RiderLocationDto } from '../dto/rider-location.dto';
 import { DispatchResourcesService } from '../services/dispatch-resources.service';
 import { RiderService } from '../services/rider.service';
@@ -35,6 +18,7 @@ export class RiderController {
     private readonly riders: RiderService,
     private readonly resources: DispatchResourcesService,
     private readonly earnings: RiderEarningsService,
+    private readonly coins: RiderCoinsService,
   ) {}
 
   @Get('profile')
@@ -99,8 +83,42 @@ export class RiderController {
       ),
     );
 
+    return new PaginatedResult(itemsJson, {
+      currentPage: p,
+      lastPage: Math.max(1, Math.ceil(total / pp)),
+      perPage: pp,
+      total,
+      path: requestContext().path,
+    });
+  }
+
+  @Get('wallet')
+  @Message('Rider wallet retrieved.')
+  async wallet(@CurrentUser() user: JwtPayload) {
+    const rider = await this.requireRider(user);
+    return { available_tokens: rider.talaCoinsBalance ?? '0.00', unit: 'Tala Coins' };
+  }
+
+  @Get('wallet/transactions')
+  @Message('Rider wallet transactions retrieved.')
+  async walletTransactions(
+    @CurrentUser() user: JwtPayload,
+    @Query('page') page?: number,
+    @Query('per_page') perPage?: number,
+  ) {
+    const rider = await this.requireRider(user);
+    // Bound rider-controlled queries; invalid query strings fall back safely.
+    const p = Number.isFinite(Number(page)) ? Math.max(1, Math.trunc(Number(page))) : 1;
+    const pp = Number.isFinite(Number(perPage))
+      ? Math.min(100, Math.max(1, Math.trunc(Number(perPage))))
+      : 20;
+    const { items, total } = await this.coins.history(rider.id, p, pp);
     return new PaginatedResult(
-      itemsJson,
+      items.map(({ actor_id: _actorId, ...entry }) => ({
+        ...entry,
+        status: 'COMPLETED',
+        direction: entry.amount.startsWith('-') ? 'DEBIT' : 'CREDIT',
+      })),
       {
         currentPage: p,
         lastPage: Math.max(1, Math.ceil(total / pp)),
