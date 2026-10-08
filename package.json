@@ -8,7 +8,11 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "sync:mapbox": "node scripts/sync-mapbox-gl.mjs",
-    "postinstall": "node scripts/sync-mapbox-gl.mjs"
+    "postinstall": "node scripts/sync-mapbox-gl.mjs && npm run sync:tala-icons",
+    "sync:tala-icons": "node scripts/sync-tala-icons.mjs",
+    "prebuild": "npm run sync:tala-icons",
+    "prestart": "npm run sync:tala-icons",
+    "prewatch": "npm run sync:tala-icons"
   },
   "private": true,
   "packageManager": "npm@11.18.0",
@@ -23,6 +27,7 @@
     "rxjs": "~7.8.0",
     "socket.io-client": "^4.8.4",
     "tailwindcss": "^4.3.3",
+    "tala-icons": "^1.1.0",
     "tslib": "^2.3.0"
   },
   "devDependencies": {

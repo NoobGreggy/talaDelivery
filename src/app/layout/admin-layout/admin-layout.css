@@ -1,4 +1,7 @@
-:host {
-  display: block;
-  height: 100vh;
-}
+ :host { display: block; height: 100dvh; }
+.admin-shell { height: 100dvh; padding: 16px; background: #07182b; gap: 16px; }
+.admin-workspace { background: #fff; border-radius: 28px; }
+.admin-content { padding: 4px 24px 24px; }
+@media (max-width: 1023px) { .admin-shell { padding: 8px; gap: 0; } .admin-workspace { border-radius: 20px; } .admin-content { padding: 8px 16px 20px; } }
+
+.admin-sidebar { position: relative; z-index: 1; }

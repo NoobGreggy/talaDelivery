@@ -1,3 +1,4 @@
+import { TalaIconComponent } from '../../../shared/components/tala-icon/tala-icon';
 import { CurrencyPipe, DatePipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
@@ -25,6 +26,7 @@ import { ZoneBoundaryMapComponent } from '../zone-boundary-map/zone-boundary-map
   selector: 'app-zone-list',
   standalone: true,
   imports: [
+    TalaIconComponent,
     CurrencyPipe,
     DatePipe,
     ReactiveFormsModule,

@@ -1,3 +1,6 @@
 :host {
   display: block;
 }
+.tala-table-search { margin: 12px 24px; padding: 8px 0; border-bottom-color: #dce5ee; }
+.tala-table-search:focus-within { border-bottom-color: #1688f8; }
+.tala-table-search input { font-size: 12px; }

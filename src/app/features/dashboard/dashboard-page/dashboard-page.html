@@ -1,176 +1,79 @@
-<div class="space-y-6">
-  <!-- Header -->
-  <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-    <div>
-      <h1 class="text-2xl font-semibold text-slate-900">{{ greeting() }}</h1>
-      <p class="mt-1 text-sm text-slate-500">
-        Here's what's happening with TalaDelivery today.
-      </p>
-    </div>
-    <div class="flex items-center gap-2">
-      <a routerLink="/deliveries">
-        <app-button variant="secondary" size="md">View Deliveries</app-button>
-      </a>
-      <a routerLink="/orders">
-        <app-button variant="primary" size="md">View Orders</app-button>
-      </a>
-    </div>
+<div class="dashboard">
+  <h1 class="dashboard-title">Dashboard</h1>
+  <div class="dashboard-intro">
+    <p>{{ greeting() }} <span>Here's your delivery overview today.</span></p>
+    <button type="button" class="refresh-button" (click)="retry()" [disabled]="loading()"><span aria-hidden="true">↻</span> Refresh</button>
   </div>
-
-  <!-- Loading skeletons -->
   @if (loading()) {
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      @for (s of [1, 2, 3, 4]; track s) {
-        <app-card>
-          <app-skeleton width="40%" height="14px" class="mb-3" />
-          <app-skeleton width="60%" height="32px" />
-        </app-card>
-      }
-    </div>
-
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <app-card [padding]="true">
-        <app-skeleton width="30%" height="16px" class="mb-4" />
-        @for (s of [1, 2, 3]; track s) {
-          <app-skeleton width="100%" height="24px" class="mb-3" />
-        }
-      </app-card>
-      <div class="lg:col-span-2">
-        <app-card [padding]="true">
-          <app-skeleton width="30%" height="16px" class="mb-4" />
-          @for (s of [1, 2, 3, 4, 5]; track s) {
-            <app-skeleton width="100%" height="36px" class="mb-3" />
-          }
-        </app-card>
-      </div>
+    <div class="loading-grid" aria-label="Loading dashboard" aria-busy="true">
+      @for (s of [1, 2, 3, 4, 5, 6]; track s) { <div class="panel"><app-skeleton width="55%" height="18px" /><div class="mt-6"><app-skeleton width="85%" height="90px" /></div></div> }
     </div>
   }
+  @if (error()) { <div class="error-panel"><app-error-state message="Couldn't load the dashboard" [description]="error() ?? ''" (retried)="retry()" /></div> }
+  @if (!loading() && !error() && data(); as d) {
+    <div class="dashboard-grid">
+      <section class="metrics" aria-label="Today's metrics">
+        <a routerLink="/orders" class="panel metric"><div class="metric-label"><span class="metric-icon">↗</span> Today's orders</div><div class="metric-value">{{ d.orders_today | number }} <span class="metric-pill">Today</span></div><p>Orders across your platform</p></a>
+        <a routerLink="/deliveries" class="panel metric"><div class="metric-label"><span class="metric-icon">⇄</span> Active deliveries</div><div class="metric-value">{{ d.active_deliveries | number }} <span class="live-label"><i></i> Live</span></div><p>Currently in progress</p></a>
+        <div class="panel metric"><div class="metric-label"><span class="metric-icon">✓</span> Delivered today</div><div class="metric-value">{{ d.delivered_today | number }}</div><p>Completed deliveries today</p></div>
+      </section>
 
-  @if (error()) {
-    <div class="flex items-center justify-center py-16">
-      <app-error-state
-        [message]="'Something went wrong'"
-        [description]="error() ?? ''"
-        (retried)="retry()" />
-    </div>
-  }
-
-  @if (!loading() && !error() && data()) {
-    <!-- Stat cards -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <app-stat-card label="Today's Orders" [value]="data()?.orders_today ?? 0" />
-      <app-stat-card label="Active Deliveries" [value]="data()?.active_deliveries ?? 0" />
-      <app-stat-card label="Online Riders" [value]="data()?.online_riders ?? 0" />
-      <app-stat-card label="Active Stores" [value]="data()?.active_stores ?? 0" />
-    </div>
-
-    <!-- Alerts + Active deliveries -->
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <!-- Operational Alerts -->
-      <div class="lg:col-span-1">
-        <h2 class="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-500">
-          Operational Alerts
-        </h2>
-
-        @if ((data()?.alerts ?? []).length === 0) {
-          <app-card>
-            <div class="p-4 text-sm text-slate-500">
-              <p class="font-medium text-slate-700">All clear</p>
-              <p class="mt-1">No operational issues right now.</p>
-            </div>
-          </app-card>
-        }
-
-        <div class="space-y-2">
-          @for (alert of data()?.alerts ?? []; track alert.id) {
-            <app-card [padding]="false">
-              <div class="flex items-start justify-between gap-3 p-4">
-                <div class="flex items-start gap-3">
-                  <span
-                    class="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-sm"
-                    [class.bg-amber-100]="alert.type === 'no_rider'"
-                    [class.text-amber-600]="alert.type === 'no_rider'"
-                    [class.bg-red-100]="alert.type === 'delivery_failed' || alert.type === 'order_cancelled'"
-                    [class.text-red-600]="alert.type === 'delivery_failed' || alert.type === 'order_cancelled'"
-                    [class.bg-sky-100]="alert.type === 'rider_rejected' || alert.type === 'new_order'"
-                    [class.text-sky-600]="alert.type === 'rider_rejected' || alert.type === 'new_order'">
-                    @switch (alert.type) {
-                      @case ('no_rider') {
-                        <span aria-hidden="true">⚠</span>
-                      }
-                      @case ('delivery_failed') {
-                        <span aria-hidden="true">✕</span>
-                      }
-                      @case ('order_cancelled') {
-                        <span aria-hidden="true">!</span>
-                      }
-                      @case ('rider_rejected') {
-                        <span aria-hidden="true">↻</span>
-                      }
-                      @default {
-                        <span aria-hidden="true">＋</span>
-                      }
-                    }
-                  </span>
-                  <p class="text-sm text-slate-700">{{ alert.message }}</p>
-                </div>
-                <a
-                  [routerLink]="alert.action_route"
-                  class="flex-shrink-0 text-xs font-medium text-sky-600 hover:text-sky-700">
-                  {{ alert.action_label }}
-                </a>
-              </div>
-            </app-card>
-          }
+      <section class="panel summary">
+        <div class="panel-heading"><h2>Today's revenue</h2><span class="small-pill">PHP</span></div>
+        <div class="revenue"><span>₱</span>{{ d.revenue_today | number:'1.2-2' }}</div>
+        <p class="muted">Revenue reported today</p>
+        <div class="fee-row"><span>Delivery fees</span><strong>₱{{ d.delivery_fees_today | number:'1.2-2' }}</strong></div>
+        <h3>Today's order mix</h3>
+        <div class="allocation" aria-hidden="true">
+          @for (item of orderMix(); track item.label) { <span [style.width.%]="item.percent" [style.background]="item.color"></span> }
         </div>
-      </div>
-
-      <!-- Active Deliveries -->
-      <div class="lg:col-span-2">
-        <div class="mb-3 flex items-center justify-between">
-          <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-500">
-            Active Deliveries
-          </h2>
-          <a routerLink="/deliveries" class="text-sm font-medium text-sky-600 hover:text-sky-700">
-            View all
-          </a>
+        <div class="allocation-list">
+          @for (item of orderMix(); track item.label) { <div><span><i [style.background]="item.color"></i>{{ item.label }} <small>{{ item.percent | number:'1.0-0' }}%</small></span><strong>{{ item.value | number }}</strong></div> }
         </div>
+        <a routerLink="/orders" class="primary-link">View orders <span aria-hidden="true">↗</span></a>
+      </section>
 
-        @if ((data()?.recent_deliveries ?? []).length === 0) {
-          <app-empty-state
-            message="No active deliveries"
-            description="There are currently no deliveries requiring attention." />
-        }
+      <section class="activity-panel">
+        <div class="panel-heading"><div><h2>Recent delivery activity</h2><p>Loaded deliveries · today · grouped every 2 hours</p></div><span class="chart-period">Today</span></div>
+        <div class="chart-total">{{ activity().count }} <span>recent deliveries today</span></div>
+        @if (activity().count > 0) {
+          <svg class="activity-chart" viewBox="0 0 700 210" role="img" aria-label="Recent delivery counts by two-hour intervals today">
+            <defs><linearGradient id="deliveryActivityFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#69b5ff" stop-opacity="0.4" /><stop offset="100%" stop-color="#69b5ff" stop-opacity="0" /></linearGradient></defs>
+            @for (y of [40, 105, 170]; track y) { <line x1="20" [attr.y1]="y" x2="680" [attr.y2]="y" stroke="#ffffff12" /> }
+            <path [attr.d]="activity().area" fill="url(#deliveryActivityFill)" />
+            <polyline [attr.points]="activity().line" fill="none" stroke="#8ac7ff" stroke-width="2.5" stroke-linejoin="round" />
+            @for (point of activity().points; track point.label) {
+              <circle [attr.cx]="point.x" [attr.cy]="point.y" r="4" fill="#cbe5ff"><title>{{ point.label }}: {{ point.count }} deliveries</title></circle>
+              @if ($index % 2 === 0) { <text [attr.x]="point.x" y="205" fill="#9eb4cd" font-size="12">{{ point.label }}</text> }
+            }
+          </svg>
+        } @else { <div class="chart-empty"><span aria-hidden="true">↗</span><strong>No recent deliveries today</strong><p>Activity appears here as today's deliveries arrive.</p></div> }
+      </section>
 
-        <div class="space-y-2">
-          @for (delivery of data()?.recent_deliveries ?? []; track delivery.id) {
-            <a
-              [routerLink]="['/deliveries', delivery.id]"
-              class="block rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:border-sky-300 hover:bg-sky-50/40">
-              <div class="flex flex-wrap items-center justify-between gap-3">
-                <div class="flex items-center gap-3">
-                  <span class="font-semibold text-slate-900">{{ delivery.delivery_number }}</span>
-                  <span class="text-sm text-slate-500">{{ delivery.store?.name }}</span>
-                </div>
-                <div class="flex items-center gap-3">
-                  <span class="text-sm text-slate-600">
-                    @if (delivery.rider) {
-                      {{ delivery.rider.name }}
-                    } @else {
-                      <span class="italic text-slate-400">finding rider</span>
-                    }
-                  </span>
-                  <app-status-badge [status]="delivery.status" />
-                </div>
-              </div>
-              <div class="mt-2 flex items-center justify-between text-sm">
-                <span class="text-slate-400">{{ formatTime(delivery.created_at) }}</span>
-                <span class="text-slate-500">{{ delivery.delivery_address }}</span>
-              </div>
-            </a>
-          }
+      <section class="panel network-panel">
+        <div class="panel-heading"><h2>Your network</h2><span class="small-pill">Live</span></div>
+        <p class="muted">The people and stores keeping things moving.</p>
+        <div class="network-cards"><a [routerLink]="isPlatformAdmin() ? '/riders' : '/deliveries'"><span class="network-symbol" aria-hidden="true">↗</span><strong>{{ d.online_riders | number }}</strong><span>Online riders</span></a><a routerLink="/stores"><span class="network-symbol" aria-hidden="true">⌂</span><strong>{{ d.active_stores | number }}</strong><span>Active stores</span></a></div>
+        <div class="network-foot"><i></i> Platform snapshot</div>
+      </section>
+
+      <section class="panel alerts-panel">
+        <div class="panel-heading"><h2>Operational alerts</h2><span class="small-pill">{{ d.alerts.length }}</span></div>
+        <div class="panel-list">
+          @for (alert of d.alerts.slice(0, 4); track alert.id) { <a [routerLink]="alert.action_route" class="alert-row"><span class="alert-dot" [class.alert-dot--urgent]="alert.type === 'delivery_failed' || alert.type === 'order_cancelled'" aria-hidden="true">!</span><div><p>{{ alert.message }}</p><small>{{ alert.action_label }} ↗</small></div></a> }
+          @empty { <div class="empty-panel"><span class="all-clear" aria-hidden="true">✓</span><strong>All clear</strong><p>No operational issues right now.</p></div> }
         </div>
-      </div>
+        @if (d.alerts.length > 4) { <p class="muted">{{ d.alerts.length - 4 }} more alerts · <a routerLink="/deliveries">View deliveries</a></p> }
+      </section>
+
+      <section class="panel deliveries-panel">
+        <div class="panel-heading"><h2>Recent deliveries</h2><a routerLink="/deliveries" class="view-all">View all ↗</a></div>
+        <div class="panel-list">
+          @for (delivery of d.recent_deliveries.slice(0, 4); track delivery.id) {
+            <a [routerLink]="['/deliveries', delivery.id]" class="delivery-row"><span class="delivery-avatar" aria-hidden="true">{{ (delivery.store?.name || 'T').charAt(0) }}</span><div class="delivery-copy"><strong>{{ delivery.delivery_number }}</strong><p>{{ delivery.store?.name || 'Delivery' }} · {{ delivery.rider?.name || 'Finding rider' }}</p></div><div class="delivery-status"><app-status-badge [status]="delivery.status" /><small>{{ formatTime(delivery.created_at) }}</small></div></a>
+          } @empty { <div class="empty-panel"><strong>No deliveries yet</strong><p>Recent deliveries will appear here.</p></div> }
+        </div>
+      </section>
     </div>
   }
 </div>

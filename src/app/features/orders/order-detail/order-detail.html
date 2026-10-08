@@ -56,12 +56,12 @@
       <div class="space-y-6 lg:col-span-2">
         <!-- Customer & Store -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="tala-panel tala-panel--padded border bg-white">
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Customer</p>
             <p class="mt-1 text-sm font-medium text-slate-900">{{ order()?.customer?.name }}</p>
             <p class="mt-0.5 text-sm text-slate-500">{{ order()?.customer?.phone }}</p>
           </div>
-          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="tala-panel tala-panel--padded border bg-white">
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Store</p>
             <p class="mt-1 text-sm font-medium text-slate-900">{{ order()?.store?.name }}</p>
             <p class="mt-0.5 text-sm text-slate-500">{{ order()?.store?.address }}</p>
@@ -114,7 +114,7 @@
 
       <!-- Side summary -->
       <div class="space-y-6">
-        <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="tala-panel tala-panel--padded border bg-white">
           <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
             Summary
           </h3>

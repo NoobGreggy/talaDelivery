@@ -1,3 +1,4 @@
+import { TalaIconComponent } from '../../../shared/components/tala-icon/tala-icon';
 import { Component, inject, signal, computed, DestroyRef } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CurrencyPipe } from '@angular/common';
@@ -6,7 +7,6 @@ import { ToastService } from '../../../core/services/toast.service';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state';
 import { ErrorStateComponent } from '../../../shared/components/error-state/error-state';
-import { DropdownComponent } from '../../../shared/components/dropdown/dropdown';
 import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialog/confirm-dialog';
 import { SearchInputComponent } from '../../../shared/components/search-input/search-input';
 import { ButtonComponent } from '../../../shared/components/button/button';
@@ -16,11 +16,11 @@ import { Product } from '../../../core/models';
   selector: 'app-product-list',
   standalone: true,
   imports: [
+    TalaIconComponent,
     CurrencyPipe,
     StatusBadgeComponent,
     EmptyStateComponent,
     ErrorStateComponent,
-    DropdownComponent,
     ConfirmDialogComponent,
     SearchInputComponent,
     ButtonComponent,

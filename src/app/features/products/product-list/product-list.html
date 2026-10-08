@@ -1,4 +1,4 @@
-<div class="space-y-4">
+<div class="tala-table-page space-y-4">
   <!-- Header -->
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
@@ -10,7 +10,7 @@
         </svg>
         Back to store
       </button>
-      <h1 class="text-2xl font-semibold text-slate-900">{{ storeName() }} — Products</h1>
+      <h1 class="text-2xl font-semibold text-slate-900">{{ storeName() }} — Products <span class="tala-table-count">{{ filteredProducts().length }} shown</span></h1>
       <p class="mt-1 text-sm text-slate-500">Manage store inventory and availability.</p>
     </div>
     <div class="flex items-center gap-2">
@@ -24,19 +24,10 @@
   </div>
 
   <!-- Stats -->
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Products</p>
-      <p class="mt-1 text-2xl font-semibold text-slate-900">{{ products().length }}</p>
-    </div>
-    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Available</p>
-      <p class="mt-1 text-2xl font-semibold text-emerald-600">{{ availableCount() }}</p>
-    </div>
-    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Out of Stock</p>
-      <p class="mt-1 text-2xl font-semibold text-slate-900">{{ outOfStock() }}</p>
-    </div>
+  <div class="tala-summary-strip" aria-label="Summary">
+    <div><span>Products</span><strong>{{ products().length }}</strong></div>
+    <div><span>Available</span><strong>{{ availableCount() }}</strong></div>
+    <div><span>Out of Stock</span><strong>{{ outOfStock() }}</strong></div>
   </div>
 
   <!-- Error -->
@@ -51,8 +42,8 @@
 
   <!-- Table -->
   @if (!error()) {
-    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <table class="min-w-[720px] w-full divide-y divide-slate-200">
+    <div class="tala-table-scroll overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="tala-table min-w-[720px] w-full divide-y divide-slate-200">
         <thead class="bg-slate-50">
           <tr>
             <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Product</th>
@@ -102,15 +93,11 @@
                   <app-status-badge [status]="product.available ? 'ACTIVE' : 'INACTIVE'" />
                 </td>
                 <td class="px-4 py-3.5 text-right">
-                  <app-dropdown
-                    [items]="[
-                      { label: 'Edit' },
-                      product.available
-                        ? { label: 'Deactivate', danger: true }
-                        : { label: 'Activate' },
-                      { label: 'Delete', danger: true }
-                    ]"
-                    (itemClick)="onRowAction($event, product)" />
+                  <div class="inline-flex items-center justify-end gap-1">
+                    <button type="button" class="tala-action" [attr.aria-label]="'Edit ' + product.name" [title]="'Edit ' + product.name" (click)="onRowAction('Edit', product)"><app-tala-icon name="edit" /></button>
+                    <button type="button" class="tala-action" [attr.aria-label]="(product.available ? 'Deactivate ' : 'Activate ') + product.name" [title]="(product.available ? 'Deactivate ' : 'Activate ') + product.name" (click)="onRowAction(product.available ? 'Deactivate' : 'Activate', product)"><app-tala-icon [name]="product.available ? 'toggle-right' : 'toggle-left'" /></button>
+                    <button type="button" class="tala-action tala-action--danger" [attr.aria-label]="'Delete ' + product.name" [title]="'Delete ' + product.name" (click)="onRowAction('Delete', product)"><app-tala-icon name="trash-2" /></button>
+                  </div>
                 </td>
               </tr>
             }

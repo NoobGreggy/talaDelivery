@@ -1,25 +1,8 @@
 <div [class]="overlayClasses()" (click)="close()"></div>
-
-<div
-  class="fixed z-50 h-full overflow-y-auto bg-white shadow-xl"
-  [class]="positionClasses() + ' ' + translateClasses()"
->
-  <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
-    @if (title()) {
-      <h2 class="text-lg font-semibold text-slate-900">{{ title() }}</h2>
-    }
-    <button
-      type="button"
-      class="inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-      (click)="close()"
-      aria-label="Close drawer"
-    >
-      <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-      </svg>
-    </button>
-  </div>
-  <div class="px-6 py-4">
-    <ng-content></ng-content>
-  </div>
+<div class="tala-side-panel tala-existing-drawer fixed z-50" [class.tala-existing-drawer--left]="side() === 'left'" [class]="positionClasses() + ' ' + translateClasses()" role="dialog" [attr.aria-modal]="open() ? 'true' : null" [attr.aria-label]="title() || 'Drawer'">
+  <header class="tala-side-header">
+    <div><p class="tala-side-eyebrow">TalaDelivery <span>/ Administration</span></p>@if (title()) { <h2>{{ title() }}</h2> }</div>
+    <button type="button" class="tala-side-close" (click)="close()" aria-label="Close drawer"><app-tala-icon name="x" [size]="20" /></button>
+  </header>
+  <div class="tala-side-body"><ng-content></ng-content></div>
 </div>

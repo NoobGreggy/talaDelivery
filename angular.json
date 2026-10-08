@@ -48,6 +48,11 @@
               {
                 "glob": "**/*",
                 "input": "public"
+              },
+              {
+                "glob": "*.svg",
+                "input": "node_modules/tala-icons/icons",
+                "output": "icons/tala"
               }
             ],
             "styles": [

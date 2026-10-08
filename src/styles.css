@@ -12,10 +12,30 @@
 @import 'mapbox-gl/dist/mapbox-gl.css';
 @import 'tailwindcss';
 
+:root {
+  --tala-panel-radius: 24px;
+  --tala-panel-border: #e5eaf0;
+  --tala-panel-padding: 22px;
+  --tala-panel-surface: #ffffff;
+  --tala-panel-ink: #0b1f36;
+}
+
 @theme {
-  --color-primary: #0ea5e9;
-  --color-primary-hover: #0284c7;
-  --color-primary-dark: #0369a1;
+  --color-brand-night: #0b1f36;
+  --color-primary: #1688f8;
+  --color-primary-hover: #0873df;
+  --color-primary-dark: #144c8c;
+  --color-sky-50: #eef6ff;
+  --color-sky-100: #dceeff;
+  --color-sky-200: #bbddff;
+  --color-sky-300: #8ac7ff;
+  --color-sky-400: #4fa6ff;
+  --color-sky-500: #1688f8;
+  --color-sky-600: #0873df;
+  --color-sky-700: #145ca5;
+  --color-sky-800: #144c8c;
+  --color-sky-900: #0b1f36;
+  --color-sky-950: #07182b;
   --color-surface: #ffffff;
   --color-background: #f8fafc;
   --color-border: #e2e8f0;
@@ -56,3 +76,148 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-slate-400;
 }
+
+/* Shared icon actions: Tala Icons SVGs are bundled locally through angular.json. */
+.tala-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  color: var(--color-primary-dark);
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.tala-action:hover { background: var(--color-sky-50); color: var(--color-primary); }
+.tala-action--danger { color: #dc2626; }
+.tala-action--danger:hover { background: #fff1f2; color: #be123c; }
+.tala-action:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.tala-action:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Admin table surfaces, shared by list pages and detail tables. */
+.tala-table-page,
+.tala-table-card {
+  border: 1px solid #e3eaf2;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 8px 28px rgb(11 31 54 / 4%);
+}
+.tala-table-page { padding: 24px; min-width: 0; }
+.tala-table-page > div:first-child { gap: 20px; }
+.tala-table-page h1 { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 23px; letter-spacing: -.7px; color: #0b1f36; }
+.tala-table-count { font-size: 11px; font-weight: 600; letter-spacing: 0; line-height: 1.4; padding: 5px 9px; border-radius: 8px; color: #145ca5; background: #eef6ff; }
+.tala-table-page > div:first-child > div:last-child { flex-wrap: wrap; }
+.tala-table-page > div:first-child > div:last-child > button { border-radius: 50%; }
+.tala-table-page > .tala-table-scroll {
+  margin-inline: -24px;
+  border-inline: 0;
+  border-radius: 0;
+  border-top-color: #e9eef4;
+  border-bottom-color: #e9eef4;
+}
+.tala-table-card { overflow-x: auto; }
+.tala-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.tala-table thead { background: #fbfcfe; }
+.tala-table thead tr { border-bottom: 1px solid #e9eef4; }
+.tala-table th { padding: 17px 24px; font-size: 12px; font-weight: 600; text-transform: none; letter-spacing: 0; color: #41566d; white-space: nowrap; }
+.tala-table tbody { border-color: #eef2f6; }
+.tala-table tbody tr { border-color: #eef2f6; transition: background-color 150ms ease; }
+.tala-table tbody tr:hover { background: #f7faff; }
+.tala-table td { padding: 21px 24px; font-size: 13px; vertical-align: middle; line-height: 1.55; }
+.tala-table td[colspan] { padding-block: 44px; }
+.tala-table td:first-child { color: #0b1f36; }
+.tala-table td:first-child .font-semibold { color: #0b1f36; font-weight: 600; }
+.tala-table td:first-child .font-medium { font-weight: 600; }
+.tala-table app-avatar > div { box-shadow: 0 0 0 5px #f5f9ff; }
+.tala-table app-status-badge > span { font-size: 10px; font-weight: 600; padding: 4px 9px; border: 1px solid color-mix(in srgb, currentColor 13%, transparent); }
+.tala-table .tala-action { width: 34px; height: 34px; border-radius: 50%; }
+.tala-table-footer { justify-content: flex-start; padding-top: 8px; }
+.tala-table-card > .tala-table-footer { padding: 18px 24px; }
+@media(max-width: 639px) {
+  .tala-table-page { padding: 18px 14px; border-radius: 20px; }
+  .tala-table-page h1 { font-size: 21px; }
+  .tala-table-page > .tala-table-scroll { margin-inline: -14px; }
+  .tala-table th { padding: 14px 18px; }
+  .tala-table td { padding: 18px; }
+  .tala-table-card > .tala-table-footer { padding: 14px; }
+}
+
+/* Compact record summaries replace the former standalone statistic cards. */
+.tala-summary-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; padding: 12px 0; border-block: 1px solid #edf1f6; }
+.tala-summary-strip > div { display: flex; align-items: baseline; gap: 8px; }
+.tala-summary-strip span { font-size: 12px; font-weight: 400; color: #7b8b9c; }
+.tala-summary-strip strong { font-size: 14px; font-weight: 600; color: #0b1f36; font-variant-numeric: tabular-nums; }
+.tala-zone-search { max-width: 300px; }
+.tala-zone-search > svg { left: 0; top: 10px; width: 17px; height: 17px; }
+.tala-zone-search > input { border: 0; border-bottom: 1px solid #dce5ee; border-radius: 0; background: transparent; padding: 8px 0 8px 26px; font-size: 12px; box-shadow: none; }
+.tala-zone-search > input:focus { border-color: #1688f8; outline: none; box-shadow: none; }
+.tala-table-page > div:first-child > div:last-child { gap: 12px; }
+@media(max-width: 639px) { .tala-summary-strip { gap: 10px 18px; } }
+
+/* Shared side panels retain their existing form projection and event handlers. */
+.tala-side-overlay { position: fixed; inset: 0; z-index: 50; display: flex; justify-content: flex-end; padding: 16px; background: rgb(7 24 43 / 38%); backdrop-filter: blur(3px); }
+.tala-side-panel { display: flex; flex-direction: column; width: min(500px, 100%); max-width: calc(100vw - 32px); height: calc(100dvh - 32px); border-radius: 24px; overflow: hidden; background: #fff; color: #0b1f36; border-left: 1px solid #dce5ee; box-shadow: -16px 0 60px rgb(7 24 43 / 14%); animation: tala-panel-enter 220ms ease-out; }
+.tala-side-panel--wide { width: min(880px, 100%); }
+.tala-side-overlay--center { justify-content: center; align-items: center; }
+.tala-side-panel--center { width: min(1200px, 100%); height: min(900px, calc(100dvh - 32px)); animation: tala-center-panel-enter 180ms ease-out; box-shadow: 0 20px 70px rgb(7 24 43 / 22%); }
+.tala-side-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 28px 30px 24px; border-top: 4px solid #1688f8; border-bottom: 1px solid #e8eef5; background: linear-gradient(135deg, #f4f9ff, #fff 65%); flex-shrink: 0; }
+.tala-side-eyebrow { font-size: 10px; font-weight: 650; letter-spacing: .8px; color: #145ca5; text-transform: uppercase; margin-bottom: 12px; }
+.tala-side-eyebrow span { color: #8b9aab; font-weight: 400; }
+.tala-side-header h2 { font-size: 25px; font-weight: 600; letter-spacing: -.8px; line-height: 1.3; }
+.tala-side-close { display: inline-flex; justify-content: center; align-items: center; width: 34px; height: 34px; flex-shrink: 0; color: #61768d; border-radius: 50%; cursor: pointer; }
+.tala-side-close:hover { background: #e8f4ff; color: #145ca5; }
+.tala-side-close:focus-visible { outline: 2px solid #1688f8; outline-offset: 2px; }
+.tala-side-body { flex: 1; min-height: 0; overflow-y: auto; padding: 28px 30px; overscroll-behavior: contain; }
+.tala-side-body label { color: #435a72; font-size: 12px; font-weight: 500; }
+.tala-side-body input:not([type='checkbox']):not([type='radio']):not([type='range']), .tala-side-body select, .tala-side-body textarea { border-color: #dce5ee; border-radius: 10px; background-color: #fafcfe; box-shadow: none; color: #0b1f36; font-size: 13px; }
+.tala-side-body input:not([type='checkbox']):not([type='radio']):not([type='range']):focus, .tala-side-body select:focus, .tala-side-body textarea:focus { border-color: #1688f8; outline-color: #1688f8; --tw-ring-color: #1688f833; }
+.tala-side-body app-button button { border-radius: 10px; }
+.tala-side-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 20px 30px; border-top: 1px solid #e8eef5; flex-shrink: 0; background: #fafcfe; }
+.tala-panel-button { border: 1px solid transparent; background: #0b1f36; color: #fff; border-radius: 10px; padding: 10px 18px; font-size: 12px; font-weight: 500; cursor: pointer; }
+.tala-panel-button:hover { background: #144c8c; }
+.tala-panel-button--secondary { background: #fff; color: #435a72; border-color: #dce5ee; }
+.tala-panel-button--secondary:hover { background: #eef6ff; }
+.tala-panel-button--danger { background: #dc2626; } .tala-panel-button--danger:hover { background: #be123c; }
+.tala-panel-button:focus-visible { outline: 2px solid #1688f8; outline-offset: 3px; }
+.tala-confirm-mark { width: 58px; height: 58px; display: grid; place-items: center; border-radius: 16px; background: #eef6ff; color: #145ca5; margin-bottom: 22px; }
+.tala-confirm-mark--danger { background: #fff1f2; color: #dc2626; }
+.tala-confirm-message { font-size: 14px; line-height: 1.8; color: #52677e; }
+.tala-existing-drawer { animation: none; top: 16px; right: 16px; left: auto; }
+.tala-existing-drawer--left { left: 16px; right: auto; }
+@keyframes tala-center-panel-enter { from { transform: translateY(12px); opacity: .5; } to { transform: translateY(0); opacity: 1; } }
+@keyframes tala-panel-enter { from { transform: translateX(24px); opacity: .5; } to { transform: translateX(0); opacity: 1; } }
+@media(max-width: 639px) { .tala-side-header { padding: 24px 20px 20px; } .tala-side-header h2 { font-size: 23px; } .tala-side-body { padding: 24px 20px; } .tala-side-footer { padding: 18px 20px; } }
+@media(prefers-reduced-motion: reduce) { .tala-side-panel { animation: none; } }
+
+@media(max-width: 639px) {
+  .tala-side-overlay { padding: 8px; }
+  .tala-side-panel { max-width: calc(100vw - 16px); height: calc(100dvh - 16px); border-radius: 20px; }
+  .tala-existing-drawer { top: 8px; right: 8px; }
+  .tala-existing-drawer--left { left: 8px; right: auto; }
+}
+
+/* The dashboard card style is the shared surface for admin content panels. */
+.tala-panel {
+  border: 1px solid var(--tala-panel-border);
+  border-radius: var(--tala-panel-radius);
+  background: var(--tala-panel-surface);
+  color: var(--tala-panel-ink);
+  box-shadow: none;
+  min-width: 0;
+}
+.tala-panel--padded { padding: var(--tala-panel-padding); }
+.tala-panel > h2, .tala-panel > h3,
+.tala-panel > div:first-child > h2, .tala-panel > div:first-child > h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--tala-panel-ink);
+  text-transform: none;
+  letter-spacing: -.4px;
+}
+.tala-panel > p.font-semibold.uppercase { text-transform: none; letter-spacing: 0; color: #7c8b9c; }
+.tala-panel--map { overflow: hidden; }
+.tala-table-page, .tala-table-card { border-color: var(--tala-panel-border); border-radius: var(--tala-panel-radius); background: var(--tala-panel-surface); box-shadow: none; }
+@media(max-width: 639px) { .tala-panel--padded { padding: 18px; } }
+
+.tala-panel--action:hover { border-color: #90c8ff; background: #eef6ff; }

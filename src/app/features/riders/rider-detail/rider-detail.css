@@ -1,3 +1,13 @@
-:host {
-  display: block;
-}
+:host { display: block; }
+.rider-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.rider-summary-grid .tala-panel { min-width: 0; }
+.rider-summary-grid .tala-panel > p:last-child { margin-top: 10px; font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+.rider-detail-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(320px, 1fr); gap: 24px; align-items: start; }
+.rider-activity { display: grid; gap: 20px; }
+.rider-profile-fields > div { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-bottom: 1px solid #eef2f6; }
+.rider-profile-fields > div:last-child { border-bottom: 0; padding-bottom: 0; }
+.rider-profile-fields dd { text-align: right; overflow-wrap: anywhere; }
+.rider-finances .tala-table { min-width: 560px; }
+.rider-activity a { border-radius: 10px; }
+@media(max-width: 1023px) { .rider-detail-grid { grid-template-columns: 1fr; gap: 20px; } .rider-activity { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } .rider-activity > .tala-panel:last-child { grid-column: 1 / -1; } }
+@media(max-width: 639px) { .rider-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; } .rider-activity { grid-template-columns: 1fr; } .rider-profile-fields > div { gap: 12px; } }

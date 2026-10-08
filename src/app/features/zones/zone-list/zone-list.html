@@ -32,23 +32,14 @@
     effective zones serve covered addresses. Rider Tala coins are a separate deduction.
   </p>
 
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Total Zones</p>
-      <p class="mt-1 text-2xl font-semibold text-slate-900">{{ zones().length }}</p>
-    </div>
-    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Accepting Orders</p>
-      <p class="mt-1 text-2xl font-semibold text-emerald-600">{{ activeCount() }}</p>
-    </div>
-    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Mapped Boundaries</p>
-      <p class="mt-1 text-2xl font-semibold text-sky-600">{{ mappedCount() }}</p>
-    </div>
+  <div class="tala-summary-strip" aria-label="Summary">
+    <div><span>Total Zones</span><strong>{{ zones().length }}</strong></div>
+    <div><span>Accepting Orders</span><strong>{{ activeCount() }}</strong></div>
+    <div><span>Mapped Boundaries</span><strong>{{ mappedCount() }}</strong></div>
   </div>
 
   <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-    <div class="relative max-w-md flex-1">
+    <div class="tala-zone-search relative max-w-md flex-1">
       <svg
         class="pointer-events-none absolute top-2.5 left-3 h-4 w-4 text-slate-400"
         fill="none"
@@ -104,7 +95,7 @@
   } @else if (loading()) {
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       @for (skeleton of [1, 2, 3, 4, 5, 6]; track skeleton) {
-        <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="tala-panel tala-panel--padded border bg-white">
           <div class="h-5 w-2/3 animate-pulse rounded bg-slate-200"></div>
           <div class="mt-4 h-24 animate-pulse rounded bg-slate-100"></div>
         </div>
@@ -120,7 +111,7 @@
   } @else {
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
       @for (zone of filteredZones(); track zone.id) {
-        <article class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <article class="tala-panel tala-panel--padded border bg-white">
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <h2 class="truncate font-semibold text-slate-900">{{ zone.name }}</h2>
@@ -186,7 +177,7 @@
             }
           </div>
           <div class="mt-5 flex flex-wrap items-center gap-2">
-            <app-button variant="secondary" size="sm" (clicked)="openEdit(zone)">Edit</app-button>
+            <button type="button" class="tala-action" aria-label="Edit delivery zone" title="Edit delivery zone" (click)="openEdit(zone)"><app-tala-icon name="edit" /></button>
             @if (zone.status === 'ACTIVE') {
               <app-button variant="secondary" size="sm" (clicked)="changeStatus(zone, 'SUSPENDED')"
                 >Suspend</app-button
@@ -215,13 +206,14 @@
     <app-modal
       [title]="editingZone() ? 'Edit delivery zone' : 'Create delivery zone'"
       size="wide"
+      placement="center"
       [open]="true"
       (closed)="closeModal()"
     >
       <form [formGroup]="form" class="space-y-6" (ngSubmit)="save()">
         <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
           <div class="space-y-5">
-            <section class="rounded-lg border border-slate-200 p-4">
+            <section class="tala-panel tala-panel--padded border">
               <h3 class="font-semibold text-slate-900">Coverage and availability</h3>
               <p class="mt-1 mb-4 text-xs text-slate-500">
                 The polygon is the source of truth. City and province remain required for labels and
@@ -281,7 +273,7 @@
               </datalist>
             </section>
 
-            <section class="rounded-lg border border-slate-200 p-4">
+            <section class="tala-panel tala-panel--padded border">
               <h3 class="font-semibold text-slate-900">Pricing</h3>
               <label class="mt-4 mb-4 block">
                 <span class="mb-1 block text-sm font-medium text-slate-700">Rider Tala Coins deduction (%)</span>
@@ -358,7 +350,7 @@
               </div>
             </section>
 
-            <section class="rounded-lg border border-slate-200 p-4" [formGroup]="previewForm">
+            <section class="tala-panel tala-panel--padded border" [formGroup]="previewForm">
               <h3 class="font-semibold text-slate-900">Test this pricing before saving</h3>
               <p class="mt-1 mb-4 text-xs text-slate-500">
                 Choose a store and enter a customer pin to verify coverage, distance, fee, and rider
@@ -431,7 +423,7 @@
           </div>
 
           <div class="space-y-5">
-            <section class="rounded-lg border border-slate-200 p-4">
+            <section class="tala-panel tala-panel--padded border">
               <h3 class="font-semibold text-slate-900">Service boundary</h3>
               <p class="mt-1 mb-4 text-xs text-slate-500">
                 Search for an official city or province boundary, or draw a custom service area.
@@ -525,7 +517,7 @@
               />
             </section>
             @if (editingZone()?.revisions?.length) {
-              <section class="rounded-lg border border-slate-200 p-4">
+              <section class="tala-panel tala-panel--padded border">
                 <h3 class="font-semibold text-slate-900">Recent changes</h3>
                 <ul class="mt-3 max-h-48 space-y-3 overflow-y-auto">
                   @for (revision of editingZone()?.revisions ?? []; track revision.id) {

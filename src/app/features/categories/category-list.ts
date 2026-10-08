@@ -1,3 +1,4 @@
+import { TalaIconComponent } from '../../shared/components/tala-icon/tala-icon';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { StoreCategoryService } from '../../core/services/store-category.service';
@@ -11,7 +12,7 @@ import { SearchInputComponent } from '../../shared/components/search-input/searc
 
 @Component({
   selector: 'app-category-list', standalone: true,
-  imports: [ReactiveFormsModule, ButtonComponent, ModalComponent, ErrorStateComponent, EmptyStateComponent, SearchInputComponent],
+  imports: [TalaIconComponent, ReactiveFormsModule, ButtonComponent, ModalComponent, ErrorStateComponent, EmptyStateComponent, SearchInputComponent],
   templateUrl: './category-list.html',
   styles: [`@font-face { font-family: TalaFlutterIcons; src: url('/fonts/materialicons-regular.otf') format('opentype'); font-display: block; }
     .flutter-icon { font-family: TalaFlutterIcons; font-weight: normal; font-style: normal; font-size: 28px; line-height: 1; }`],

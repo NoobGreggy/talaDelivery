@@ -1,8 +1,8 @@
-<div class="space-y-4">
+<div class="tala-table-page space-y-4">
   <!-- Header -->
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h1 class="text-2xl font-semibold text-slate-900">Orders</h1>
+      <h1 class="text-2xl font-semibold text-slate-900">Orders <span class="tala-table-count">{{ total() }} total</span></h1>
       <p class="mt-1 text-sm text-slate-500">Track customer orders across TalaDelivery.</p>
     </div>
     <div class="flex items-center gap-2">
@@ -63,8 +63,8 @@
 
   <!-- Table -->
   @if (!error() || orders().length) {
-    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <table class="min-w-[820px] w-full divide-y divide-slate-200">
+    <div class="tala-table-scroll overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="tala-table min-w-[820px] w-full divide-y divide-slate-200">
         <thead class="bg-slate-50">
           <tr>
             @for (col of columns; track col.key) {
@@ -127,7 +127,7 @@
     </div>
 
     @if (lastPage() > 1) {
-      <div class="flex justify-center pt-4">
+      <div class="tala-table-footer flex justify-center pt-4">
         <app-pagination
           [currentPage]="currentPage()"
           [totalPages]="lastPage()"

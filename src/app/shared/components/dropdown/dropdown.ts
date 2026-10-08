@@ -1,3 +1,4 @@
+import { TalaIconComponent } from '../tala-icon/tala-icon';
 import {
   Component,
   ElementRef,
@@ -11,6 +12,7 @@ import {
 @Component({
   selector: 'app-dropdown',
   standalone: true,
+  imports: [TalaIconComponent],
   templateUrl: './dropdown.html',
   styleUrl: './dropdown.css',
 })

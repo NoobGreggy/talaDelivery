@@ -1,8 +1,10 @@
+import { TalaIconComponent } from '../tala-icon/tala-icon';
 import { Component, computed, input, output } from '@angular/core';
 
 @Component({
   selector: 'app-drawer',
   standalone: true,
+  imports: [TalaIconComponent],
   templateUrl: './drawer.html',
   styleUrl: './drawer.css',
 })

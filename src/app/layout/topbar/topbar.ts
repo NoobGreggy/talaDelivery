@@ -16,7 +16,6 @@ import { AppNotification } from '../../core/models';
 })
 export class TopbarComponent implements OnDestroy {
   menuToggle = output<void>();
-  sidebarToggle = output<void>();
 
   private router = inject(Router);
   private authService = inject(AuthService);
@@ -26,8 +25,6 @@ export class TopbarComponent implements OnDestroy {
   protected readonly user = this.authService.user;
   protected readonly profileOpen = signal(false);
   protected readonly notificationsOpen = signal(false);
-  protected readonly pageTitle = 'TalaDelivery';
-
   protected readonly notifications = this.notificationService.items;
   protected readonly unreadCount = this.notificationService.unreadCount;
   protected readonly loadingNotifications = this.notificationService.loading;

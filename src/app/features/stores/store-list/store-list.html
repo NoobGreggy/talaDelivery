@@ -1,8 +1,8 @@
-<div class="space-y-4">
+<div class="tala-table-page space-y-4">
   <!-- Header -->
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h1 class="text-2xl font-semibold text-slate-900">Stores</h1>
+      <h1 class="text-2xl font-semibold text-slate-900">Stores <span class="tala-table-count">{{ filteredStores().length }} shown</span></h1>
       <p class="mt-1 text-sm text-slate-500">Manage stores using TalaDelivery.</p>
     </div>
     <div class="flex items-center gap-2">
@@ -24,19 +24,10 @@
   </div>
 
   <!-- Stats -->
-  <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
-    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Active Stores</p>
-      <p class="mt-1 text-2xl font-semibold text-slate-900">{{ activeCount() }}</p>
-    </div>
-    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Orders Today</p>
-      <p class="mt-1 text-2xl font-semibold text-slate-900">{{ ordersToday() }}</p>
-    </div>
-    <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Offline Stores</p>
-      <p class="mt-1 text-2xl font-semibold text-slate-900">{{ offlineCount() }}</p>
-    </div>
+  <div class="tala-summary-strip" aria-label="Summary">
+    <div><span>Active Stores</span><strong>{{ activeCount() }}</strong></div>
+    <div><span>Orders Today</span><strong>{{ ordersToday() }}</strong></div>
+    <div><span>Offline Stores</span><strong>{{ offlineCount() }}</strong></div>
   </div>
 
   <!-- Status filter pills -->
@@ -71,8 +62,8 @@
 
   <!-- Table -->
   @if (!error()) {
-    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <table class="min-w-[700px] w-full divide-y divide-slate-200">
+    <div class="tala-table-scroll overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="tala-table min-w-[700px] w-full divide-y divide-slate-200">
         <thead class="bg-slate-50">
           <tr>
             <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Store</th>

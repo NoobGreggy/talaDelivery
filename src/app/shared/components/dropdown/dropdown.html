@@ -1,6 +1,10 @@
 <div class="relative inline-block text-left">
   <div (click)="toggle()">
-    <ng-content></ng-content>
+    <ng-content>
+      <button type="button" class="tala-action" aria-label="Row actions" title="Row actions" [attr.aria-expanded]="isOpen()">
+        <app-tala-icon name="more-horizontal" />
+      </button>
+    </ng-content>
   </div>
 
   @if (isOpen()) {

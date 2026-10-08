@@ -1,21 +1,21 @@
-<div class="space-y-4">
+<div class="tala-table-page space-y-4">
   <div class="flex flex-wrap items-center justify-between gap-4">
-    <div><h1 class="text-2xl font-semibold text-slate-900">Categories</h1><p class="mt-1 text-sm text-slate-500">Create categories and tag stores from their Categories tab.</p></div>
+    <div><h1 class="text-2xl font-semibold text-slate-900">Categories <span class="tala-table-count">{{ filtered().length }} shown</span></h1><p class="mt-1 text-sm text-slate-500">Create categories and tag stores from their Categories tab.</p></div>
     <div class="flex gap-2"><app-search-input placeholder="Search categories..." (valueChange)="search.set($event)" /><app-button variant="primary" size="md" (clicked)="open()">Add Category</app-button></div>
   </div>
   @if (error()) { <app-error-state message="Unable to load categories" [description]="error() ?? ''" (retried)="load()" /> }
   @else if (loading()) { <p class="py-10 text-center text-sm text-slate-500">Loading categories...</p> }
   @else if (!filtered().length) { <app-empty-state message="No categories found" description="Add a category such as Restaurants, Groceries, or Pharmacy to start tagging stores." /> }
   @else {
-    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <table class="w-full text-left text-sm">
+    <div class="tala-table-scroll overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="tala-table w-full text-left text-sm">
         <thead class="bg-slate-50 text-xs uppercase text-slate-500"><tr><th class="px-4 py-3">Category</th><th class="px-4 py-3">Stores</th><th class="px-4 py-3">Status</th><th class="px-4 py-3"><span class="sr-only">Actions</span></th></tr></thead>
         <tbody class="divide-y divide-slate-100">
           @for (category of filtered(); track category.id) {
             <tr><td class="px-4 py-4"><p class="flex items-center gap-2 font-medium text-slate-900"><span aria-hidden="true" class="flutter-icon">{{ iconGlyph(category.icon) }}</span>{{ category.name }}</p><p class="mt-1 text-xs text-slate-500">{{ category.description }}</p></td>
               <td class="px-4 py-4">{{ category.store_count }}</td>
               <td class="px-4 py-4"><span class="rounded-full px-2 py-1 text-xs" [class.bg-emerald-50]="category.is_active" [class.text-emerald-700]="category.is_active" [class.bg-slate-100]="!category.is_active">{{ category.is_active ? 'Active' : 'Inactive' }}</span></td>
-              <td class="px-4 py-4 text-right"><app-button variant="secondary" size="sm" (clicked)="open(category)">Edit</app-button></td></tr>
+              <td class="px-4 py-4 text-right"><button type="button" class="tala-action" [attr.aria-label]="'Edit ' + category.name" [title]="'Edit ' + category.name" (click)="open(category)"><app-tala-icon name="edit" /></button></td></tr>
           }
         </tbody>
       </table>

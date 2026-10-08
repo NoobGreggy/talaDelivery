@@ -1,6 +1,7 @@
 <div
-  class="bg-white rounded-lg border border-slate-200 shadow-sm"
+  class="tala-panel bg-white border"
   [class]="paddingClasses()"
+  [class.tala-panel--padded]="padding()"
 >
   <ng-content></ng-content>
 </div>

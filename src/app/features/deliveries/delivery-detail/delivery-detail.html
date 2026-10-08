@@ -99,19 +99,19 @@
       <div class="space-y-6 lg:col-span-2">
         <!-- Info cards -->
         <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="tala-panel tala-panel--padded border bg-white">
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Order</p>
             <p class="mt-1 text-sm font-medium text-slate-900">#{{ delivery()?.order?.id }}</p>
           </div>
-          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="tala-panel tala-panel--padded border bg-white">
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Store</p>
             <p class="mt-1 text-sm font-medium text-slate-900">{{ delivery()?.store?.name }}</p>
           </div>
-          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="tala-panel tala-panel--padded border bg-white">
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Customer</p>
             <p class="mt-1 text-sm font-medium text-slate-900">{{ delivery()?.customer?.name }}</p>
           </div>
-          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="tala-panel tala-panel--padded border bg-white">
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Rider</p>
             @if (delivery()?.rider) {
               <p class="mt-1 text-sm font-medium text-slate-900">{{ delivery()?.rider?.name }}</p>
@@ -119,13 +119,13 @@
               <p class="mt-1 text-sm italic text-slate-400">Not assigned</p>
             }
           </div>
-          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="tala-panel tala-panel--padded border bg-white">
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Distance</p>
             <p class="mt-1 text-sm font-medium text-slate-900">
               {{ delivery()?.distance_km ?? 0 }} km
             </p>
           </div>
-          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="tala-panel tala-panel--padded border bg-white">
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Rider Commission
             </p>
@@ -133,7 +133,7 @@
               {{ delivery()?.rider_commission ?? 0 | currency: 'PHP' : 'symbol' }}
             </p>
           </div>
-          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="tala-panel tala-panel--padded border bg-white">
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">
               Delivery Fee
             </p>
@@ -149,12 +149,12 @@
 
         <!-- Addresses -->
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="tala-panel tala-panel--padded border bg-white">
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Pickup</p>
             <p class="mt-2 text-sm font-medium text-slate-900">{{ delivery()?.store?.name }}</p>
             <p class="mt-1 text-sm text-slate-500">{{ delivery()?.pickup_address }}</p>
           </div>
-          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <div class="tala-panel tala-panel--padded border bg-white">
             <p class="text-xs font-semibold uppercase tracking-wider text-slate-400">Delivery</p>
             <p class="mt-2 text-sm font-medium text-slate-900">{{ delivery()?.customer?.name }}</p>
             <p class="mt-1 text-sm text-slate-500">{{ delivery()?.delivery_address }}</p>
@@ -170,7 +170,7 @@
         }
 
         <!-- Timeline -->
-        <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="tala-panel tala-panel--padded border bg-white">
           <h3 class="mb-5 text-sm font-semibold uppercase tracking-wider text-slate-500">
             Timeline
           </h3>
@@ -180,7 +180,7 @@
 
       <!-- Side rail -->
       <div class="space-y-6">
-        <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="tala-panel tala-panel--padded border bg-white">
           <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
             Summary
           </h3>
@@ -220,7 +220,7 @@
 
         <a
           [routerLink]="['/orders', delivery()?.order?.id]"
-          class="block rounded-lg border border-slate-200 bg-white p-4 text-sm font-medium text-sky-600 shadow-sm transition-colors hover:bg-sky-50"
+          class="tala-panel tala-panel--padded tala-panel--action block border bg-white text-sm font-medium text-sky-600 transition-colors"
         >
           View Order #{{ delivery()?.order?.id }}
         </a>

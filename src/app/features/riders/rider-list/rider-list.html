@@ -1,8 +1,8 @@
-<div class="space-y-4">
+<div class="tala-table-page space-y-4">
   <!-- Header -->
   <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
     <div>
-      <h1 class="text-2xl font-semibold text-slate-900">Riders</h1>
+      <h1 class="text-2xl font-semibold text-slate-900">Riders <span class="tala-table-count">{{ filteredRiders().length }} shown</span></h1>
       <p class="mt-1 text-sm text-slate-500">Manage rider availability and active deliveries.</p>
     </div>
     <div class="flex items-center gap-2">
@@ -21,23 +21,11 @@
   </div>
 
   <!-- Stats -->
-  <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-    <div class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 shadow-sm">
-      <p class="text-xs font-medium text-amber-700">Pending</p>
-      <p class="mt-1 text-2xl font-semibold text-amber-900">{{ counts().pending }}</p>
-    </div>
-    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <p class="text-xs font-medium text-emerald-600">Online</p>
-      <p class="mt-1 text-2xl font-semibold text-slate-900">{{ counts().online }}</p>
-    </div>
-    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <p class="text-xs font-medium text-sky-600">Busy</p>
-      <p class="mt-1 text-2xl font-semibold text-slate-900">{{ counts().busy }}</p>
-    </div>
-    <div class="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <p class="text-xs font-medium text-red-600">Suspended</p>
-      <p class="mt-1 text-2xl font-semibold text-slate-900">{{ counts().suspended }}</p>
-    </div>
+  <div class="tala-summary-strip" aria-label="Summary">
+    <div><span>Pending</span><strong>{{ counts().pending }}</strong></div>
+    <div><span>Online</span><strong>{{ counts().online }}</strong></div>
+    <div><span>Busy</span><strong>{{ counts().busy }}</strong></div>
+    <div><span>Suspended</span><strong>{{ counts().suspended }}</strong></div>
   </div>
 
   <!-- Status filter -->
@@ -82,8 +70,8 @@
 
   <!-- Table -->
   @if (!error()) {
-    <div class="overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <table class="min-w-[720px] w-full divide-y divide-slate-200">
+    <div class="tala-table-scroll overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <table class="tala-table min-w-[720px] w-full divide-y divide-slate-200">
         <thead class="bg-slate-50">
           <tr>
             @for (col of columns; track col.key) {

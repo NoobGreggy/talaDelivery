@@ -81,7 +81,7 @@
     <!-- Overview tab -->
     @if (activeTab() === 'overview') {
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="tala-panel tala-panel--padded border bg-white">
           <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
             Store Information
           </h3>
@@ -110,7 +110,7 @@
             </div>
           </dl>
         </div>
-        <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div class="tala-panel tala-panel--padded border bg-white">
           <h3 class="mb-4 text-sm font-semibold uppercase tracking-wider text-slate-500">
             Today
           </h3>
@@ -121,7 +121,7 @@
     }
 
     @if (activeTab() === 'categories') {
-      <section class="space-y-4 rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <section class="tala-panel tala-panel--padded space-y-4 border bg-white">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div><h3 class="font-semibold text-slate-900">Store Categories</h3><p class="mt-1 text-sm text-slate-500">Select the categories that describe this store.</p></div>
           <a routerLink="/categories" class="text-sm font-medium text-sky-600">Manage category list</a>
@@ -150,7 +150,7 @@
 
     <!-- Orders tab -->
     @if (activeTab() === 'orders') {
-      <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <div class="tala-panel tala-panel--padded border bg-white">
         <h3 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-500">
           Store Orders
         </h3>
@@ -163,7 +163,7 @@
 
     <!-- Delivery settings tab -->
     @if (activeTab() === 'delivery') {
-      <div class="rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+      <div class="tala-panel tala-panel--padded border bg-white">
         <h3 class="mb-2 text-sm font-semibold uppercase tracking-wider text-slate-500">
           Delivery Settings
         </h3>

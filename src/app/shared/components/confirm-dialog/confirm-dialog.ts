@@ -1,8 +1,10 @@
+import { TalaIconComponent } from '../tala-icon/tala-icon';
 import { Component, input, output } from '@angular/core';
 
 @Component({
   selector: 'app-confirm-dialog',
   standalone: true,
+  imports: [TalaIconComponent],
   templateUrl: './confirm-dialog.html',
   styleUrl: './confirm-dialog.css',
 })

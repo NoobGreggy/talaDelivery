@@ -12,7 +12,7 @@ import { MobileNavComponent } from '../mobile-nav/mobile-nav';
   styleUrl: './admin-layout.css'
 })
 export class AdminLayoutComponent {
-  sidebarCollapsed = signal(false);
+  sidebarCollapsed = signal(true);
   mobileMenuOpen = signal(false);
 
   toggleSidebar() {

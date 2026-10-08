@@ -1,8 +1,10 @@
+import { TalaIconComponent } from '../tala-icon/tala-icon';
 import { Component, input, output, signal } from '@angular/core';
 
 @Component({
   selector: 'app-search-input',
   standalone: true,
+  imports: [TalaIconComponent],
   templateUrl: './search-input.html',
   styleUrl: './search-input.css',
 })
