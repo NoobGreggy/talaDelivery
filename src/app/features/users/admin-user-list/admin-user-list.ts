@@ -4,6 +4,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AdminUser, AdminUserStatus } from '../../../core/models';
 import { AdminUserService } from '../../../core/services/admin-user.service';
+import { ZoneService } from '../../../core/services/zone.service';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { AvatarComponent } from '../../../shared/components/avatar/avatar';
@@ -43,6 +44,7 @@ import { StatusBadgeComponent } from '../../../shared/components/status-badge/st
 })
 export class AdminUserListComponent {
   private adminUserService = inject(AdminUserService);
+  private zoneService = inject(ZoneService);
   private toastService = inject(ToastService);
   private authService = inject(AuthService);
   private fb = inject(FormBuilder);
@@ -56,6 +58,8 @@ export class AdminUserListComponent {
   protected readonly modalOpen = signal(false);
   protected readonly acting = signal(false);
   protected readonly formError = signal<string | null>(null);
+  protected readonly availableZones = this.zoneService.zones;
+  protected readonly selectedZoneIds = signal<number[]>([]);
 
   protected readonly passwordModalOpen = signal(false);
   protected readonly passwordTarget = signal<AdminUser | null>(null);
@@ -99,6 +103,7 @@ export class AdminUserListComponent {
 
   constructor() {
     this.adminUserService.load();
+    this.zoneService.load();
   }
 
   protected onSearch(term: string): void {
@@ -115,6 +120,7 @@ export class AdminUserListComponent {
 
   protected openCreate(): void {
     this.formError.set(null);
+    this.selectedZoneIds.set([]);
     this.form.reset({
       name: '',
       email: '',
@@ -123,6 +129,12 @@ export class AdminUserListComponent {
       status: 'ACTIVE',
     });
     this.modalOpen.set(true);
+  }
+
+  protected toggleZone(zoneId: number, checked: boolean): void {
+    this.selectedZoneIds.update((ids) =>
+      checked ? [...new Set([...ids, zoneId])] : ids.filter((id) => id !== zoneId),
+    );
   }
 
   protected closeModal(): void {
@@ -147,6 +159,7 @@ export class AdminUserListComponent {
         phone: raw.phone?.trim() || null,
         password: raw.password ?? '',
         status: raw.status ?? 'ACTIVE',
+        delivery_zone_ids: this.selectedZoneIds(),
       })
       .subscribe({
         next: () => {

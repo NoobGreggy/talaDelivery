@@ -110,6 +110,7 @@ export class ZoneListComponent {
     maximum_delivery_fee: [null as number | null, Validators.min(0)],
     distance_rounding_km: [0.5, [Validators.required, Validators.min(0.1)]],
     effective_from: [''],
+    admin_id: [null as number | null],
   });
 
   protected readonly previewForm = this.fb.group({
@@ -161,6 +162,7 @@ export class ZoneListComponent {
       maximum_delivery_fee: null,
       distance_rounding_km: 0.5,
       effective_from: '',
+      admin_id: null,
     });
     this.previewForm.reset({
       store_id: null,
@@ -392,6 +394,7 @@ export class ZoneListComponent {
         zone.maximum_delivery_fee == null ? null : Number(zone.maximum_delivery_fee),
       distance_rounding_km: Number(zone.distance_rounding_km),
       effective_from: zone.effective_from ? zone.effective_from.slice(0, 16) : '',
+      admin_id: zone.admin_id ?? null,
     });
     this.formModalOpen.set(true);
   }
@@ -413,6 +416,7 @@ export class ZoneListComponent {
       maximum_delivery_fee: this.optionalDecimal(raw.maximum_delivery_fee),
       distance_rounding_km: this.decimal(raw.distance_rounding_km, '0.10'),
       effective_from: raw.effective_from || null,
+      admin_id: raw.admin_id ?? null,
     };
   }
 

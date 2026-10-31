@@ -16,6 +16,7 @@ export class DashboardPageComponent {
   private authService = inject(AuthService);
   private dashboardService = inject(DashboardService);
   protected readonly isPlatformAdmin = this.authService.isPlatformAdmin;
+  protected readonly isSuperAdmin = this.authService.isSuperAdmin;
   protected readonly data = this.dashboardService.data;
   protected readonly loading = this.dashboardService.loading;
   protected readonly error = this.dashboardService.error;

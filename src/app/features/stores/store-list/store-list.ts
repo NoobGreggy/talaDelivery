@@ -2,6 +2,8 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { StoreService } from '../../../core/services/store.service';
+import { ZoneService } from '../../../core/services/zone.service';
+import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { StatusBadgeComponent } from '../../../shared/components/status-badge/status-badge';
 import { EmptyStateComponent } from '../../../shared/components/empty-state/empty-state';
@@ -11,7 +13,7 @@ import { ConfirmDialogComponent } from '../../../shared/components/confirm-dialo
 import { SearchInputComponent } from '../../../shared/components/search-input/search-input';
 import { ModalComponent } from '../../../shared/components/modal/modal';
 import { ButtonComponent } from '../../../shared/components/button/button';
-import { Store } from '../../../core/models';
+import { Store, DeliveryZone } from '../../../core/models';
 
 @Component({
   selector: 'app-store-list',
@@ -32,6 +34,8 @@ import { Store } from '../../../core/models';
 })
 export class StoreListComponent {
   private storeService = inject(StoreService);
+  private zoneService = inject(ZoneService);
+  private authService = inject(AuthService);
   private router = inject(Router);
   private toastService = inject(ToastService);
   private fb = inject(FormBuilder);
@@ -46,6 +50,9 @@ export class StoreListComponent {
   protected readonly acting = signal(false);
   protected readonly createModalOpen = signal(false);
   protected readonly createError = signal<string | null>(null);
+  protected readonly availableZones = signal<DeliveryZone[]>([]);
+  protected readonly zonesLoading = signal(false);
+  protected readonly selectedZones = signal<number[]>([]);
 
   protected readonly createForm = this.fb.group({
     name: ['', Validators.required],
@@ -67,6 +74,14 @@ export class StoreListComponent {
     const term = this.searchTerm().toLowerCase();
     const status = this.statusFilter();
     let list = this.stores();
+
+    const assignedZones = this.authService.user()?.delivery_zone_ids ?? [];
+    const isSuper = this.authService.isSuperAdmin();
+    if (!isSuper && assignedZones.length > 0) {
+      list = list.filter((s) =>
+        (s.deliveryZoneIds ?? []).some((zoneId) => assignedZones.includes(zoneId)),
+      );
+    }
 
     if (status !== 'all') {
       list = list.filter((s) => (status === 'active' ? s.status === 'ACTIVE' : s.status !== 'ACTIVE'));
@@ -149,7 +164,29 @@ export class StoreListComponent {
   protected openCreateStore(): void {
     this.createForm.reset({});
     this.createError.set(null);
+    this.selectedZones.set([]);
     this.createModalOpen.set(true);
+    this.loadZones();
+  }
+
+  protected loadZones(): void {
+    this.zonesLoading.set(true);
+    this.zoneService.listAllForAssignment().subscribe({
+      next: (zones) => {
+        this.availableZones.set(zones.filter((zone) => zone.status === 'ACTIVE'));
+        this.zonesLoading.set(false);
+      },
+      error: () => {
+        this.availableZones.set([]);
+        this.zonesLoading.set(false);
+      },
+    });
+  }
+
+  protected toggleZone(id: number, checked: boolean): void {
+    this.selectedZones.update((ids) =>
+      checked ? [...new Set([...ids, id])] : ids.filter((value) => value !== id),
+    );
   }
 
   protected closeCreateStore(): void {
@@ -165,6 +202,7 @@ export class StoreListComponent {
       merchant_email?: string;
       merchant_password?: string;
       merchant_phone?: string;
+      delivery_zone_ids?: number[];
     } = {
       name: raw.name ?? '',
       description: raw.description || undefined,
@@ -179,6 +217,7 @@ export class StoreListComponent {
       merchant_email: raw.merchant_email || undefined,
       merchant_password: raw.merchant_password || undefined,
       merchant_phone: raw.merchant_phone || undefined,
+       delivery_zone_ids: this.selectedZones().length ? this.selectedZones() : undefined,
     };
     this.acting.set(true);
     this.createError.set(null);

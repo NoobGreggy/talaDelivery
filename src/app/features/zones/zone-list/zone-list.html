@@ -260,6 +260,10 @@
                   ><span class="mb-1 block text-sm font-medium text-slate-700">Effective from</span
                   ><input formControlName="effective_from" type="datetime-local" class="zone-input"
                 /></label>
+                <label
+                  ><span class="mb-1 block text-sm font-medium text-slate-700">Owner admin ID (super admin only)</span
+                  ><input formControlName="admin_id" type="number" min="1" class="zone-input"
+                /></label>
               </div>
               <datalist id="zone-cities">
                 @for (city of citySuggestions(); track city) {

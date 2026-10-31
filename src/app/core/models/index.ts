@@ -3,8 +3,9 @@ export interface User {
   name: string;
   email: string;
   phone?: string;
-  role: 'platform_admin' | 'store_admin';
+  role: 'super_admin' | 'platform_admin' | 'store_admin';
   store_id?: number;
+  delivery_zone_ids?: number[];
   avatar?: string;
 }
 
@@ -21,8 +22,9 @@ export interface AdminUser {
   name: string;
   email: string;
   phone: string | null;
-  role: 'platform_admin';
+  role: 'super_admin' | 'platform_admin';
   status: AdminUserStatus;
+  delivery_zone_ids?: number[];
   roles: string[];
   permissions: string[];
   created_at: string | null;
@@ -43,6 +45,7 @@ export interface CreateAdminUserRequest {
   phone?: string | null;
   password: string;
   status?: AdminUserStatus;
+  delivery_zone_ids?: number[];
 }
 
 export interface Store {
@@ -252,6 +255,7 @@ export interface DeliveryZone {
   distance_rounding_km: number;
   effective_from?: string | null;
   status: DeliveryZoneStatus;
+  admin_id?: number | null;
   updated_by?: { id: number; name: string } | null;
   revision_count?: number;
   revisions?: DeliveryZoneRevision[];
@@ -280,6 +284,7 @@ export interface DeliveryZoneWrite {
   distance_rounding_km?: string;
   effective_from?: string | null;
   status?: DeliveryZoneStatus;
+  admin_id?: number | null;
 }
 
 export interface GeoJsonPolygon {
@@ -332,6 +337,7 @@ export interface PlatformSettings {
   settlement_timezone: string;
   settlement_day_starts_at: string;
   distance_method: 'STRAIGHT_LINE' | 'ROAD_ROUTE';
+  share_ratio?: string;
   updated_at?: string;
 }
 
@@ -344,6 +350,7 @@ export interface DashboardData {
   cancelled_today: number;
   revenue_today: number;
   delivery_fees_today: number;
+  total_gross: number;
   alerts: OperationalAlert[];
   recent_deliveries: Delivery[];
 }

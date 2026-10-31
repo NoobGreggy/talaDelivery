@@ -23,6 +23,9 @@
         <div class="revenue"><span>₱</span>{{ d.revenue_today | number:'1.2-2' }}</div>
         <p class="muted">Revenue reported today</p>
         <div class="fee-row"><span>Delivery fees</span><strong>₱{{ d.delivery_fees_today | number:'1.2-2' }}</strong></div>
+        @if (isSuperAdmin()) {
+          <div class="fee-row"><span>Total gross</span><strong>₱{{ d.total_gross | number:'1.2-2' }}</strong></div>
+        }
         <h3>Today's order mix</h3>
         <div class="allocation" aria-hidden="true">
           @for (item of orderMix(); track item.label) { <span [style.width.%]="item.percent" [style.background]="item.color"></span> }

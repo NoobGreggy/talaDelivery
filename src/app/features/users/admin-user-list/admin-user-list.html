@@ -186,6 +186,23 @@
             <option value="SUSPENDED">Suspended</option>
           </select>
         </div>
+
+        <div>
+          <label class="mb-1 block text-sm font-medium text-slate-700">Delivery zones</label>
+          <div class="max-h-40 space-y-1 overflow-y-auto rounded-lg border border-slate-300 p-2">
+            @for (zone of availableZones(); track zone.id) {
+              <label class="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  [checked]="selectedZoneIds().includes(zone.id)"
+                  (change)="toggleZone(zone.id, $any($event.target).checked)" />
+                {{ zone.name }}
+              </label>
+            } @empty {
+              <p class="text-xs text-slate-500">No delivery zones available.</p>
+            }
+          </div>
+        </div>
       </div>
 
       <div>

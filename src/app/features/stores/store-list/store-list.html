@@ -182,6 +182,27 @@
             class="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-sky-500 focus:ring-1 focus:ring-sky-500 focus:outline-none"></textarea>
         </div>
         <div class="sm:col-span-2 mt-2 border-t border-slate-200 pt-4">
+          <p class="mb-3 text-sm font-semibold text-slate-800">Delivery Zones</p>
+          @if (zonesLoading()) {
+            <p class="text-sm text-slate-500">Loading delivery zones…</p>
+          } @else if (availableZones().length === 0) {
+            <p class="text-sm text-slate-500">No active delivery zones available. A super admin must create them first.</p>
+          } @else {
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              @for (zone of availableZones(); track zone.id) {
+                <label class="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm">
+                  <input
+                    type="checkbox"
+                    [checked]="selectedZones().includes(zone.id)"
+                    (change)="toggleZone(zone.id, $any($event.target).checked)"
+                    class="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500" />
+                  <span>{{ zone.name }} ({{ zone.city ?? zone.province }})</span>
+                </label>
+              }
+            </div>
+          }
+        </div>
+        <div class="sm:col-span-2 mt-2 border-t border-slate-200 pt-4">
           <p class="mb-3 text-sm font-semibold text-slate-800">Merchant Login Account</p>
         </div>
         <div>

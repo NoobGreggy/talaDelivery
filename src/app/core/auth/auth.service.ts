@@ -16,7 +16,11 @@ export class AuthService {
   user = this.currentUser.asReadonly();
   isAuthenticated = computed(() => !!this.token());
   isInitialized = this.initialized.asReadonly();
-  isPlatformAdmin = computed(() => this.currentUser()?.role === 'platform_admin');
+  isPlatformAdmin = computed(() => {
+    const role = this.currentUser()?.role;
+    return role === 'platform_admin' || role === 'super_admin';
+  });
+  isSuperAdmin = computed(() => this.currentUser()?.role === 'super_admin');
   isStoreAdmin = computed(() => this.currentUser()?.role === 'store_admin');
 
   login(credentials: LoginRequest): Observable<LoginResponse> {
@@ -43,7 +47,11 @@ export class AuthService {
   }
 
   hasRole(role: string): boolean {
-    return this.currentUser()?.role === role;
+    const current = this.currentUser()?.role;
+    if (current === role) return true;
+    // Super admins inherit platform-admin access.
+    if (current === 'super_admin' && role === 'platform_admin') return true;
+    return false;
   }
 
   loadUser(): Observable<User | null> {

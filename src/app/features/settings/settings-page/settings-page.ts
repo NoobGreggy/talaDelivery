@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { PlatformSettings } from '../../../core/models';
 import { PlatformSettingsService } from '../../../core/services/platform-settings.service';
+import { AuthService } from '../../../core/auth/auth.service';
 import { ButtonComponent } from '../../../shared/components/button/button';
 
 @Component({
@@ -13,6 +14,8 @@ import { ButtonComponent } from '../../../shared/components/button/button';
 })
 export class SettingsPageComponent {
   private settingsService = inject(PlatformSettingsService);
+  private authService = inject(AuthService);
+  protected readonly isSuperAdmin = this.authService.isSuperAdmin;
   private fb = inject(FormBuilder);
 
   protected readonly saved = signal(false);
@@ -31,6 +34,7 @@ export class SettingsPageComponent {
     settlement_timezone: ['Asia/Manila', Validators.required],
     settlement_day_starts_at: ['00:00', Validators.required],
     distance_method: ['STRAIGHT_LINE' as 'STRAIGHT_LINE' | 'ROAD_ROUTE', Validators.required],
+    share_ratio: ['70/30' as string, Validators.required],
   });
 
   constructor() {
@@ -41,7 +45,11 @@ export class SettingsPageComponent {
     if (this.form.invalid || this.saving()) return;
     this.saving.set(true);
     this.error.set(null);
-    this.settingsService.update(this.form.getRawValue() as PlatformSettings).subscribe({
+    const payload = { ...this.form.getRawValue() } as PlatformSettings;
+    if (!this.isSuperAdmin()) {
+      delete (payload as { share_ratio?: string }).share_ratio;
+    }
+    this.settingsService.update(payload).subscribe({
       next: (settings) => {
         this.form.patchValue(settings);
         this.saving.set(false);
