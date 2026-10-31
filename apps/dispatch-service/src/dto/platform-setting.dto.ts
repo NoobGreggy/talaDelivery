@@ -44,6 +44,10 @@ export class UpdatePlatformSettingDto {
 
   @IsIn([DistanceMethod.StraightLine, DistanceMethod.RoadRoute])
   distance_method: string;
+
+  @IsOptional()
+  @IsIn(['70/30', '80/20'])
+  share_ratio?: string;
 }
 
 /** Partial variant used by tests / dev seeding. */
@@ -79,4 +83,8 @@ export class PatchPlatformSettingDto {
   @IsOptional()
   @IsIn([DistanceMethod.StraightLine, DistanceMethod.RoadRoute])
   distance_method?: string;
+
+  @IsOptional()
+  @IsIn(['70/30', '80/20'])
+  share_ratio?: string;
 }

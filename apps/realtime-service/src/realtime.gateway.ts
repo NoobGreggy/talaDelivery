@@ -76,7 +76,7 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       return { success: false, error: 'Forbidden.' };
     }
 
-    if (client.user.role !== Role.PlatformAdmin &&
+    if (client.user.role !== Role.PlatformAdmin && client.user.role !== Role.SuperAdmin &&
         (body.room.startsWith('order:') || body.room.startsWith('delivery:'))) {
       try {
         const order = await this.factory.create('ORDER_SERVICE_URL').get<{
@@ -117,6 +117,13 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
       } catch { return { success: false, error: 'Store membership unavailable.' }; }
     }
 
+    // Customer rooms carry that customer's order updates. A customer may only
+    // join their own room; platform/super admins retain cross-customer access.
+    if (body.room.startsWith('customer:') && client.user.role === Role.Customer) {
+      if (!/^customer:[1-9]\\d*$/.test(body.room)) return { success: false, error: 'Forbidden.' };
+      if (Number(body.room.slice(9)) !== client.user.sub) return { success: false, error: 'Forbidden.' };
+    }
+
     await client.join(body.room);
     return { success: true };
   }
@@ -151,16 +158,22 @@ export class RealtimeGateway implements OnGatewayConnection, OnGatewayDisconnect
     // Platform-wide operations feed: new rider applications, new stores.
     // Platform admins only — this is the room those events are broadcast to.
     if (room === 'admin:platform' || room.startsWith('admin:')) {
-      return user.role === Role.PlatformAdmin;
+      return user.role === Role.PlatformAdmin || user.role === Role.SuperAdmin;
     }
     if (room.startsWith('merchant:')) {
-      return user.role === Role.StoreAdmin || user.role === Role.PlatformAdmin;
+      return user.role === Role.StoreAdmin || user.role === Role.PlatformAdmin || user.role === Role.SuperAdmin;
     }
     if (room.startsWith('rider:')) {
-      return user.role === Role.Rider || user.role === Role.PlatformAdmin;
+      return user.role === Role.Rider || user.role === Role.PlatformAdmin || user.role === Role.SuperAdmin;
     }
     if (room.startsWith('customer:')) {
-      return user.role === Role.Customer || user.role === Role.PlatformAdmin;
+      // Cross-customer leak fix: a customer may only subscribe to their own
+      // customer room. Platform admins and super admins retain the deliberate
+      // access policy of reading any customer's feed.
+      if (!/^customer:[1-9]\\d*$/.test(room)) return false;
+      if (user.role === Role.PlatformAdmin || user.role === Role.SuperAdmin) return true;
+      if (user.role === Role.Customer) return Number(room.slice(9)) === user.sub;
+      return false;
     }
     return false;
   }

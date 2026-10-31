@@ -1,6 +1,8 @@
 import {
+  IsArray,
   IsEmail,
   IsIn,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -48,4 +50,10 @@ export class CreateAdminUserDto {
     message: 'The selected status is invalid.',
   })
   status?: string;
+
+  /** Delivery zones this platform admin is responsible for (super admin sets). */
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  delivery_zone_ids?: number[];
 }

@@ -113,6 +113,7 @@ export interface ZoneResourceJson {
   effective_from: string | null;
   status: string;
   updated_by: { id: number; name: string } | null;
+  admin_id: number | null;
   revision_count?: number;
   revisions?: Array<{
     id: number;
@@ -330,6 +331,7 @@ export class DispatchResourcesService {
       effective_from: toIso(zone.effectiveFrom),
       status: zone.status,
       updated_by: extras.updatedBy ?? null,
+      admin_id: zone.adminId ?? null,
       created_at: zone.createdAt.toISOString(),
       updated_at: zone.updatedAt.toISOString(),
     };

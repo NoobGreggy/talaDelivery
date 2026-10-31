@@ -138,7 +138,7 @@ describe('CreateAdminUserDto', () => {
     );
     const properties = new Set(validated.map((meta) => meta.propertyName));
 
-    expect([...properties].sort()).toEqual(['email', 'name', 'password', 'phone', 'status']);
+    expect([...properties].sort()).toEqual(['delivery_zone_ids', 'email', 'name', 'password', 'phone', 'status']);
     expect(properties.has('role')).toBe(false);
   });
 });

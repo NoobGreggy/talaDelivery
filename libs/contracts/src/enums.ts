@@ -6,6 +6,7 @@
  */
 
 export const Role = {
+  SuperAdmin: 'super_admin',
   PlatformAdmin: 'platform_admin',
   StoreAdmin: 'store_admin',
   Rider: 'rider',

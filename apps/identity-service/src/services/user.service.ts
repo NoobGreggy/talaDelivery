@@ -14,6 +14,7 @@ export interface CreateUserInput {
   password: string;
   role: string;
   status: string;
+  deliveryZoneIds?: number[];
 }
 
 /**
@@ -119,6 +120,7 @@ export class UserService {
       password: await this.hashPassword(input.password),
       role: input.role,
       status: input.status,
+      deliveryZoneIds: input.deliveryZoneIds ?? [],
     });
     return this.users.save(user);
   }

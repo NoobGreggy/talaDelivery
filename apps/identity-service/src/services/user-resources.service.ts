@@ -15,6 +15,7 @@ export interface UserResourceJson {
   phone: string | null;
   role: string;
   status: string;
+  delivery_zone_ids: number[];
   roles: string[];
   permissions: string[];
   created_at: string | null;
@@ -37,6 +38,7 @@ export class UserResourcesService {
       phone: user.phone ?? null,
       role: user.role,
       status: user.status,
+      delivery_zone_ids: user.deliveryZoneIds ?? [],
       roles: [user.role],
       permissions: [],
       created_at: toIso(user.createdAt),

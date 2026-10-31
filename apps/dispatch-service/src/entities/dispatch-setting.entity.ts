@@ -44,6 +44,9 @@ export class DispatchSetting {
   @Column({ name: 'distance_method', type: 'varchar', length: 20, default: DistanceMethod.StraightLine })
   distanceMethod: string;
 
+  @Column({ name: 'share_ratio', type: 'varchar', length: 16, default: '70/30' })
+  shareRatio: string;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

@@ -72,6 +72,9 @@ export class DeliveryZone {
   @Column({ name: 'updated_by', type: 'int', nullable: true })
   updatedBy: number | null;
 
+  @Column({ name: 'admin_id', type: 'int', nullable: true })
+  adminId: number | null;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

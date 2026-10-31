@@ -2,7 +2,9 @@ import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsIn,
+  IsInt,
   IsObject,
+  Min,
   IsOptional,
   IsString,
   MaxLength,
@@ -83,6 +85,11 @@ export class StoreDeliveryZoneDto {
   @IsOptional()
   @IsIn(ZONE_STATUS_INPUT)
   status?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  admin_id?: number;
 }
 
 /**
@@ -151,6 +158,11 @@ export class UpdateDeliveryZoneDto {
   @IsOptional()
   @IsIn(ZONE_STATUS_INPUT)
   status?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  admin_id?: number;
 }
 
 /** Zone pricing rules used by the admin preview endpoint (zone.*). */

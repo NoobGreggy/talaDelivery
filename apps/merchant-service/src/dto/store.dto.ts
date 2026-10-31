@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsObject, IsOptional, IsString, Length, Max, Min, ValidateNested } from 'class-validator';
+import { IsArray, IsIn, IsInt, IsObject, IsOptional, IsString, Length, Max, Min, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { StoreStatus } from '@taladelivery/contracts';
 
@@ -17,6 +17,7 @@ export class CreateStoreDto {
   @IsOptional() @IsString() longitude?: string;
   @IsOptional() @IsIn(Object.values(StoreStatus)) status?: string;
   @IsOptional() @IsObject() @ValidateNested() @Type(() => OpeningHoursDayDto) openingHours?: Record<string, OpeningHoursDayDto>;
+  @IsOptional() @IsArray() @IsInt({ each: true }) @Min(1, { each: true }) delivery_zone_ids?: number[];
 }
 
 export class UpdateStoreDto extends CreateStoreDto {}

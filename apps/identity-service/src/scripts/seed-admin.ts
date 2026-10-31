@@ -26,7 +26,7 @@ async function seedAdmin(): Promise<void> {
       email,
       phone: null,
       password: hashedPassword,
-      role: Role.PlatformAdmin,
+      role: Role.SuperAdmin,
       status: UserStatus.Active,
     }),
   );

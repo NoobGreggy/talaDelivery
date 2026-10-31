@@ -70,7 +70,10 @@ export class IdentityInternalController {
 
   @Get('admin/active-users')
   async activeAdmins() {
-    const admins = await this.users.findActiveByRole(Role.PlatformAdmin);
+    const admins = [
+      ...(await this.users.findActiveByRole(Role.PlatformAdmin)),
+      ...(await this.users.findActiveByRole(Role.SuperAdmin)),
+    ];
     return admins.map((user) => this.users.toUserSnapshot(user));
   }
 }

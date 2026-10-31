@@ -20,6 +20,7 @@ const baseSnapshot: DispatchSettingsSnapshot = {
   settlementTimezone: 'Asia/Manila',
   settlementDayStartsAt: '00:00',
   distanceMethod: 'STRAIGHT_LINE',
+  shareRatio: '70/30',
 };
 
 /**

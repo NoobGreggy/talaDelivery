@@ -22,6 +22,7 @@ export interface ZoneInput {
   distanceRoundingKm?: string;
   effectiveFrom?: Date | null;
   status?: string;
+  adminId?: number | null;
   /** Internal audit fields (not accepted from the API). */
   createdBy?: number | null;
   updatedBy?: number | null;

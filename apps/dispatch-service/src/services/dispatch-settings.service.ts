@@ -13,6 +13,7 @@ export interface DispatchSettingsSnapshot {
   settlementTimezone: string;
   settlementDayStartsAt: string;
   distanceMethod: string;
+  shareRatio: string;
 }
 
 @Injectable()
@@ -45,6 +46,7 @@ export class DispatchSettingsService {
       settlementTimezone: row.settlementTimezone,
       settlementDayStartsAt: row.settlementDayStartsAt,
       distanceMethod: row.distanceMethod,
+      shareRatio: row.shareRatio ?? '70/30',
     };
   }
 

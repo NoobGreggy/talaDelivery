@@ -472,20 +472,21 @@ export class OrderService {
     await this.fanOutToRealtime(order, paymentEvent);
   }
 
-  async adminTotals(): Promise<{ orders: number; pendingOrders: number; todayOrders: number; todayDelivered: number; todayRevenue: string }> {
+  async adminTotals(): Promise<{ orders: number; pendingOrders: number; todayOrders: number; todayDelivered: number; todayRevenue: string; totalRevenue: string }> {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const end = new Date(start.getTime() + 86400000);
 
-    const [orders, pendingOrders, todayOrders, todayDelivered, todayRevenue] = await Promise.all([
+    const [orders, pendingOrders, todayOrders, todayDelivered, todayRevenue, totalRevenue] = await Promise.all([
       this.orders.count(),
       this.orders.count({ where: { status: OrderStatus.Pending } }),
       this.orders.count({ where: { createdAt: Between(start, end) } }),
       this.orders.count({ where: { status: OrderStatus.Delivered, updatedAt: Between(start, end) } }),
       this.todayRevenue(start, end),
+      this.totalRevenueAll(),
     ]);
 
-    return { orders, pendingOrders, todayOrders, todayDelivered, todayRevenue };
+    return { orders, pendingOrders, todayOrders, todayDelivered, todayRevenue, totalRevenue };
   }
 
   private async todayRevenue(start: Date, end: Date): Promise<string> {
@@ -493,6 +494,12 @@ export class OrderService {
       where: { status: OrderStatus.Delivered, updatedAt: Between(start, end) },
       select: ['total'],
     });
+    const totalMinor = rows.reduce((sum, row) => sum + toMinor(row.total), 0);
+    return fromMinor(totalMinor);
+  }
+
+  private async totalRevenueAll(): Promise<string> {
+    const rows = await this.orders.find({ select: ['total'] });
     const totalMinor = rows.reduce((sum, row) => sum + toMinor(row.total), 0);
     return fromMinor(totalMinor);
   }

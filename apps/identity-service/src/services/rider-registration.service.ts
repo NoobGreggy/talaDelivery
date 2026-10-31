@@ -109,7 +109,10 @@ export class RiderRegistrationService {
     user: { id: number; name: string; email: string },
     profile: RiderProfileSnapshot,
   ): Promise<void> {
-    const admins = await this.users.findActiveByRole(Role.PlatformAdmin);
+    const admins = [
+      ...(await this.users.findActiveByRole(Role.PlatformAdmin)),
+      ...(await this.users.findActiveByRole(Role.SuperAdmin)),
+    ];
     if (admins.length === 0) {
       this.logger.warn('Rider application received but no platform admin exists to notify');
       return;

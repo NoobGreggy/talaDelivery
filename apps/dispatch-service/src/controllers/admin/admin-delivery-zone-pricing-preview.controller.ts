@@ -23,7 +23,7 @@ import { ZoneBoundaryService } from '../../services/zone-boundary.service';
  */
 @Controller('admin/delivery-zones/preview')
 @UseGuards(AppKeyGuard, JwtAuthGuard, RolesGuard)
-@Roles(Role.PlatformAdmin)
+@Roles(Role.SuperAdmin)
 export class AdminDeliveryZonePricingPreviewController {
   constructor(
     private readonly pricing: PricingService,

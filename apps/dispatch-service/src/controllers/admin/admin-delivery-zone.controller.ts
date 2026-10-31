@@ -55,6 +55,7 @@ export class AdminDeliveryZoneController {
   @Get()
   @Message('Delivery zones retrieved.')
   async index(
+    @CurrentUser() user: JwtPayload,
     @Query('status') status?: string,
     @Query('search') search?: string,
     @Query('page') page?: number,
@@ -68,6 +69,9 @@ export class AdminDeliveryZoneController {
       .skip((p - 1) * pp)
       .take(pp);
 
+    if (user.role !== Role.SuperAdmin) {
+      query.andWhere('(zone.admin_id IS NULL OR zone.admin_id = :adminId)', { adminId: user.sub });
+    }
     if (status) {
       query.andWhere('zone.status = :status', { status });
     }
@@ -102,6 +106,7 @@ export class AdminDeliveryZoneController {
   }
 
   @Post()
+  @Roles(Role.SuperAdmin)
   @Message('Delivery zone created.')
   async store(@CurrentUser() user: JwtPayload, @Body() dto: StoreDeliveryZoneDto) {
     const input = this.toZoneInput(dto, true);
@@ -140,6 +145,7 @@ export class AdminDeliveryZoneController {
   }
 
   @Put(':deliveryZone')
+  @Roles(Role.SuperAdmin)
   @Message('Delivery zone updated.')
   async update(
     @CurrentUser() user: JwtPayload,
@@ -152,6 +158,7 @@ export class AdminDeliveryZoneController {
   }
 
   @Delete(':deliveryZone')
+  @Roles(Role.SuperAdmin)
   @Message('Delivery zone archived.')
   async destroy(
     @CurrentUser() user: JwtPayload,
@@ -165,6 +172,7 @@ export class AdminDeliveryZoneController {
   private toZoneInput(dto: StoreDeliveryZoneDto | UpdateDeliveryZoneDto, isStore: boolean): ZoneInput {
     const input: ZoneInput = {};
     if (dto.tala_coins_percent !== undefined) input.talaCoinsPercent = dto.tala_coins_percent;
+    if (dto.admin_id !== undefined) input.adminId = dto.admin_id ?? null;
     if ('name' in dto && dto.name !== undefined) input.name = dto.name;
     if (dto.city !== undefined) input.city = dto.city ?? null;
     if (dto.province !== undefined) input.province = dto.province;

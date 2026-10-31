@@ -8,7 +8,7 @@ import { CATEGORY_ICONS } from '../../dto/category-icons';
 
 @Controller('admin/store-categories')
 @UseGuards(AppKeyGuard, JwtAuthGuard, RolesGuard)
-@Roles(Role.PlatformAdmin)
+@Roles(Role.SuperAdmin)
 export class AdminStoreCategoryController {
   @Get('icons') @Message('Category icons retrieved.')
   icons() { return CATEGORY_ICONS; }

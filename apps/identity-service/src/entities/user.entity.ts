@@ -37,6 +37,9 @@ export class User {
   @Column({ type: 'varchar', length: 20, default: UserStatus.Active })
   status: string;
 
+  @Column({ name: 'delivery_zone_ids', type: 'int', array: true, default: '{}' })
+  deliveryZoneIds: number[];
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

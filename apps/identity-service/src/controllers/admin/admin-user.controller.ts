@@ -43,7 +43,7 @@ import { squish } from '../../common/format.util';
  */
 @Controller('admin/users')
 @UseGuards(AppKeyGuard, JwtAuthGuard, RolesGuard)
-@Roles(Role.PlatformAdmin)
+@Roles(Role.SuperAdmin)
 export class AdminUserController {
   constructor(
     private readonly users: UserService,
@@ -106,6 +106,7 @@ export class AdminUserController {
       password: dto.password,
       role: Role.PlatformAdmin,
       status: dto.status ?? UserStatus.Active,
+      deliveryZoneIds: dto.delivery_zone_ids ?? [],
     });
     return this.resources.toUserJson(user);
   }

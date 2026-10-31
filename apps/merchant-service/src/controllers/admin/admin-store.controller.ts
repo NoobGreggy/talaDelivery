@@ -69,7 +69,11 @@ export class AdminStoreController {
   @Post()
   @Message('Store created.')
   async create(@Body() dto: CreateStoreDto) {
-    return this.stores.snapshot(await this.stores.create(dto));
+    const store = await this.stores.create(dto);
+    if (dto.delivery_zone_ids?.length) {
+      await this.deliveryZones.assign(store.id, dto.delivery_zone_ids);
+    }
+    return this.stores.snapshot(await this.stores.require(store.id));
   }
 
   @Put(':id/categories')

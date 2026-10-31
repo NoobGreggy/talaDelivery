@@ -18,6 +18,7 @@ interface OrderTotals {
   todayOrders: number;
   todayDelivered: number;
   todayRevenue: string;
+  totalRevenue: string;
 }
 
 const EMPTY_ORDER_TOTALS: OrderTotals = {
@@ -26,6 +27,7 @@ const EMPTY_ORDER_TOTALS: OrderTotals = {
   todayOrders: 0,
   todayDelivered: 0,
   todayRevenue: '0.00',
+  totalRevenue: '0.00',
 };
 
 /**
@@ -73,6 +75,7 @@ export class AdminDashboardController {
         deliveries,
         pending_orders: orderTotals.pendingOrders,
         online_riders: onlineRiders,
+        total_gross: orderTotals.totalRevenue,
       },
       today: {
         orders: orderTotals.todayOrders,

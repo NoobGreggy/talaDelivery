@@ -122,7 +122,12 @@ export class RolesGuard implements CanActivate {
     if (!user) {
       throw new UnauthorizedException('Unauthenticated.');
     }
-    if (!requiredRoles.includes(user.role)) {
+    // Super admins inherit every platform-admin permission, so a route that
+    // requires `platform_admin` is also reachable by `super_admin`.
+    if (
+      !requiredRoles.includes(user.role) &&
+      !(user.role === 'super_admin' && requiredRoles.includes('platform_admin'))
+    ) {
       throw new ForbiddenException('You are not allowed to perform this action.');
     }
     return true;

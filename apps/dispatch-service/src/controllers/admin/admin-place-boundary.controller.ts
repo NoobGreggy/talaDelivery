@@ -17,7 +17,7 @@ import { PlaceBoundarySearchService } from '../../services/place-boundary-search
  */
 @Controller('admin/place-boundaries')
 @UseGuards(AppKeyGuard, JwtAuthGuard, RolesGuard)
-@Roles(Role.PlatformAdmin)
+@Roles(Role.SuperAdmin)
 export class AdminPlaceBoundaryController {
   constructor(private readonly boundaries: PlaceBoundarySearchService) {}
 
